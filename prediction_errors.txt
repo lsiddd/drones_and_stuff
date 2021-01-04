@@ -1,8 +1,0 @@
-Traceback (most recent call last):
-  File "/home/lucas/Downloads/ns-allinone-3.32/ns-3.32/prediction.py", line 1, in <module>
-    from statsmodels.tsa.arima_model import ARIMA                                                   
-ModuleNotFoundError: No module named 'statsmodels'
-Traceback (most recent call last):
-  File "/home/lucas/Downloads/ns-allinone-3.32/ns-3.32/prediction.py", line 1, in <module>
-    from statsmodels.tsa.arima_model import ARIMA                                                   
-ModuleNotFoundError: No module named 'statsmodels'

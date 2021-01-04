@@ -40,6 +40,22 @@ std::default_random_engine generator;
 
 NS_LOG_COMPONENT_DEFINE("LteEvalvid");
 
+const float PI = 3.14159265; // pi
+void migrate(Ptr<Node>, Ptr<Node>, Ipv4Address, Ipv4Address);
+int getCellId(int nodeId);
+
+// COnfigurable parameters
+string algorithm = "mosca";
+
+// scenario variables
+uint16_t numPeds = 1;
+
+uint16_t numEnbs = 10;
+uint16_t numEdgeNodes = numEnbs;
+uint16_t numFogNodes = 10;
+uint16_t numMistNodes = 20;
+uint16_t numCloudNodes = 1;
+
 std::vector<double> ues_sinr;
 std::ofstream ues_sinr_file;
 std::vector<double> time_to_centroid;
@@ -51,17 +67,19 @@ bool disableDl = false;
 bool disableUl = false;
 bool enablePrediction = true;
 bool verbose = false;
+bool enableHandover = false;
 std::string ns3_dir;
 
 bool useCa = false;
-const uint32_t numUAVs = 1;
-const uint32_t numUes = 5;
-const uint32_t numStaticCells = 100;
+const uint32_t numUAVs = 3;
+const uint32_t numUes = 4;
+const uint32_t numStaticCells = 10;
 // uint32_t numCars = 10;
 uint32_t seedValue = 10000;
 uint32_t SimTime = 30;
-int eNodeBTxPower = 23;
+int eNodeBTxPower = 46;
 const uint32_t numBSs = numUAVs + numStaticCells;
+uint16_t node_remote = 1; // HOST_REMOTO
 
 /* connection management structures */
 int connections[numBSs][numUes]{{0}};
@@ -80,6 +98,35 @@ NodeContainer ServerNodes;
 
 NetDeviceContainer enbDevs;
 NetDeviceContainer ueDevs;
+
+
+// migration variables
+// server characteristics
+// the first index is the metric: lat, bw, and cost
+// second index is the type of server: mist, edge, fog, cloud
+int serverReqs[4][3] = {{1, 1, 4}, {4, 2, 3}, {10, 10, 2}, {100, 100, 1}};
+
+// applications class 1, 2, 3, and 4
+// latency in ms and bw in mbps, and prioritary
+int applicationReqs[3][3] = {{1, 10, 1}, {10, 100, 1}, {1000, 1, 0}};
+uint16_t applicationType = 0;
+
+//-----VARIABLES THAT DEPEND ON THE NUMBER OF SERVERS----
+// The resources variable tells which server has one or
+// more of the recources needed in this simulation
+// the resources are:
+vector<uint16_t> resources;
+int initialEdgeResources = 5;
+int initialFogResources = 10;
+
+// type of cell position allocation
+bool rowTopology = false;
+bool randomCellAlloc = true;
+
+// ----------VARIABLES TO CALCULATE METRICS-----------
+std::vector<int> latency;
+std::vector<int> cost;
+
 
 Ptr<LteHelper> lteHelper = CreateObject<LteHelper>();
 
@@ -151,7 +198,7 @@ void handoverManager() {
       }
     }
     // Randomly handover to next strongest cell
-    if (rand() % 100 < 2 && Simulator::Now() > Seconds(2)) {
+    if (rsrp > neighbors[servingCell][imsi - 1]) {
       lteHelper->HandoverRequest(Simulator::Now(), ueDevs.Get(i),
                                  enbDevs.Get(servingCell),
                                  enbDevs.Get(strongestNeighborCell));
@@ -567,7 +614,7 @@ void request_video(Ptr<Node> sender_node, Ptr<Node> receiver_node) {
   // server.SetAttribute("SenderDumpFilename", StringValue("evalvid_sd_" +
   // std::to_string(request_id)));
   server.SetAttribute("SenderDumpFilename",
-                      StringValue("sd_" + std::to_string(request_id)));
+                      StringValue("sd_" + std::to_string(request_id) + ".txt"));
   server.SetAttribute("PacketPayload", UintegerValue(512));
   ApplicationContainer apps = server.Install(sender_node);
   apps.Start(Seconds(5));
@@ -576,7 +623,7 @@ void request_video(Ptr<Node> sender_node, Ptr<Node> receiver_node) {
   // client.SetAttribute("ReceiverDumpFilename", StringValue("evalvid_rd_" +
   // std::to_string(request_id)));
   client.SetAttribute("ReceiverDumpFilename",
-                      StringValue("rd_" + std::to_string(request_id)));
+                      StringValue("rd_" + std::to_string(request_id) + ".txt"));
   apps = client.Install(receiver_node);
   apps.Start(Seconds(5));
 
@@ -671,22 +718,22 @@ std::string GetTopLevelSourceDir(void) {
 }
 
 int main(int argc, char *argv[]) {
-  uint16_t node_remote = 1; // HOST_REMOTO
+  // LogComponentEnable("Config", LOG_LEVEL_ALL);
+  LogComponentEnable("EvalvidClient", LOG_INFO);
+  LogComponentEnable("EvalvidServer", LOG_INFO);
+
   CommandLine cmd;
+
   // Open file for writing and overwrite if it already exists
-  ues_sinr_file.open("ues_sinr.txt", std::ofstream::out | std::ofstream::trunc);
-  time_to_centroid_file.open("time_to_centroid.txt",
-                             std::ofstream::out | std::ofstream::trunc);
-  ue_positions_log.open("ue_positions_log.txt",
-                        std::ofstream::out | std::ofstream::trunc);
-  ue_positions_log << numUes << std::endl;
+  // ues_sinr_file.open("ues_sinr.txt", std::ofstream::out |
+  // std::ofstream::trunc); time_to_centroid_file.open("time_to_centroid.txt",
+  // std::ofstream::out | std::ofstream::trunc);
+  // ue_positions_log.open("ue_positions_log.txt",
+  // std::ofstream::out | std::ofstream::trunc);
+  // ue_positions_log << numUes << std::endl;
 
   ConfigStore inputConfig;
   inputConfig.ConfigureDefaults();
-
-  // LogComponentEnable ("Config", LOG_LEVEL_ALL);
-  LogComponentEnable("EvalvidClient", LOG_INFO);
-  LogComponentEnable("EvalvidServer", LOG_INFO);
 
   cmd.Parse(argc, argv);
 
@@ -702,12 +749,18 @@ int main(int argc, char *argv[]) {
                        StringValue("ns3::RrComponentCarrierManager"));
   }
 
-  ues_sinr.resize(numUes);
+  // ues_sinr.resize(numUes);
 
   // Ptr<LteHelper> lteHelper = CreateObject<LteHelper>();
   Ptr<PointToPointEpcHelper> epcHelper = CreateObject<PointToPointEpcHelper>();
   lteHelper->SetEpcHelper(epcHelper);
   Config::SetDefault("ns3::LteEnbRrc::SrsPeriodicity", UintegerValue(320));
+
+  // error modes for ctrl and data planes
+  Config::SetDefault("ns3::LteSpectrumPhy::CtrlErrorModelEnabled",
+                     BooleanValue(false));
+  Config::SetDefault("ns3::LteSpectrumPhy::DataErrorModelEnabled",
+                     BooleanValue(false));
 
   // todo: add this on verbose
   Ptr<Node> pgw = epcHelper->GetPgwNode();
@@ -721,10 +774,10 @@ int main(int argc, char *argv[]) {
   // DoubleValue(0)); lteHelper->SetPathlossModelAttribute("ShadowSigmaOutdoor",
   // DoubleValue(3.0)); lteHelper->SetPathlossModelAttribute("Los2NlosThr",
   // DoubleValue(200));
-  lteHelper->SetHandoverAlgorithmType("ns3::A3RsrpHandoverAlgorithm");
-  lteHelper->SetHandoverAlgorithmAttribute("Hysteresis", DoubleValue(0));
-  lteHelper->SetHandoverAlgorithmAttribute("TimeToTrigger",
-                                           TimeValue(MilliSeconds(10)));
+  lteHelper->SetHandoverAlgorithmType("ns3::NoOpHandoverAlgorithm");
+  // lteHelper->SetHandoverAlgorithmAttribute("Hysteresis", DoubleValue(0));
+  // lteHelper->SetHandoverAlgorithmAttribute("TimeToTrigger",
+  // TimeValue(MilliSeconds(10)));
 
   // todo: substitute for multiple MEC servers
   NodeContainer remoteHostContainer;
@@ -819,6 +872,7 @@ int main(int argc, char *argv[]) {
                                      1);
   }
 
+  // todo: change for uavs
   lteHelper->SetEnbDeviceAttribute("DlBandwidth",
                                    UintegerValue(25)); // Set Download BandWidth
   lteHelper->SetEnbDeviceAttribute("UlBandwidth",
@@ -854,13 +908,13 @@ int main(int argc, char *argv[]) {
                                       Ipv4Mask("255.0.0.0"), 1);
 
   // Setup Applications
-  UDPApp(remoteHost, NodeContainer(ueNodes));
+  // UDPApp(remoteHost, NodeContainer(ueNodes));
 
   for (uint32_t i = 0; i < UAVNodes.GetN(); ++i) {
     request_video(UAVNodes.Get(i), remoteHost);
   }
 
-  AnimationInterface animator("lte.xml");
+  AnimationInterface animator("lte_animation.xml");
   animator.SetMobilityPollInterval(Seconds(1));
   for (uint32_t i = 0; i < UAVNodes.GetN(); ++i) {
     animator.UpdateNodeDescription(UAVNodes.Get(i), "UAV " + std::to_string(i));
@@ -903,14 +957,13 @@ int main(int argc, char *argv[]) {
   Ptr<Ipv4FlowClassifier> classifier =
       DynamicCast<Ipv4FlowClassifier>(flowmon.GetClassifier());
 
-  Simulator::Stop(Seconds(SimTime));
-
   // for (uint32_t ib = 0; ib <= SimTime; ib++) {
   //     Simulator::Schedule(Seconds(ib), &print_position, ueNodes);
   // }
 
-  Simulator::Schedule(Seconds(SimTime - 0.001), &write_metrics);
-  Simulator::Schedule(Seconds(5), ThroughputMonitor, &flowmon, monitor);
+  // Simulator::Schedule(Seconds(SimTime - 0.001), &write_metrics);
+  Simulator::Schedule(Seconds(SimTime - 0.01), ThroughputMonitor, &flowmon,
+                      monitor);
   if (enablePrediction) {
     Simulator::Schedule(Seconds(1), &log_ue_positions, NodeContainer(ueNodes),
                         &ue_positions_log);
@@ -920,10 +973,10 @@ int main(int argc, char *argv[]) {
   // Simulator::Schedule(Seconds(1), &print_meas);
 
   // set initial positions of drones
-  set_drones(UAVNodes);
+  // set_drones(UAVNodes);
 
   // save user positions to file
-  save_user_positions(NodeContainer(ueNodes));
+  // save_user_positions(NodeContainer(ueNodes));
 
   // BuildingsHelper::MakeMobilityModelConsistent();
 
@@ -948,6 +1001,22 @@ int main(int argc, char *argv[]) {
 
   lteHelper->EnableTraces(); // enable all traces
 
+  // Ptr<RadioEnvironmentMapHelper> remHelper =
+  // CreateObject<RadioEnvironmentMapHelper>();
+  // remHelper->SetAttribute("ChannelPath", StringValue("/ChannelList/0"));
+  // remHelper->SetAttribute("OutputFile", StringValue("rem.out"));
+  // remHelper->SetAttribute("XMin", DoubleValue(-400.0));
+  // remHelper->SetAttribute("XMax", DoubleValue(400.0));
+  // remHelper->SetAttribute("XRes", UintegerValue(100));
+  // remHelper->SetAttribute("YMin", DoubleValue(-300.0));
+  // remHelper->SetAttribute("YMax", DoubleValue(300.0));
+  // remHelper->SetAttribute("YRes", UintegerValue(75));
+  // remHelper->SetAttribute("Z", DoubleValue(0.0));
+  // remHelper->SetAttribute("UseDataChannel", BooleanValue(true));
+  // remHelper->SetAttribute("RbId", IntegerValue(10));
+  // remHelper->Install();
+
+  Simulator::Stop(Seconds(SimTime));
   Simulator::Run();
 
   monitor->CheckForLostPackets();
@@ -980,9 +1049,9 @@ int main(int argc, char *argv[]) {
   Simulator::Destroy();
   // BuildingsHelper::Install(ueNodes);
 
-  ues_sinr_file.close();
-  time_to_centroid_file.close();
-  ue_positions_log.close();
+  // ues_sinr_file.close();
+  // time_to_centroid_file.close();
+  // ue_positions_log.close();
 
   return 0;
 }

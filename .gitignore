@@ -3,6 +3,9 @@
 *.patch
 *.rej
 
+*.txt
+*.xml
+
 *.o
 *.pyc
 *.pyo

@@ -1063,7 +1063,7 @@ int main(int argc, char *argv[]) {
   for (map<FlowId, FlowMonitor::FlowStats>::const_iterator i = stats.begin();
        i != stats.end(); ++i) {
     Ipv4FlowClassifier::FiveTuple t = classifier->FindFlow(i->first);
-    std::cout << "Flow " << i->first << " (" << t.sourceAddress << " ->"
+    std::cout << "Flow " << i->first << " (" << t.sourceAddress << " -> "
               << t.destinationAddress << ")\n";
     std::cout << "  Tx Packets: " << i->second.txPackets << "\n";
     std::cout << "  Tx Bytes:   " << i->second.txBytes << "\n";

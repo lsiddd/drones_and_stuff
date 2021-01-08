@@ -339,17 +339,18 @@ Ptr<ListPositionAllocator> generatePositionAllocator(int area = 1000,
 
   if (allocation == "koln")
   {
+    double multiplier = 1 / 5;
     std::ifstream cellList("cellList_koln");
     double a, b, c;
     while (cellList >> a >> b >> c)
     {
-      HpnPosition->Add(Vector3D(b, c, 45));
+      HpnPosition->Add(Vector3D(b * multiplier, c * multiplier, 45));
     }
   }
 
   else if (allocation == "random")
   {
-    for (uint32_t i = 0; i < number_of_nodes; i++)
+    for (int i = 0; i < number_of_nodes; i++)
     {
       HpnPosition->Add(
           Vector3D(distribution(generator), distribution(generator), 45));
@@ -1174,10 +1175,24 @@ int main(int argc, char *argv[])
 
   cmd.Parse(argc, argv);
 
-  ns3::RngSeedManager::SetSeed(
-      seedValue); // valor de seed para geração de números aleatórios
+  ns3::RngSeedManager::SetSeed(seedValue);
   ns3_dir = GetTopLevelSourceDir();
 
+  // create epc helper and set as default
+  Ptr<PointToPointEpcHelper> epcHelper = CreateObject<PointToPointEpcHelper>();
+  lteHelper->SetEpcHelper(epcHelper);
+  // get pgw node
+  Ptr<Node> pgw = epcHelper->GetPgwNode();
+
+  // lte specific config
+  lteHelper->SetHandoverAlgorithmType("ns3::NoOpHandoverAlgorithm");
+  // todo: change for uavs
+  lteHelper->SetEnbDeviceAttribute("DlBandwidth",
+                                   UintegerValue(25)); // Set Download BandWidth
+  lteHelper->SetEnbDeviceAttribute("UlBandwidth",
+                                   UintegerValue(25)); // Set Upload Bandwidth
+
+  // Network config
   if (useCa)
   {
     Config::SetDefault("ns3::LteHelper::UseCa", BooleanValue(useCa));
@@ -1187,41 +1202,40 @@ int main(int argc, char *argv[])
                        StringValue("ns3::RrComponentCarrierManager"));
   }
 
-  Ptr<PointToPointEpcHelper> epcHelper = CreateObject<PointToPointEpcHelper>();
-  lteHelper->SetEpcHelper(epcHelper);
+  Config::SetDefault("ns3::LteEnbPhy::TxPower", DoubleValue(eNodeBTxPower));
   Config::SetDefault("ns3::LteEnbRrc::SrsPeriodicity", UintegerValue(320));
-
   // error modes for ctrl and data planes
   Config::SetDefault("ns3::LteSpectrumPhy::CtrlErrorModelEnabled",
                      BooleanValue(false));
   Config::SetDefault("ns3::LteSpectrumPhy::DataErrorModelEnabled",
                      BooleanValue(false));
 
-  // todo: add this on verbose
-  Ptr<Node> pgw = epcHelper->GetPgwNode();
-  
+  // create nodes in global containers
+  UAVNodes.Create(numUAVs);
+  ueNodes.Create(numUes);
+  BSNodes.Create(numStaticCells);
+  serverNodes.Create(numStaticCells);
 
-  NS_LOG_UNCOND("Pathloss model: NakagamiPropagationLossModel ");
-  lteHelper->SetHandoverAlgorithmType("ns3::NoOpHandoverAlgorithm");
-
-  /*MEC servers configuration*/
-  /* edge nodes configuration*/
-  // create internet stack
+  // create and install internet
   InternetStackHelper internet;
-
+  internet.Install(ueNodes);
   internet.Install(serverNodes);
+
+  // address base for servers
   Ipv4AddressHelper ipv4h;
   ipv4h.SetBase("1.0.0.0", "255.0.0.0");
-
   // set up  links between pgw and edge servers
   Ipv4StaticRoutingHelper ipv4RoutingHelper;
+
+  // what the fuck is this loop for, i forgot
   for (uint32_t i = 0; i < serverNodes.GetN(); ++i)
   {
     // create all edge nodes with different delays, some of them unfit fot the
     // application
     Ptr<Node> node = serverNodes.Get(i);
 
-    // for mist nodes
+    // delay value, should be set up on initialization way above
+    // todo: fix later
     int delay = 40;
 
     // Create the Internet
@@ -1243,13 +1257,33 @@ int main(int argc, char *argv[])
     // p2ph.EnablePcapAll("lena-simple-epc-backhaul");
   }
 
-  UAVNodes.Create(numUAVs);
-  ueNodes.Create(numUes);
-  BSNodes.Create(numStaticCells);
-  serverNodes.Create(numStaticCells); // todo
+  // set default gateway for users
+  for (uint32_t u = 0; u < ueNodes.GetN(); ++u)
+  {
+    Ptr<Node> ueNode = ueNodes.Get(u);
+    Ptr<Ipv4StaticRouting> ueStaticRouting =
+        ipv4RoutingHelper.GetStaticRouting(ueNode->GetObject<Ipv4>());
+    ueStaticRouting->SetDefaultRoute(epcHelper->GetUeDefaultGatewayAddress(),
+                                     1);
+  }
 
-  internet.Install(ueNodes);
+    // set up backhaul channel
+  // links between servers for migrations!!
+  Ipv4AddressHelper edgeIpv4AddressHelper;
+  CsmaHelper csma;
+  csma.SetChannelAttribute("DataRate", StringValue("100Gbps"));
+  csma.SetChannelAttribute("Delay", StringValue("0ms"));
+  NetDeviceContainer backhaulCsma = csma.Install(serverNodes);
+  Ipv4InterfaceContainer serversIpIfaces =
+      edgeIpv4AddressHelper.Assign(backhaulCsma);
+  for (uint32_t i = 0; i < serversIpIfaces.GetN(); ++i)
+  {
+    serverNodesAddresses[i][1] = serversIpIfaces.GetAddress(i);
+  }
 
+
+
+  // set up mobility
   MobilityHelper mobility;
   mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
   // mobility.Install(remoteHost);
@@ -1259,7 +1293,6 @@ int main(int argc, char *argv[])
   /*user device mobility according to ns2 trace*/
   Ns2MobilityHelper ped_mobil = Ns2MobilityHelper("mobil/koln.tcl");
   ped_mobil.Install(ueNodes.Begin(), ueNodes.End());
-
 
   MobilityHelper mobilityEnb;
   mobilityEnb.SetMobilityModel("ns3::ConstantPositionMobilityModel");
@@ -1275,33 +1308,17 @@ int main(int argc, char *argv[])
   mobilityUAV.SetPositionAllocator(UAVPosition);
   mobilityUAV.Install(UAVNodes);
 
-  for (uint32_t u = 0; u < ueNodes.GetN(); ++u)
-  {
-    Ptr<Node> ueNode = ueNodes.Get(u);
-    Ptr<Ipv4StaticRouting> ueStaticRouting =
-        ipv4RoutingHelper.GetStaticRouting(ueNode->GetObject<Ipv4>());
-    ueStaticRouting->SetDefaultRoute(epcHelper->GetUeDefaultGatewayAddress(),
-                                     1);
-  }
-
-  // todo: change for uavs
-  lteHelper->SetEnbDeviceAttribute("DlBandwidth",
-                                   UintegerValue(25)); // Set Download BandWidth
-  lteHelper->SetEnbDeviceAttribute("UlBandwidth",
-                                   UintegerValue(25)); // Set Upload Bandwidth
- 
   enbDevs = lteHelper->InstallEnbDevice(NodeContainer(BSNodes, UAVNodes));
   ueDevs = lteHelper->InstallUeDevice(ueNodes);
 
   Ipv4InterfaceContainer ueIpIface;
   ueIpIface = epcHelper->AssignUeIpv4Address(NetDeviceContainer(ueDevs));
 
-  Ptr<LteEnbPhy> enb0Phy;
 
-  // todo: set different bandwidth for individual cells
+  // set up different transmission powers for drones
   for (uint32_t i = 0; (unsigned)i < enbDevs.GetN(); i++)
   {
-    enb0Phy = enbDevs.Get(i)->GetObject<LteEnbNetDevice>()->GetPhy();
+    auto enb0Phy = enbDevs.Get(i)->GetObject<LteEnbNetDevice>()->GetPhy();
     if (i < numStaticCells)
     {
       enb0Phy->SetTxPower(43);
@@ -1312,57 +1329,31 @@ int main(int argc, char *argv[])
     }
   }
 
-  Ipv4AddressHelper s1uIpv4AddressHelper;
-  Ipv4AddressHelper edgeIpv4AddressHelper;
-
-
-  // backhaul channel
-  CsmaHelper csma;
-  csma.SetChannelAttribute("DataRate", StringValue("100Gbps"));
-  csma.SetChannelAttribute("Delay", StringValue("0ms"));
-  NetDeviceContainer backhaulCsma = csma.Install(serverNodes);
-  Ipv4InterfaceContainer serversIpIfaces =
-      edgeIpv4AddressHelper.Assign(backhaulCsma);
-  for (uint32_t i = 0; i < serversIpIfaces.GetN(); ++i) {
-    serverNodesAddresses[i][1] = serversIpIfaces.GetAddress(i);
-  }
-
-  // Install the IP stack on the UEs
-  internet.Install(ueNodes);
-  Ipv4InterfaceContainer ueIpIface;
-  ueIpIface = epcHelper->AssignUeIpv4Address(NetDeviceContainer(ueDevs));
-  // Assign IP address to UEs, and install applications
-  for (uint32_t u = 0; u < ueNodes.GetN(); ++u) {
-    Ptr<Node> ueNode = ueNodes.Get(u);
-    // Set the default gateway for the UE
-    Ptr<Ipv4StaticRouting> ueStaticRouting =
-        ipv4RoutingHelper.GetStaticRouting(ueNode->GetObject<Ipv4>());
-    ueStaticRouting->SetDefaultRoute(epcHelper->GetUeDefaultGatewayAddress(),
-                                     1);
-  }
-
-
   // attach to cells with the highest sinr
   lteHelper->Attach(ueDevs);
 
-  // todo: change this to set power individually instead of globally
-  Config::SetDefault("ns3::LteEnbPhy::TxPower", DoubleValue(eNodeBTxPower));
+  Simulator::Schedule(Seconds(2), &requestApplication, ueNodes.Get(0), serverNodes.Get(0), serverNodesAddresses[0][0]);
+  // requestApplication(ueNodes.Get(0), serverNodes.Get(0), serverNodesAddresses[0][0]);
 
-  for (uint32_t u = 0; u < UAVNodes.GetN(); ++u)
-  {
-    Ptr<Node> UAVNode = UAVNodes.Get(u);
-    Ptr<Ipv4> UAVIpv4 = UAVNode->GetObject<Ipv4>();
-    Ptr<Ipv4StaticRouting> UAVStaticRouting =
-        ipv4RoutingHelper.GetStaticRouting(UAVIpv4);
-    UAVStaticRouting->AddNetworkRouteTo(Ipv4Address("1.0.0.0"),
-                                        Ipv4Mask("255.0.0.0"), 1);
-  }
-  Ptr<Node> sgw = epcHelper->GetSgwNode();
-  Ptr<Ipv4> sgwIpv4 = sgw->GetObject<Ipv4>();
-  Ptr<Ipv4StaticRouting> sgwStaticRouting =
-      ipv4RoutingHelper.GetStaticRouting(sgwIpv4);
-  sgwStaticRouting->AddNetworkRouteTo(Ipv4Address("1.0.0.0"),
-                                      Ipv4Mask("255.0.0.0"), 1);
+
+  // what the fuck is this
+  // i have no idea if this is important
+  // seriously
+  // for (uint32_t u = 0; u < UAVNodes.GetN(); ++u)
+  // {
+  //   Ptr<Node> UAVNode = UAVNodes.Get(u);
+  //   Ptr<Ipv4> UAVIpv4 = UAVNode->GetObject<Ipv4>();
+  //   Ptr<Ipv4StaticRouting> UAVStaticRouting =
+  //       ipv4RoutingHelper.GetStaticRouting(UAVIpv4);
+  //   UAVStaticRouting->AddNetworkRouteTo(Ipv4Address("1.0.0.0"),
+  //                                       Ipv4Mask("255.0.0.0"), 1);
+  // }
+  // Ptr<Node> sgw = epcHelper->GetSgwNode();
+  // Ptr<Ipv4> sgwIpv4 = sgw->GetObject<Ipv4>();
+  // Ptr<Ipv4StaticRouting> sgwStaticRouting =
+  //     ipv4RoutingHelper.GetStaticRouting(sgwIpv4);
+  // sgwStaticRouting->AddNetworkRouteTo(Ipv4Address("1.0.0.0"),
+  //                                     Ipv4Mask("255.0.0.0"), 1);
 
   AnimationInterface animator("lte_animation.xml");
   animator.SetMobilityPollInterval(Seconds(1));

@@ -21,13 +21,13 @@
 #include "ns3/flow-monitor-module.h"
 #include "ns3/internet-module.h"
 #include "ns3/lte-module.h"
-#include <ns3/csma-module.h>
 #include "ns3/mobility-module.h"
 #include "ns3/netanim-module.h"
 #include "ns3/network-module.h"
 #include "ns3/point-to-point-helper.h"
 #include "ns3/stats-module.h"
 #include <ns3/buildings-helper.h>
+#include <ns3/csma-module.h>
 
 #include <boost/algorithm/string/classification.hpp> // Include boost::for is_any_of
 #include <boost/algorithm/string/split.hpp>          // Include for boost::split
@@ -329,17 +329,18 @@ void NotifyHandoverEndOkEnb(std::string context, uint64_t imsi, uint16_t cellId,
             << " RNTI " << rnti << std::endl;
 }
 
-Ptr<ListPositionAllocator> generatePositionAllocator(int area = 1000,
-                                                     int number_of_nodes = 300,
-                                                     std::string allocation = "random")
+Ptr<ListPositionAllocator>
+generatePositionAllocator(int area = 1000, int number_of_nodes = 300,
+                          std::string allocation = "random")
 {
 
-  Ptr<ListPositionAllocator> HpnPosition = CreateObject<ListPositionAllocator>();
+  Ptr<ListPositionAllocator> HpnPosition =
+      CreateObject<ListPositionAllocator>();
   std::uniform_int_distribution<int> distribution(0, area);
 
   if (allocation == "koln")
   {
-    double multiplier = 1 / 5;
+    double multiplier = 1.0 / 5;
     std::ifstream cellList("cellList_koln");
     double a, b, c;
     while (cellList >> a >> b >> c)
@@ -993,9 +994,9 @@ void ThroughputMonitor(FlowMonitorHelper *fmhelper, Ptr<FlowMonitor> flowMon)
   for (auto stats : flowStats)
   {
     Ipv4FlowClassifier::FiveTuple fiveTuple = classing->FindFlow(stats.first);
-    PDR = (100 * stats.second.rxPackets) / (stats.second.txPackets);
-    LostPacketsum = (stats.second.txPackets) - (stats.second.rxPackets);
-    PLR = ((LostPacketsum * 100) / stats.second.txPackets);
+    PDR = (double)(100 * stats.second.rxPackets) / (stats.second.txPackets);
+    LostPacketsum = (double)(stats.second.txPackets) - (stats.second.rxPackets);
+    PLR = (double)(LostPacketsum * 100) / stats.second.txPackets;
     Delay = (stats.second.delaySum.GetSeconds()) / (stats.second.txPackets);
     Throughput = stats.second.rxBytes * 8.0 /
                  (stats.second.timeLastRxPacket.GetSeconds() -
@@ -1167,6 +1168,7 @@ int main(int argc, char *argv[])
   // LogComponentEnable("Config", LOG_LEVEL_ALL);
   LogComponentEnable("EvalvidClient", LOG_INFO);
   LogComponentEnable("EvalvidServer", LOG_INFO);
+  LogComponentEnable("RemSpectrumPhy", LOG_LEVEL_ALL);
 
   CommandLine cmd;
 
@@ -1185,6 +1187,7 @@ int main(int argc, char *argv[])
   Ptr<Node> pgw = epcHelper->GetPgwNode();
 
   // lte specific config
+  lteHelper->SetAttribute("PathlossModel", StringValue("ns3::FriisPropagationLossModel"));
   lteHelper->SetHandoverAlgorithmType("ns3::NoOpHandoverAlgorithm");
   // todo: change for uavs
   lteHelper->SetEnbDeviceAttribute("DlBandwidth",
@@ -1202,7 +1205,7 @@ int main(int argc, char *argv[])
                        StringValue("ns3::RrComponentCarrierManager"));
   }
 
-  Config::SetDefault("ns3::LteEnbPhy::TxPower", DoubleValue(eNodeBTxPower));
+  // Config::SetDefault("ns3::LteEnbPhy::TxPower", DoubleValue(eNodeBTxPower));
   Config::SetDefault("ns3::LteEnbRrc::SrsPeriodicity", UintegerValue(320));
   // error modes for ctrl and data planes
   Config::SetDefault("ns3::LteSpectrumPhy::CtrlErrorModelEnabled",
@@ -1267,7 +1270,7 @@ int main(int argc, char *argv[])
                                      1);
   }
 
-    // set up backhaul channel
+  // set up backhaul channel
   // links between servers for migrations!!
   Ipv4AddressHelper edgeIpv4AddressHelper;
   CsmaHelper csma;
@@ -1280,8 +1283,6 @@ int main(int argc, char *argv[])
   {
     serverNodesAddresses[i][1] = serversIpIfaces.GetAddress(i);
   }
-
-
 
   // set up mobility
   MobilityHelper mobility;
@@ -1314,7 +1315,6 @@ int main(int argc, char *argv[])
   Ipv4InterfaceContainer ueIpIface;
   ueIpIface = epcHelper->AssignUeIpv4Address(NetDeviceContainer(ueDevs));
 
-
   // set up different transmission powers for drones
   for (uint32_t i = 0; (unsigned)i < enbDevs.GetN(); i++)
   {
@@ -1332,9 +1332,10 @@ int main(int argc, char *argv[])
   // attach to cells with the highest sinr
   lteHelper->Attach(ueDevs);
 
-  Simulator::Schedule(Seconds(2), &requestApplication, ueNodes.Get(0), serverNodes.Get(0), serverNodesAddresses[0][0]);
-  // requestApplication(ueNodes.Get(0), serverNodes.Get(0), serverNodesAddresses[0][0]);
-
+  Simulator::Schedule(Seconds(2), &requestApplication, ueNodes.Get(0),
+                      serverNodes.Get(0), serverNodesAddresses[0][0]);
+  // requestApplication(ueNodes.Get(0), serverNodes.Get(0),
+  // serverNodesAddresses[0][0]);
 
   // what the fuck is this
   // i have no idea if this is important

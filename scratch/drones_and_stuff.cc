@@ -1254,7 +1254,7 @@ int main(int argc, char *argv[]) {
                   MakeCallback(&NotifyHandoverStartUe));
   Config::Connect("/NodeList/*/DeviceList/*/LteEnbRrc/HandoverEndOk",
                   MakeCallback(&NotifyHandoverEndOkEnb));
-}
+
   Config::Connect("/NodeList/*/DeviceList/*/LteUeRrc/HandoverEndOk",
                   MakeCallback(&NotifyHandoverEndOkUe));
 

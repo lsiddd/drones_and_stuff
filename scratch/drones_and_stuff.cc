@@ -69,6 +69,9 @@ uint32_t SimTime = 10;
 int eNodeBTxPower = 46;
 const uint32_t numBSs = numUAVs + numStaticCells;
 uint16_t node_remote = 1; // HOST_REMOTO
+std::string mobil_trace = "koln.tcl";
+std::string requests_trace = "requests.tcl_but_not_really";
+float distance_multiplier = 1.0/10;
 
 /* connection management structures */
 int connections[numBSs][numUes]{{0}};
@@ -312,11 +315,10 @@ generatePositionAllocator(int area = 1000, int number_of_nodes = 300,
   std::uniform_int_distribution<int> distribution(0, area);
 
   if (allocation == "koln") {
-    double multiplier = 1.0 / 5;
     std::ifstream cellList("cellList_koln");
     double a, b, c;
     while (cellList >> a >> b >> c) {
-      HpnPosition->Add(Vector3D(b * multiplier, c * multiplier, 45));
+      HpnPosition->Add(Vector3D(b * distance_multiplier, c * distance_multiplier, 45));
     }
   }
 
@@ -359,7 +361,7 @@ int getEdge(int nodeId) {
 }
 
 void HandoverPrediction(int nodeId, int timeWindow) {
-  std::string mobilityTrace = "mobil/koln.tcl";
+  std::string mobilityTrace = mobil_trace;
   // means no connection has been found
   // happens if it's called too early in the simulation
   int imsi = nodeId - 1;
@@ -652,27 +654,6 @@ void CourseChange(std::string context, Ptr<const MobilityModel> model) {
   double now = Simulator::Now().GetSeconds();
   double start_time;
   if (start_times.count(PeekPointer(model)) > 0) { // check if key exists
-  requestApplication(ueNodes.Get(0), serverNodes.Get(0),
-  // serverNodesAddresses[0][0]);
-
-  // what the fuck is this
-  // i have no idea if this is important
-  // seriously
-  // for (uint32_t u = 0; u < UAVNodes.GetN(); ++u)
-  // {
-  //   Ptr<Node> UAVNode = UAVNodes.Get(u);
-  //   Ptr<Ipv4> UAVIpv4 = UAVNode->GetObject<Ipv4>();
-  //   Ptr<Ipv4StaticRouting> UAVStaticRouting =
-  //       ipv4RoutingHelper.GetStaticRouting(UAVIpv4);
-  //   UAVStaticRouting->AddNetworkRouteTo(Ipv4Address("1.0.0.0"),
-  //                                       Ipv4Mask("255.0.0.0"), 1);
-  // }
-  // Ptr<Node> sgw = epcHelper->GetSgwNode();
-  // Ptr<Ipv4> sgwIpv4 = sgw->GetObject<Ipv4>();
-  // Ptr<Ipv4StaticRouting> sgwStaticRouting =
-  //     ipv4RoutingHelper.GetStaticRouting(sgwIpv4);
-  // sgwStaticRouting->AddNetworkRouteTo(Ipv4Address("1.0.0.0"),
-  //                                     Ipv4Mask("255.0.0.0"), 1);
     start_time = start_times[PeekPointer(model)];
     if (start_time >= 0) { // check if node started movement
       if (model->GetVelocity().GetLength() == 0) { // Drone stopped?
@@ -960,23 +941,18 @@ void request_video(Ptr<Node> sender_node, Ptr<Node> receiver_node) {
   Ipv4Address ipAddr = iaddr.GetLocal();
 
   EvalvidServerHelper server(m_port);
-  server.SetAttribute("SenderTraceFilename",
-                      StringValue(ns3_dir + std::string("/st_highway_cif.st")));
-  // server.SetAttribute("SenderDumpFilename", StringValue("evalvid_sd_" +
-  // std::to_string(request_id)));
-  server.SetAttribute("SenderDumpFilename",
-                      StringValue("sd_" + std::to_string(request_id) + ".txt"));
-  server.SetAttribute("PacketPayload", UintegerValue(512));
+  server.SetAttribute("SenderTraceFilename", StringValue("st_highway_cif.st"));
+
+  server.SetAttribute("SenderDumpFilename", StringValue("sd_" + std::to_string(request_id) + ".txt"));
+  // server.SetAttribute("PacketPayload", UintegerValue(512));
+
   ApplicationContainer apps = server.Install(sender_node);
-  apps.Start(Seconds(5));
+  apps.Start(Seconds(0));
 
   EvalvidClientHelper client(ipAddr, m_port);
-  // client.SetAttribute("ReceiverDumpFilename", StringValue("evalvid_rd_" +
-  // std::to_string(request_id)));
-  client.SetAttribute("ReceiverDumpFilename",
-                      StringValue("rd_" + std::to_string(request_id) + ".txt"));
+  client.SetAttribute("ReceiverDumpFilename", StringValue("rd_" + std::to_string(request_id) + ".txt"));
   apps = client.Install(receiver_node);
-  apps.Start(Seconds(5));
+  apps.Start(Seconds(0));
 
   request_id++;
   m_port++;
@@ -1068,11 +1044,11 @@ std::string GetTopLevelSourceDir(void) {
   NS_FATAL_ERROR("Could not find source directory from self=" << self);
 }
 
+
 int main(int argc, char *argv[]) {
   // LogComponentEnable("Config", LOG_LEVEL_ALL);
-  LogComponentEnable("EvalvidClient", LOG_INFO);
-  LogComponentEnable("EvalvidServer", LOG_INFO);
-  LogComponentEnable("RemSpectrumPhy", LOG_LEVEL_ALL);
+  LogComponentEnable("EvalvidClient", LOG_LEVEL_ALL);
+  LogComponentEnable("EvalvidServer", LOG_LEVEL_ALL);
 
   CommandLine cmd;
 
@@ -1163,18 +1139,11 @@ int main(int argc, char *argv[]) {
     // p2ph.EnablePcapAll("lena-simple-epc-backhaul");
   }
 
-  // set default gateway for users
-  for (uint32_t u = 0; u < ueNodes.GetN(); ++u) {
-    Ptr<Node> ueNode = ueNodes.Get(u);
-    Ptr<Ipv4StaticRouting> ueStaticRouting =
-        ipv4RoutingHelper.GetStaticRouting(ueNode->GetObject<Ipv4>());
-    ueStaticRouting->SetDefaultRoute(epcHelper->GetUeDefaultGatewayAddress(),
-                                     1);
-  }
-
-  // set up backhaul channel
+    // set up backhaul channel
   // links between servers for migrations!!
   Ipv4AddressHelper edgeIpv4AddressHelper;
+  edgeIpv4AddressHelper.SetBase("22.0.0.0", "255.255.255.0");
+
   CsmaHelper csma;
   csma.SetChannelAttribute("DataRate", StringValue("100Gbps"));
   csma.SetChannelAttribute("Delay", StringValue("0ms"));
@@ -1185,6 +1154,7 @@ int main(int argc, char *argv[]) {
     serverNodesAddresses[i][1] = serversIpIfaces.GetAddress(i);
   }
 
+
   // set up mobility
   MobilityHelper mobility;
   mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
@@ -1193,7 +1163,7 @@ int main(int argc, char *argv[]) {
   BuildingsHelper::Install(pgw);
 
   /*user device mobility according to ns2 trace*/
-  Ns2MobilityHelper ped_mobil = Ns2MobilityHelper("mobil/koln.tcl");
+  Ns2MobilityHelper ped_mobil = Ns2MobilityHelper(mobil_trace);
   ped_mobil.Install(ueNodes.Begin(), ueNodes.End());
 
   MobilityHelper mobilityEnb;
@@ -1213,9 +1183,6 @@ int main(int argc, char *argv[]) {
   enbDevs = lteHelper->InstallEnbDevice(NodeContainer(BSNodes, UAVNodes));
   ueDevs = lteHelper->InstallUeDevice(ueNodes);
 
-  Ipv4InterfaceContainer ueIpIface;
-  ueIpIface = epcHelper->AssignUeIpv4Address(NetDeviceContainer(ueDevs));
-
   // set up different transmission powers for drones
   for (uint32_t i = 0; (unsigned)i < enbDevs.GetN(); i++) {
     auto enb0Phy = enbDevs.Get(i)->GetObject<LteEnbNetDevice>()->GetPhy();
@@ -1226,14 +1193,28 @@ int main(int argc, char *argv[]) {
     }
   }
 
+    // set default gateway for users
+  // Install the IP stack on the UEs
+  Ipv4InterfaceContainer ueIpIface;
+  ueIpIface = epcHelper->AssignUeIpv4Address(NetDeviceContainer(ueDevs));
+  // Assign IP address to UEs, and install applications
+  for (uint32_t u = 0; u < ueNodes.GetN(); ++u) {
+    Ptr<Node> ueNode = ueNodes.Get(u);
+    // Set the default gateway for the UE
+    Ptr<Ipv4StaticRouting> ueStaticRouting = ipv4RoutingHelper.GetStaticRouting(ueNode->GetObject<Ipv4>());
+    ueStaticRouting->SetDefaultRoute(epcHelper->GetUeDefaultGatewayAddress(), 1);
+  }
+
+
   // attach to cells with the highest sinr
   lteHelper->Attach(ueDevs);
+  lteHelper->AddX2Interface(BSNodes);
 
-  Simulator::Schedule(Seconds(2), &requestApplication, ueNodes.Get(0),
-                      serverNodes.Get(0), serverNodesAddresses[0][0]);
+  Simulator::Schedule(Seconds(2), &request_video, serverNodes.Get(0), ueNodes.Get(1));
+  Simulator::Schedule(Seconds(2), &request_video, ueNodes.Get(0), serverNodes.Get(1));
 
   AnimationInterface animator("lte_animation.xml");
-  animator.SetMobilityPollInterval(Seconds(1));
+  // animator.SetMobilityPollInterval(Seconds(1));
   for (uint32_t i = 0; i < UAVNodes.GetN(); ++i) {
     animator.UpdateNodeDescription(UAVNodes.Get(i), "UAV " + std::to_string(i));
     animator.UpdateNodeColor(UAVNodes.Get(i), 250, 200, 45);
@@ -1259,8 +1240,10 @@ int main(int argc, char *argv[]) {
   Ptr<Ipv4FlowClassifier> classifier =
       DynamicCast<Ipv4FlowClassifier>(flowmon.GetClassifier());
 
-  Simulator::Schedule(Seconds(SimTime - 0.01), ThroughputMonitor, &flowmon,
+  Simulator::Schedule(Seconds(SimTime - 0.01), &ThroughputMonitor, &flowmon,
                       monitor);
+
+  
 
   /* handover reporting callbacks*/
   Config::Connect("/NodeList/*/DeviceList/*/LteEnbRrc/HandoverStart",
@@ -1271,6 +1254,7 @@ int main(int argc, char *argv[]) {
                   MakeCallback(&NotifyHandoverStartUe));
   Config::Connect("/NodeList/*/DeviceList/*/LteEnbRrc/HandoverEndOk",
                   MakeCallback(&NotifyHandoverEndOkEnb));
+}
   Config::Connect("/NodeList/*/DeviceList/*/LteUeRrc/HandoverEndOk",
                   MakeCallback(&NotifyHandoverEndOkUe));
 

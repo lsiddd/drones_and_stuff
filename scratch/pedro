@@ -1,0 +1,2801 @@
+/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
+/*	Copyright (c) 2019
+
+* This program is free software; you can redistribute it and/or modify
+* it under the terms of the GNU General Public License version 2 as
+* published by the Free Software Foundation;
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with this program; if not, write to the Free Software
+* Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+* Author: Pedro Luiz Magalhães Cumino <cumino@ufpa.br>
+
+*/
+
+
+// --------------------- LIBRARIES ---------------------
+#include <algorithm>
+#include <array>
+#include <boost/algorithm/string/classification.hpp> // Include boost::for is_any_of
+#include <boost/algorithm/string/split.hpp> // Include for boost::split
+#include <boost/bind.hpp>
+#include <cstdlib>
+#include <fstream>
+#include <iostream>     // std::cout
+#include <limits>
+#include <list>
+#include <map>
+#include <math.h>
+#include <memory>
+#include <random>
+#include <sstream>      // std::stringstream
+#include <stdlib.h>     /* abs */
+#include <string>
+#include <typeinfo>
+#include <unordered_map>
+#include <utility> // std::pair
+#include <vector>
+
+#include <ns3/boolean.h>
+#include <ns3/buildings-module.h>
+#include <ns3/enum.h>
+#include <ns3/lte-ue-net-device.h>
+#include <ns3/lte-ue-phy.h>
+#include <ns3/lte-ue-rrc.h>
+
+#include "ns3/applications-module.h"
+#include "ns3/energy-module.h"
+#include "ns3/basic-energy-source.h" // ENERGY
+#include "ns3/basic-energy-source-helper.h" // ENERGY
+#include "ns3/energy-source-container.h"
+#include "ns3/device-energy-model-container.h"
+#include "ns3/li-ion-energy-source.h"
+#include "ns3/li-ion-energy-source-helper.h"
+#include "ns3/simple-device-energy-model.h"
+
+#include "ns3/config-store.h"
+#include "ns3/core-module.h"
+#include "ns3/csma-helper.h"
+#include "ns3/double.h"
+#include "ns3/epc-helper.h"
+#include "ns3/evalvid-client-server-helper.h"
+#include "ns3/evalvid-client.h"
+#include "ns3/evalvid-server.h"
+#include "ns3/flow-monitor-module.h"
+#include "ns3/gnuplot.h" //gnuplot
+#include "ns3/internet-apps-module.h"
+#include "ns3/internet-module.h"
+#include "ns3/ipv4-global-routing-helper.h"
+#include "ns3/log.h"
+#include "ns3/lte-helper.h"
+#include "ns3/lte-module.h"
+#include "ns3/mobility-module.h"
+#include "ns3/netanim-module.h"
+#include "ns3/network-module.h"
+#include "ns3/on-off-helper.h"
+#include "ns3/onoff-application.h"
+#include "ns3/point-to-point-helper.h"
+
+using namespace ns3;
+
+std::default_random_engine GENERATOR;
+
+// #define print(x) std::cout << x << std::endl
+#define print(x) NS_LOG_UNCOND("\u001b[3m\u001b[1m" << x << "\u001b[0m")
+
+
+std::string SIM_NAME = "lte-qos-energy-ground-eNB";
+std::string NS3_DIR = "";
+
+// ==== GLOBAL VARIABLES ====
+// SIMULATION
+enum PROPOSAL_ALGORITHM
+{
+	FROGLET_ALGORITHM,
+	GA_ALGORITHM,
+	GA_ENERGY_1_ALGORITHM,
+	GA_ENERGY_2_ALGORITHM,
+	GA_ENERGY_3_ALGORITHM,
+	GA_ENERGY_4_ALGORITHM,
+	GA_ENERGY_5_ALGORITHM,
+	PSO_ALGORITHM
+};
+
+struct PROPOSAL_CONFIG
+{
+	PROPOSAL_ALGORITHM	id;
+	std::string					name;
+	std::string					py_dir;
+} P_CONFIG;
+
+PROPOSAL_ALGORITHM PROPOSAL;
+
+double SIMTIME	= 10; // 120 secs ||100 secs || 300 secs
+int SIMRUNS			= 0;
+
+std::string ROOTPATH					= "./";//(std::__fs::filesystem::current_path());
+std::string TRACEFILE					= "./src/mobility/my_mobility/RandomWaypoint_UserEquipment-2000-nodes_5000x5000-time1800.tcl";
+// std::string TRACEFILE					= "./src/mobility/my_mobility/DisasterArea_UserEquipment-150-nodes_3000x3000-time180.tcl";
+std::string SIM_OUTPUT_FOLDER	= ROOTPATH+"/sim-outputs/";
+
+vector< Vector3D > RECHARGE_STATION_POSITION_LIST;
+// ==========================
+
+// ---------- RESULTS ----------
+std::string RESULT_PREFIX;
+struct QoS_DATA_TYPE{
+	Vector3D nodeLocation;
+	string proposalName	= "";
+	string nodeId		= "";
+	int N_uavs			= 0;
+	int N_ues			= 0;
+	double currentTime	= 0.0;
+	double delaySum		= 0.0;
+	double jitterSum	= 0.0;
+	double lastDelay	= 0.0;
+	double txBytes		= 0.0;
+	double rxBytes		= 0.0;
+	double txPackets	= 0.0;
+	double rxPackets	= 0.0;
+	double PDR			= 0.0;
+	double PLR			= 0.0;
+	double Throughput	= 0.0;
+} LAST_QoS_STAUTS;
+
+std::map<std::string, QoS_DATA_TYPE> LAST_NODE_QOS_MAP;
+std::vector<QoS_DATA_TYPE> ALL_QOS_DATA_VECTOR;
+double LAST_TOTAL_RX;
+double LAST_QOS_TIME = 0;
+
+// ---------- NODES ----------
+std::map<std::string, std::vector<int> > NODETYPE_MAP_LIST;
+std::map<int, vector<uint16_t> > UABS_CONNECTED_UEIMSI; // save a vector with all connected UEs(imsi). The index is the UABS nodeId
+std::map<int, int > UE_NODEID_IMSI;
+std::map<int, double > UE_IMSI_SINR;
+std::map<int, int > UE_IMSI_UABS_NODEID;
+			// typedef std::map<int, std::pair<float, char> > Maptype;
+			// Maptype m;
+			// m[123] = std::make_pair(0.5f, 'c');
+			// std::pair<float, char> val = m[245];
+			// std::cout << "float: " << val.first << ", char: " << val.second << std::endl;
+
+
+uint32_t NUMBER_UAVS	 	= -1;
+uint32_t NUMBER_UES			= 5; //Number of user to test: 245, 392, 490 (The number of users and their traffic model follow the parameters recommended by the 3GPP)
+uint32_t NUMBER_ENBBS 		= 2;
+uint32_t NUMBER_EDGESERVERS	= NUMBER_ENBBS;
+
+double DRONE_ALTITUDE		= 10;
+double DRONE_MAX_SPEED		= 10;	// m/s
+double DRONE_MIN_SPEED		= 5;	// m/s
+double MAX_LONGRANGE_REF	= 1000;
+double MAX_SHORTRANGE_REF	= 1000;
+
+bool VERBOSE = false;
+
+/* connection management structures */
+std::vector<std::vector<int>> CONNECTIONS;
+std::vector<std::vector<int>> NEIGHBORS;
+std::vector<std::vector<int>> HANDOVER_PREDICTIONS;
+std::vector<std::vector<int>> EDGE_UE;
+std::vector<std::vector<int>> EDGE_MIGRATION_CHART;
+std::vector<std::vector<Ipv4Address>> SERVER_NODES_ADDRESSES;
+
+std::map<int, std::map<int, int>> RNTI_CELLS;
+
+// mapping nodelist ids to actual imsis
+std::map<int, int> PATH_IMSI;
+
+
+
+
+// -------------- HELPERS --------------
+Ptr<LteHelper> LTE_HELPER = CreateObject<LteHelper>();
+Ipv4StaticRoutingHelper IPV4ROUTING_HELPER;
+PointToPointHelper P2P_HELPER;
+FlowMonitorHelper FLOWMON_HELPER;
+
+// UavMobilityEnergyModelHelper UAV_MOBILITY_ENERGY_HELPER; // ENERGY
+
+// ---------- NETWORK ----------
+NodeContainer UAV_NODECONTAINER;		// = NodeContainer ("drone");
+NodeContainer UE_NODECONTAINER;			// = NodeContainer ("user");
+NodeContainer BS_NODECONTAINER;			// = NodeContainer ("bs");
+NodeContainer SERVER_NODECONTAINER;		// = NodeContainer ("server");
+
+NetDeviceContainer ENB_DEVS;
+NetDeviceContainer UE_DEVS;
+
+NetDeviceContainer BSENB_NETDEV;
+NetDeviceContainer UAB_NETDEV;
+NetDeviceContainer UE_NETDEV;
+NetDeviceContainer INTERNET_NETDEV;
+
+ApplicationContainer UL_CLIENTAPPS;
+ApplicationContainer UL_SERVERAPPS;
+ApplicationContainer DL_CLIENTAPPS;
+ApplicationContainer DL_SERVERAPPS;
+
+Ipv4InterfaceContainer ALL_IPV4_CONTAINERS;
+
+uint32_t ByteCounter = 0;
+uint32_t oldByteCounter = 0;
+const double UDPAPPSTARTTIME = 1;
+
+
+
+// /*MIGRATION VARIABLES*/
+// enable logs
+// perform migrations
+bool DOMIGRATE = true;
+// uint32_t numEdgeServers;
+Time MANAGERINTERVAL = Seconds(1);
+std::string MIGRATION_ALGORITHM = "mosca";
+
+//-----VARIABLES THAT DEPEND ON THE NUMBER OF SERVERS----
+// The resources variable tells which server has one or
+// more of the recources needed in this simulation
+// the resources are:
+
+// vector<uint16_t> RESOURCES{{5}};
+vector<uint16_t> RESOURCES = vector<uint16_t>(5,5);
+int INITIAL_EDGE_RESOURCES = 5;
+int INITIAL_FOG_RESOURCES = 10;
+
+
+
+
+
+// ===== LTE
+// Channel Bandwidth	 VS		Resource Blocks
+// 1.4	MHz		------------>		6	RBs
+// 3	MHz		------------>		15	RBs
+// 5	MHz		------------>		25	RBs
+// 10	MHz		------------>		50	RBs
+// 15	MHz		------------>		75	RBs
+// 20	MHz		------------>		100	RBs
+
+uint8_t BANDWIDTH_RESBLOCK_BSENB = 100;
+uint8_t BANDWIDTH_RESBLOCK_UABS = 100;
+// int UABS_TXPOWER = 12;// 0 // 23;   Set UABS Power
+double TXPOWER_UABS		= 23; //Set enodeB Power dBm 46dBm --> 20MHz  |  43dBm --> 5MHz
+double TXPOWER_UE		= 12; // 12
+double TXPOWER_BSENB	= 12; // 46
+
+// std::stringstream UE_UABS_SS; // To UEs cell id in every second of the simulation
+// std::stringstream QTY_UABS_SS; //To get the quantity of UABS used per RUNS
+// std::ofstream UE_UABS; // To UEs cell id in every second of the simulation
+// std::ofstream QTY_UABS; //To get the quantity of UABS used per RUNS
+
+
+
+// ==== Energy Variables ====
+// BATTERY BRAND and MODEL: https://hobbyking.com/en_us/turnigy-graphene-professional-8000mah-6s-15c-lipo-pack-w-xt90.html?___store=en_us
+// 6393600 J
+double INITIAL_ENERGY = 6.3936*1e6; // Joules //2052000; //10000; //https://www.genstattu.com/ta-10c-25000-6s1p-hv-xt90.html
+// double INITIAL_ENERGY = 593.6; // Joules //2052000; //10000; //https://www.genstattu.com/ta-10c-25000-6s1p-hv-xt90.html
+//356400; //https://www.nsnam.org/wiki/Li-Ion_model_fitting
+double INITIAL_BATT_VOLTAGE = 22.2;
+// https://www.genstattu.com/ta-10c-25000-6s1p-hv-xt90.html
+DeviceEnergyModelContainer UAV_ENERGY_MODE;
+std::vector<int> ENERGY_DEPLETED_DRONES;
+// ==========================
+
+
+
+
+// void ShowLog(std::stringstream log_msg){
+// 	if (VERBOSE){
+		// NS_LOG_UNCOND(log_msg.str().c_str());
+// 	}
+// }
+
+
+
+
+
+int get_imsi(int cellId, int rnti){
+	return RNTI_CELLS[cellId][rnti] == 0 ? -1 : RNTI_CELLS[cellId][rnti];
+}
+
+int populate_path_imsi(std::string path, int imsi){
+	int nodeid;
+
+	std::vector<std::string> split_path;
+	boost::split(split_path, path, boost::is_any_of("/"));
+	nodeid = stoi(split_path[2]);
+
+	if (imsi != -1)
+		PATH_IMSI[nodeid] = imsi;
+
+	return nodeid;
+}
+
+
+
+
+
+
+
+// -------------- CORE GLOBAL VARIABLES --------------
+//!< Global variable used to configure the bandwidth. It is accessible as "--bandwidth" from CommandLine.
+static ns3::GlobalValue g_bandwidth ("bandwidth",
+	"The system bandwidth",
+	ns3::DoubleValue(200e6),
+	ns3::MakeDoubleChecker<double>()); 
+//!< Global variable used to configure the UDP packet interval. It is accessible as "--udpInterval" from CommandLine.
+static ns3::GlobalValue g_udpInterval ("udpInterval",
+	"Udp interval for UDP application packet arrival, in seconds",
+	// ns3::DoubleValue (0.1),ns3::MakeDoubleChecker<double>());
+	ns3::DoubleValue (0.5),ns3::MakeDoubleChecker<double>()); // PEDRO
+//!< Global variable used to configure the UDP packet size. It is accessible as "--udpPacketSize" from CommandLine.
+static ns3::GlobalValue g_udpPacketSize ("udpPacketSize",
+	"Udp packet size in bytes",
+	ns3::UintegerValue (1024),ns3::MakeUintegerChecker<uint32_t>());
+	// ns3::UintegerValue (100000000),ns3::MakeUintegerChecker<uint32_t>()); // PEDRO 100MB
+	// ns3::UintegerValue (200000000),ns3::MakeUintegerChecker<uint32_t>()); // PEDRO 200MB
+//!< Global variable used to configure whether the traffic is the full buffer traffic. It is accessible as "--udpFullBuffer" from CommandLine.
+static ns3::GlobalValue g_udpRate ("udpFullBuffer",
+	"Whether to set the full buffer traffic; if this parameter is set then the udpInterval parameter will be neglected.",
+	ns3::BooleanValue (false),
+	ns3::MakeBooleanChecker()); 
+//!< Global variable used to configure simulation output tag that helps distinguishing different simulation campaigns. It is accessible as "--simTag" from CommandLine.
+static ns3::GlobalValue g_simTag ("simTag",
+	"tag to be appended to output fileNames to distinguish simulation campaigns",
+	ns3::StringValue (SIM_NAME),
+	ns3::MakeStringChecker ()); 
+//!< Global variable used to configure simulation output folder. It is accessible as "--outputDir" from CommandLine.
+static ns3::GlobalValue g_outputDir ("outputDir",
+	"directory where to store simulation results",
+	ns3::StringValue (SIM_OUTPUT_FOLDER),
+	ns3::MakeStringChecker ());
+
+static ns3::GlobalValue g_UlSinrFileName ("UlSinrFileName",
+	"Name of the file where the UE SINR statistics will be saved.",
+	ns3::StringValue (SIM_OUTPUT_FOLDER+"UlSinrStats.txt"),
+	ns3::MakeStringChecker ());
+
+static ns3::GlobalValue g_UlInterferenceFileName ("UlInterferenceFileName",
+	"Name of the file where the interference statistics will be saved.",
+	ns3::StringValue (SIM_OUTPUT_FOLDER+"UlInterferenceStats.txt"),
+	ns3::MakeStringChecker ());
+
+static ns3::GlobalValue g_DlRsrpSinrFileName ("DlRsrpSinrFileName",
+	"Name of the file where the RSRP/SINR statistics will be saved.",
+	ns3::StringValue (SIM_OUTPUT_FOLDER+"DlRsrpSinrStats.txt"),
+	ns3::MakeStringChecker ());
+
+static ns3::GlobalValue g_DlRlcOutputFileName ("DlRlcOutputFileName",
+	"Name of the file where the downlink results will be saved.",
+	ns3::StringValue (SIM_OUTPUT_FOLDER+"DlRlcStats.txt"),
+	ns3::MakeStringChecker ());
+
+static ns3::GlobalValue g_UlRlcOutputFileName ("UlRlcOutputFileName",
+	"Name of the file where the uplink results will be saved.",
+	ns3::StringValue (SIM_OUTPUT_FOLDER+"UlRlcStats.txt"),
+	ns3::MakeStringChecker ());
+
+static ns3::GlobalValue g_DlPdcpOutputFileName ("DlPdcpOutputFileName",
+	"Name of the file where the downlink results will be saved.",
+	ns3::StringValue (SIM_OUTPUT_FOLDER+"DlPdcpStats.txt"),
+	ns3::MakeStringChecker ());
+
+static ns3::GlobalValue g_UlPdcpOutputFileName ("UlPdcpOutputFileName",
+	"Name of the file where the uplink results will be saved.",
+	ns3::StringValue (SIM_OUTPUT_FOLDER+"UlPdcpStats.txt"),
+	ns3::MakeStringChecker ());
+
+static ns3::GlobalValue g_DlRxOutputFileName ("DlRxOutputFileName",
+	"Name of the file where the downlink results will be saved.",
+	ns3::StringValue (SIM_OUTPUT_FOLDER+"DlRxPhyStats.txt"),
+	ns3::MakeStringChecker ());
+
+static ns3::GlobalValue g_UlRxOutputFileName ("UlRxOutputFileName",
+	"Name of the file where the uplink results will be saved.",
+	ns3::StringValue (SIM_OUTPUT_FOLDER+"UlRxPhyStats.txt"),
+	ns3::MakeStringChecker ());
+
+static ns3::GlobalValue g_DlOutputFileName ("DlOutputFileName",
+	"Name of the file where the downlink results will be saved.",
+	ns3::StringValue (SIM_OUTPUT_FOLDER+"DlMacStats.txt"),
+	ns3::MakeStringChecker ());
+
+static ns3::GlobalValue g_UlOutputFileName ("UlOutputFileName",
+	"Name of the file where the uplink results will be saved.",
+	ns3::StringValue (SIM_OUTPUT_FOLDER+"UlMacStats.txt"),
+	ns3::MakeStringChecker ());
+
+static ns3::GlobalValue g_DlTxOutputFileName ("DlTxOutputFileName",
+	"Name of the file where the downlink results will be saved.",
+	ns3::StringValue (SIM_OUTPUT_FOLDER+"DlTxPhyStats.txt"),
+	ns3::MakeStringChecker ());
+
+static ns3::GlobalValue g_UlTxOutputFileName ("UlTxOutputFileName",
+	"Name of the file where the uplink results will be saved.",
+	ns3::StringValue (SIM_OUTPUT_FOLDER+"UlTxPhyStats.txt"),
+	ns3::MakeStringChecker ());
+
+
+
+// ------------------------------------------------------------
+
+std::string exec(const char* cmd)// Function to execute Python in console
+{
+	std::array<char, 128> buffer;
+	std::string result;
+	std::shared_ptr<FILE> pipe(popen(cmd, "r"), pclose);
+	if (!pipe)
+		throw std::runtime_error("popen() failed!");
+	while (!feof(pipe.get())) 
+	{
+		if (fgets(buffer.data(), 128, pipe.get()) != nullptr)
+			result += buffer.data();
+	}
+	return result;
+}
+
+std::vector< Vector > vector_from_string(std::string output){
+	Vector a = Vector(0,0,0);
+	std::vector< Vector > res;
+	std::vector<std::string> splited_coords;
+	std::vector<std::string> single_coord;
+
+	if (output.length() < 1)
+		return res;
+
+	boost::split(splited_coords, output, boost::is_any_of(";"), boost::token_compress_on);
+	for(auto i: splited_coords){
+		boost::split(single_coord, i, boost::is_any_of(","), boost::token_compress_on);
+		// NS_LOG_UNCOND("vector_from_string: [" << single_coord << "]");
+		a.x = std::max(0.0,std::stod(single_coord[0]));
+		a.y = std::max(0.0,std::stod(single_coord[1]));
+		a.z = abs(max(1.5,std::stod(single_coord[2])));
+		res.push_back(a);
+	}
+
+	return res;
+}
+
+std::string get_coord_str(Vector location){
+	std::string res = "(";
+	res += std::to_string(int(location.x)) + ", ";
+	res += std::to_string(int(location.y)) + ", ";
+	res += std::to_string(int(location.z)) + ") ";
+	return res;
+}
+
+void udp_traffic_single(Ptr<Node> remoteHost, Ipv4InterfaceContainer internetIpIfaces, uint32_t udpPacketSize, double udpInterval, bool udpFullBuffer, double bandwidth){
+	uint16_t dlPort = 1234;
+	UdpServerHelper dlPacketSinkHelper(dlPort);
+	DL_SERVERAPPS.Add (dlPacketSinkHelper.Install (UE_NODECONTAINER.Get(0)));
+	for (uint32_t j = 0; j < UE_NODECONTAINER.GetN(); ++j){
+		UdpClientHelper dlClient(internetIpIfaces.GetAddress(j), dlPort);
+		dlClient.SetAttribute ("PacketSize", UintegerValue(udpPacketSize));
+		dlClient.SetAttribute ("MaxPackets", UintegerValue(0xFFFFFFFF));
+		//dlClient.SetAttribute ("MaxPackets", UintegerValue(1000));
+		dlClient.SetAttribute ("Interval", TimeValue (Seconds(udpInterval)));
+
+		if (udpFullBuffer){
+			double bitRate = 75000000; // 75 Mb/s will saturate the system of 20 MHz
+			if (bandwidth > 20e6) bitRate *= bandwidth / 20e6;
+			udpInterval = static_cast<double> (udpPacketSize * 8) / bitRate ;
+		}
+
+		DL_CLIENTAPPS.Add (dlClient.Install (remoteHost));
+
+		Ptr<EpcTft> tft = Create<EpcTft> ();
+		EpcTft::PacketFilter dlpf;
+		dlpf.localPortStart = dlPort;
+		dlpf.localPortEnd = dlPort;
+		dlPort++;
+		tft->Add (dlpf);
+
+		enum EpsBearer::Qci q;
+		q = EpsBearer::GBR_CONV_VOICE;
+		EpsBearer bearer (q);
+		LTE_HELPER->ActivateDedicatedEpsBearer(UE_NETDEV.Get(j), bearer, tft);
+		// MMWAVEHELPER->ActivateDedicatedEpsBearer(UENETDEV.Get(j), bearer, tft);
+	}
+	
+	// start server and client apps
+	DL_SERVERAPPS.Start(Seconds(UDPAPPSTARTTIME));
+	DL_CLIENTAPPS.Start(Seconds(UDPAPPSTARTTIME));
+	DL_SERVERAPPS.Stop(Seconds(SIMTIME));
+	DL_CLIENTAPPS.Stop(Seconds(SIMTIME));
+}
+
+// void stop_node(Ptr<ConstantVelocityMobilityModel> mobility, Vector destinationposition){
+// 	mobility->SetPosition(destinationposition);
+// 	// mobility->SetVelocity(Vector(0,0,0));
+// }
+void stop_node(Ptr<Node> node){
+	Ptr<ConstantVelocityMobilityModel> mobility = node->GetObject<ConstantVelocityMobilityModel>();
+	Vector currentPosition = mobility->GetPosition();
+	mobility->SetPosition(currentPosition);
+	mobility->SetVelocity(Vector(0,0,0));
+	// NS_LOG_UNCOND("\t(" << Simulator::Now().GetSeconds() << ")\u001b[3m\u001b[35m[" << node->GetId() << "]" << "Arrived to the destination " << get_coord_str(currentPosition) << "\u001b[0m");
+}
+
+void move_node_constVec(Ptr<Node> node, Vector destinationposition, double speed){
+	// NS_LOG_UNCOND("["<< P_CONFIG.name <<"]\u001b[34m[move_node_constVec] " << Simulator::Now().GetSeconds() << "s " << "\u001b[0m");
+
+	Ptr<ConstantVelocityMobilityModel> mobility = node->GetObject<ConstantVelocityMobilityModel>();
+	Vector currentPosition = mobility->GetPosition();
+	double distance = CalculateDistance(destinationposition, currentPosition);
+
+	// stop_node(node); // Stop at the current position before go to the next destination
+
+	if (mobility->GetVelocity().x > 0 &&
+		mobility->GetVelocity().y > 0 &&
+		mobility->GetVelocity().z > 0){
+		Simulator::Schedule(Seconds(0.0), &stop_node, node); // Stop at the current position before go to the next destination
+	}
+
+	// mover apenas se o nó estiver parado e a distancia até o destino for maior que 1
+	// std::cout << "s_x: " << mobility->GetVelocity().x << " ";
+	// std::cout << "s_y: " << mobility->GetVelocity().y << " ";
+	// std::cout << "s_z: " << mobility->GetVelocity().z << "\n";
+
+
+	std::stringstream log_msg;
+	if (distance > 1){
+
+		Vector speedVector = destinationposition - currentPosition;
+		speedVector.x = speed*(speedVector.x/distance);
+		speedVector.y = speed*(speedVector.y/distance);
+		speedVector.z = speed*(speedVector.z/distance);
+
+		mobility->SetVelocity(speedVector);
+		
+		double currentTime = Simulator::Now().GetSeconds();
+		double arrivalTime = (distance/speed) + currentTime;
+		
+		// NS_LOG_UNCOND("\t\u001b[1m\u001b[35m[" << node->GetId() << "]Current VELOCITY: " << get_coord_str(mobility->GetVelocity()) << "\tEST.ARV. TIME: " << arrivalTime << "s" << "\u001b[0m move_node_constVec");
+		// NS_LOG_UNCOND("\t\u001b[1m\u001b[35m[" << node->GetId() << "]Current POS: " << get_coord_str(mobility->GetPosition()) << "\u001b[0m move_node_constVec");
+		// Simulator::Schedule(Seconds((distance/speed)), &stop_node, mobility, destinationposition);
+		Simulator::Schedule(Seconds((distance/speed)), &stop_node, node); // the node will stop moving to the direction
+
+		// // Vector currentSpeed = mobility->GetVelocity();
+		unsigned int nodeId = node->GetId();
+		log_msg << "MOVING NODE[" << nodeId << "]"
+			<< " FROM: "			<< get_coord_str(currentPosition)			<< ""
+			<< " TO: "				<< get_coord_str(destinationposition)		<< ""
+			<< " AT SPEED: "		<< get_coord_str(mobility->GetVelocity())	<< "m/s"
+			<< " DISTANCE: "		<< distance									<< "m"
+			<< " EST.ARV. TIME: "	<< arrivalTime								<< "s"
+			<< "";
+	}
+	// else{
+	// 	log_msg << " FROM: "			<< get_coord_str(currentPosition)			<< ""
+	// 			<< " TO: "				<< get_coord_str(destinationposition)		<< ""
+	// 			<< "\tdistance " << distance << "m is too short, not moving";
+	// }
+	// NS_LOG_UNCOND("["<< P_CONFIG.name <<"]\u001b[34m[move_node_constVec] "
+	// 	<< Simulator::Now().GetSeconds() << "s " << "\u001b[0m" << log_msg.str().c_str());
+	// NS_LOG_UNCOND("["<< P_CONFIG.name <<"]\u001b[34m[move_node_constVec] " << Simulator::Now().GetSeconds() << "s " << "\u001b[0m");
+}
+
+Ptr<ListPositionAllocator> loadInitialFroglet(NodeContainer targetNodes, double altitude, uint32_t *numberCoverNodes){
+	// Loading user initial locations
+	std::string targetPosStr = "";
+	for (uint32_t i = 0; i < targetNodes.GetN(); ++i){
+		Vector pos = targetNodes.Get(i)->GetObject<MobilityModel>()->GetPosition();
+		targetPosStr += std::to_string(pos.x)+",";
+		targetPosStr += std::to_string(pos.y)+",";
+		targetPosStr += std::to_string(pos.z)+";";
+	}
+	// std::cout << "[loadInitialFroglet]: " << std::endl;
+	// std::cout << "\ttarget: " << targetPosStr << std::endl; 
+	// std::cout << "CURRENT NUMBER OF UAVs: " << NODETYPE_MAP_LIST["drone"].size() << std::endl;
+
+	// Loading cover positions from external algorithm
+	std::stringstream cmd;
+	cmd << "python3 ~/git/CoverageMaximizationProblem/main.py"
+		<< " --pos \"" << targetPosStr << "\""
+		<< " --altitude " << DRONE_ALTITUDE
+		// << " -d " << 84.88 // # ∆x = 99.33 // # ∆y = 99.66 // # ∆h = 84.88
+		// << " -d " << 60 // # ∆x = 440 // # ∆y = 440 // # ∆h = 169
+		<< " --maxLongRange " << MAX_LONGRANGE_REF
+		<< " --maxShortRange " << MAX_SHORTRANGE_REF
+		<< " --tier " << 1			// tiers
+		// << " -v "				// show topology
+		<< " 2>/dev/null ";
+
+	// std::cout << "\tcalculating first drone position (Froglet) -> running " << cmd.str().c_str() << " \n";
+	// NS_LOG_UNCOND("["<< P_CONFIG.name <<"]\u001b[34m[loadInitialFroglet] " << Simulator::Now().GetSeconds() << "s " << "calculating first drone position (Froglet) -> running " << cmd.str().c_str() << "\u001b[0m");
+	//std::string output = exec(cmd.str().c_str());
+	std::string output = "0.008897066116333008#1695.829397710542,1433.534709652705,10.0;3315.0749253579033,1876.887907020544,10.0;3009.878823770514,3708.1452859870196,10.0;2334.8538974799894,3801.1534074154592,10.0;";
+	// output = "0.00#100,100,20;100,200,20;";
+	// output = "0.00#350,100,20;";
+	// output = "0.00#100,100,1.5;";
+	// output = "0.00#100,100,20;1000,1000,20;";
+
+	std::string elapsed_time = output.substr(0, output.find("#"));
+	output = output.substr(output.find("#") + 1);
+	output.pop_back();
+	std::vector< Vector > newPos_vector = vector_from_string(output);
+	*numberCoverNodes = newPos_vector.size();
+
+	// NS_LOG_UNCOND("\u001b[33mNumber of UAVs: \u001b[1m" << *numberCoverNodes << "\u001b[0m");
+
+	// Loading into simulation format
+	Ptr<ListPositionAllocator> positionAllocator = CreateObject<ListPositionAllocator> ();
+	// std::cout << "\tFroglet:\n";
+	for (int i = 0; i < (int) newPos_vector.size(); ++i){
+		positionAllocator->Add (Vector( newPos_vector[i].x, newPos_vector[i].y, newPos_vector[i].z));
+	}
+	return positionAllocator;
+}
+
+std::string calculate_Froglet(std::string targetPosStr, int maxUAVs){
+	// std::cout << "[calculate_Froglet]: " << std::endl;
+	// std::cout << "\ttarget: " << targetPosStr << std::endl;
+	// std::cout << "\tmaxUAVs: " << maxUAVs << std::endl;
+
+	// Loading cover positions from external algorithm
+	std::stringstream cmd;
+	// cmd << "python3 ~/git/CoverageMaximizationProblem/main.py"
+	cmd << "python3 " << P_CONFIG.py_dir
+		<< " --pos \"" << targetPosStr << "\""
+		<< " --altitude " << DRONE_ALTITUDE
+		// << " -d " << 84.88 // # ∆x = 99.33 // # ∆y = 99.66 // # ∆h = 84.88
+		// << " -d " << 60 // # ∆x = 440 // # ∆y = 440 // # ∆h = 169
+		<< " --maxLongRange " << MAX_LONGRANGE_REF
+		<< " --maxShortRange " << MAX_SHORTRANGE_REF
+		<< " --tier " << 1			// tiers
+		<< " --max " << maxUAVs	// max number of nodes to be used
+		// << " -v "				// show topology
+		<< " 2>/dev/null ";
+	// std::cout << "\tcalculating new drone position (froglet) -> running " << cmd.str().c_str() << " \n";
+	// NS_LOG_UNCOND("\tcalculating new drone position (froglet) -> running " << cmd.str().c_str());
+	//std::string output = exec(cmd.str().c_str());
+	std::string output = "0.008897066116333008#1695.829397710542,1433.534709652705,10.0;3315.0749253579033,1876.887907020544,10.0;3009.878823770514,3708.1452859870196,10.0;2334.8538974799894,3801.1534074154592,10.0;";
+	if(output.length() < 1){
+		output = targetPosStr;
+	}
+
+	return output;
+}
+
+std::string calculate_GA(std::string targetPosStr, int maxUAVs){
+	// std::cout << "[calculate_GA]: " << std::endl;
+	// std::cout << "\ttarget: " << targetPosStr << std::endl;
+	// std::cout << "\tmaxUAVs: " << maxUAVs << std::endl;
+
+	std::string current_running_solution = "";
+	for (uint32_t i = 0; i < UAV_NODECONTAINER.GetN(); ++i){
+		Vector3D pos = UAV_NODECONTAINER.Get(i)->GetObject<MobilityModel>()->GetPosition();
+		current_running_solution += std::to_string(pos.x)+",";
+		current_running_solution += std::to_string(pos.y)+",";
+		current_running_solution += std::to_string(pos.z)+";";
+	}
+
+	// Loading cover positions from external algorithm
+	std::stringstream cmd;
+	// P_CONFIG.py_dir = "~/git/CoverageMaximizationProblem/main.py";
+	cmd << "python3 " << P_CONFIG.py_dir
+		<< " --pos \"" << targetPosStr << "\""
+		<< " --curr_solution \"" << current_running_solution << "\""
+		<< " --altitude " << DRONE_ALTITUDE
+		<< " --maxLongRange " << MAX_LONGRANGE_REF
+		<< " --maxShortRange " << MAX_SHORTRANGE_REF
+		<< " --maxGeneration " << 25 
+		<< " --maxsize " << 35
+		<< " --mutRate " << 0.085
+		<< " --selectBests " << 0.05
+		<< " 2>/dev/null ";
+	// std::cout << "\tcalculating new drone position (ga) -> running: " << cmd.str().c_str() << " \n";
+	//std::string output = exec(cmd.str().c_str());
+	std::string output = "0.008897066116333008#1695.829397710542,1433.534709652705,10.0;3315.0749253579033,1876.887907020544,10.0;3009.878823770514,3708.1452859870196,10.0;2334.8538974799894,3801.1534074154592,10.0;";
+	return output;
+}
+
+std::vector< int > getBestNodesSorted(std::vector< Vector > *coords, NodeContainer nodes){
+	// NS_LOG_UNCOND("\u001b[31m\t[getBestNodesSorted]\u001b[0m");
+	// NS_LOG_UNCOND("\t>>> nodes.GetN() = " << nodes.GetN());
+	// NS_LOG_UNCOND("\t>>> coords->size() = " << coords->size());
+
+	// ============ Init values ============
+	std::vector< Vector > coords_from_alg = *coords;
+	std::vector< Vector > coords_from_nod;
+
+	for (uint32_t i = 0; i < nodes.GetN(); ++i){
+		int currIndex = i;
+		Vector posUAV = nodes.Get(currIndex)->GetObject<MobilityModel>()->GetPosition();
+		coords_from_nod.push_back(posUAV);
+	}
+	// =====================================
+
+
+
+
+
+	// =====================================
+	// Choosing the 3 closest given positions for each drone on the simulation
+	int search_suggestions = 3;
+
+	struct pair{
+		double distance;
+		int index_nod;
+		int index_alg;
+		Vector3D pos_nod;
+		Vector3D pos_alg;
+	};
+
+	std::vector<pair> list_pairs;
+	for (auto it_nod = coords_from_nod.begin(); it_nod != coords_from_nod.end(); ++it_nod){
+		int idx_nod = it_nod - coords_from_nod.begin();
+
+		std::vector< int > list_choosen_indexes_alg;
+		for (int count = 0; count < search_suggestions; ++count){
+
+			double shortest_distance = -1;
+			int best_index_alg = -1;
+			
+			for (auto it_alg = coords_from_alg.begin(); it_alg != coords_from_alg.end(); ++it_alg){// find the closest three points from A to B
+				int idx_alg = it_alg - coords_from_alg.begin();
+				
+				double current_distance = CalculateDistance(*it_nod, *it_alg);
+				if ((current_distance < shortest_distance || shortest_distance < 0) &&
+					!(std::find(list_choosen_indexes_alg.begin(), list_choosen_indexes_alg.end(), idx_alg) != list_choosen_indexes_alg.end()))
+				{
+					shortest_distance = current_distance;
+					best_index_alg = idx_alg;
+				}
+			}
+
+			if (shortest_distance >= 0 && best_index_alg >= 0){
+				list_choosen_indexes_alg.push_back(best_index_alg);
+				pair newPair;
+				newPair.distance = shortest_distance;
+				newPair.index_nod = idx_nod;
+				newPair.index_alg = best_index_alg;
+				list_pairs.push_back(newPair);
+			}
+		}
+	}
+	// =====================================
+
+
+
+
+
+	// =====================================
+	// ===== Sort the nodes according to thefarthest distance from the alg positions =====
+	struct id_sum_distance{
+		int id; // save the id of the node
+		double sum_distance; // save the sumation of the distances to the 3 suggestions to the alg positions
+	};
+	auto compareSumDistance = [](const id_sum_distance &a, const id_sum_distance &b) {
+		return a.sum_distance > b.sum_distance;
+	};
+
+
+
+	double distance_sum = 0.0;
+	if (list_pairs.size() > 0){
+		int current_index_nod = list_pairs.begin()->index_nod;
+		std::vector< id_sum_distance > distace_sum_list_nod; // list of nod and their distance sumation which will be sorted
+
+		for (auto it_pair = list_pairs.begin(); it_pair != list_pairs.end(); it_pair++ ){
+			
+			if (it_pair->index_nod != current_index_nod){
+				// NS_LOG_UNCOND("nod[" << current_index_nod << "]" << " distance_sum: " << distance_sum);
+				// NS_LOG_UNCOND(" ");
+				id_sum_distance newInput;
+				newInput.id = current_index_nod;
+				newInput.sum_distance = distance_sum;
+				distace_sum_list_nod.push_back(newInput);
+
+				distance_sum = 0.0; // reseting the sumation for the next nod
+				current_index_nod = it_pair->index_nod;
+			}
+			// NS_LOG_UNCOND("nod[" << it_pair->index_nod << "]" << " " << "alg[" << it_pair->index_alg << "]" << " = " << coords_from_nod[it_pair->index_nod] << "\t" << coords_from_alg[it_pair->index_alg] << "\t" << it_pair->distance);
+			if (it_pair->index_nod == current_index_nod){
+				distance_sum += it_pair->distance;
+			}
+
+		}
+		id_sum_distance newLastInput;
+		newLastInput.id = current_index_nod;
+		newLastInput.sum_distance = distance_sum;
+		distace_sum_list_nod.push_back(newLastInput);
+
+		// NS_LOG_UNCOND("nod[" << current_index_nod << "]" << " distance_sum: " << distance_sum);
+		// NS_LOG_UNCOND(" ");
+
+
+		std::sort(distace_sum_list_nod.begin(), distace_sum_list_nod.end(), compareSumDistance);
+	
+	// NS_LOG_UNCOND("nod[" << it->id_nod << "]\t closest alg[" << best_index_alg << "]\t" << coords_from_alg[best_index_alg]);
+	// =====================================
+
+
+
+		list_pairs.erase(list_pairs.begin(), list_pairs.end());
+
+		std::vector< int > list_choosen_indexes_alg;
+		for (auto it_sum_list = distace_sum_list_nod.begin(); it_sum_list != distace_sum_list_nod.end(); ++it_sum_list){
+			// NS_LOG_UNCOND("nod[" << it_sum_list->id << "]\t" << coords_from_nod[it_sum_list->id] << "\t sum_distance: " << it_sum_list->sum_distance);
+			// NS_LOG_UNCOND("\tfind the best alg node for nod[" << it_sum_list->id << "]...");
+
+			double shortest_distance = -1;
+			int best_index_alg = -1;
+			
+			for (auto it_alg = coords_from_alg.begin(); it_alg != coords_from_alg.end(); ++it_alg){// find the closest three points from A to B
+				int idx_alg = it_alg - coords_from_alg.begin();
+				
+				double current_distance = CalculateDistance(coords_from_nod[it_sum_list->id], *it_alg);
+
+				if ((current_distance < shortest_distance || shortest_distance < 0) &&
+					!(std::find(list_choosen_indexes_alg.begin(), list_choosen_indexes_alg.end(), idx_alg) != list_choosen_indexes_alg.end()))
+				{
+					shortest_distance = current_distance;
+					best_index_alg = idx_alg;
+				}
+			}
+
+			if (shortest_distance >= 0 && best_index_alg >= 0){
+				list_choosen_indexes_alg.push_back(best_index_alg);
+				pair newPair;
+				newPair.distance = shortest_distance;
+				newPair.index_nod = it_sum_list->id;
+				newPair.index_alg = best_index_alg;
+				list_pairs.push_back(newPair);
+			}
+			else{
+				pair newPair;
+				newPair.distance = shortest_distance;
+				newPair.index_nod = it_sum_list->id;
+				newPair.index_alg = best_index_alg;
+				list_pairs.push_back(newPair);
+			}
+
+		}
+	}
+
+	std::vector< int > sorted_index_nod;
+	std::vector< Vector > sorted_coords_alg;
+	// NS_LOG_UNCOND(" ");
+	// checking new pair list
+	for (auto it_pair = list_pairs.begin(); it_pair != list_pairs.end(); it_pair++ ){
+		if (it_pair->index_nod > -1){
+			sorted_index_nod.push_back(it_pair->index_nod);
+		}
+		if (it_pair->index_alg > -1){
+			sorted_coords_alg.push_back(coords_from_alg[it_pair->index_alg]);
+		}
+		// NS_LOG_UNCOND("pair nod[" << it_pair->index_nod << "] "<< coords_from_nod[it_pair->index_nod] <<" \t alg[" << it_pair->index_alg << "] " << coords_from_alg[it_pair->index_alg] << " \t distance: " << it_pair->distance);
+	}
+	// NS_LOG_UNCOND(" ");
+
+	*coords = sorted_coords_alg;
+
+	return sorted_index_nod;
+}
+
+void updateDronePosition(std::string (*f)(std::string pos, int maxUAVs), double deltaTime){
+	// Vector3D pos = UE_NODECONTAINER->GetObject<MobilityModel>()->GetPosition();
+	int availableDrones = UAV_NODECONTAINER.GetN() - ENERGY_DEPLETED_DRONES.size();
+	NS_LOG_UNCOND("\u001b[33mNumber available UAVs: \u001b[1m" << availableDrones << "\u001b[0m");
+
+	if (ENERGY_DEPLETED_DRONES.size() < UAV_NODECONTAINER.GetN()){
+		std::string targetPosStr = "";
+		for (uint32_t i = 0; i < UE_NODECONTAINER.GetN(); ++i){
+			Vector3D pos = UE_NODECONTAINER.Get(i)->GetObject<MobilityModel>()->GetPosition();
+			targetPosStr += std::to_string(pos.x)+",";
+			targetPosStr += std::to_string(pos.y)+",";
+			targetPosStr += std::to_string(pos.z)+";";
+		}
+		// std::cout << "target: " << targetPosStr << std::endl;
+
+		std::string newPos_str = (*f)(targetPosStr, UAV_NODECONTAINER.GetN()); //std::string newPos_str = (*f)(targetPosStr, NODETYPE_MAP_LIST["drone"].size());
+		if (newPos_str.length() > 1){
+			// NS_LOG_UNCOND("["<< P_CONFIG.name <<"]\u001b[34m[updateDronePosition] " << Simulator::Now().GetSeconds() << "s " << "\u001b[0m" << " newPos_str: " << newPos_str);
+
+			// newPos_str = newPos_str.substr(1, newPos_str.size() - 2);
+			// std::vector< Vector > newPos_vector = vector_from_string(newPos_str);
+
+			std::string elapsed_time = newPos_str.substr(0, newPos_str.find("#"));
+			newPos_str = newPos_str.substr(newPos_str.find("#") + 1);
+			newPos_str.pop_back();
+			std::vector< Vector > newPos_vector = vector_from_string(newPos_str);
+			// NS_LOG_UNCOND("\u001b[31m\telapsed_time: \u001b[3m" << elapsed_time << "\u001b[0m");
+			// exit(1);
+
+			std::vector< int > nodeIDs = getBestNodesSorted(&newPos_vector, UAV_NODECONTAINER);
+
+			for (uint32_t i = 0; i < UAV_NODECONTAINER.GetN(); ++i){
+				if (i >= nodeIDs.size() || i >= newPos_vector.size()){
+					// prevent vector access error
+					break;
+				}			
+				// NS_LOG_UNCOND("\u001b[31m" << "Moving UAV[" << nodeIDs[i] << "] " << UAV_NODECONTAINER.Get(nodeIDs[i])->GetObject<MobilityModel>()->GetPosition() << "\t to newPos_vector[" << i << "] " << newPos_vector[i] << "\u001b[0m");
+				
+				Simulator::Schedule(Seconds (0.0), &move_node_constVec, UAV_NODECONTAINER.Get(nodeIDs[i]), newPos_vector[i], DRONE_MAX_SPEED);
+				// Simulator::Schedule(Seconds (0.0), &move_node_constVec, UAV_NODECONTAINER.Get(nodeIDs[i]), newPos_vector[i], DRONE_MIN_SPEED);
+
+			}
+			// if (Simulator::Now().GetSeconds() > 3){
+			// 	exit(1);
+			// }
+		}
+		else{
+			// NS_LOG_UNCOND("["<< P_CONFIG.name <<"]\u001b[33m" << "[WARNING]: " << Simulator::Now().GetSeconds() << "s " << "No output from the position algorithm. " << "Output of size " << 0 << "\u001b[0m");
+		}
+
+		Simulator::Schedule(Seconds (deltaTime), &updateDronePosition, (*f), deltaTime);
+	}
+	else{
+
+	}
+}
+
+// void CalculateThroughput (){
+// 	Time now = Simulator::Now ();                                         // Return the simulator's virtual time. */
+// 	double cur = (DL_CLIENTAPPS.GetTotalRx () - LAST_TOTAL_RX) * (double) 8 / 1e5;    //  Convert Application RX Packets to MBits. 
+// 	print(now.GetSeconds () << " s: \t" << cur << " Mbit/s");
+// 	LAST_TOTAL_RX = DL_CLIENTAPPS.GetTotalRx ();
+// 	Simulator::Schedule(MilliSeconds (100), &CalculateThroughput);
+// }
+
+void Throughput(bool firstWrite, Time binSize, std::string fileName){
+	std::ofstream output;
+	if (firstWrite == true){
+		output.open (fileName.c_str (), std::ofstream::out);
+		output << "time"
+			<< "," << "Throughput"
+			<< "," << "N_uavs"
+			<< "," << "N_ues"
+			<< "," << "proposal"
+			<< std::endl;
+		firstWrite = false;
+	}
+	else{
+		output.open (fileName.c_str (), std::ofstream::app);
+	}
+	//Instantaneous throughput every 200 ms
+	double  throughput = (ByteCounter - oldByteCounter)*8/binSize.GetSeconds ()/1024/1024;
+	output << Simulator::Now().GetSeconds()
+		<< "," << throughput
+		<< "," << UAV_NODECONTAINER.GetN()
+		<< "," << UE_NODECONTAINER.GetN()
+		<< "," << P_CONFIG.name
+		<< std::endl;
+	oldByteCounter = ByteCounter;
+	Simulator::Schedule(binSize, &Throughput, firstWrite, binSize, fileName);
+}
+
+// ------------------- Functions to notify notification -----------------------//
+void ConnectionEstablishedEnb (std::string context, uint64_t imsi, uint16_t cellid, uint16_t rnti){
+	std::vector<std::string> splited_context;
+	boost::split(splited_context, context, boost::is_any_of ("/"), boost::token_compress_on);
+	int nodeId = std::stoi(splited_context[2]);
+
+	// UABS_CONNECTED_UEIMSI[nodeId].push_back(rnti);
+	// verificar se o UE está em algum outro UAV, caso sim, retirar do mesmo, do contrário salvar no novo UAV
+	 // = mapOfWordCount.begin();
+	for (std::map<int, vector<uint16_t> >::iterator i = UABS_CONNECTED_UEIMSI.begin(); i != UABS_CONNECTED_UEIMSI.end(); ++i){
+		if (i->first != nodeId){
+			// NS_LOG_UNCOND("disconnecting " << imsi << " from [" << i->first << "]");
+			i->second.erase(std::remove(i->second.begin(), i->second.end(), imsi), i->second.end());
+		}
+	}
+	UABS_CONNECTED_UEIMSI[nodeId].push_back(imsi);
+	UE_IMSI_UABS_NODEID[imsi] = nodeId;
+
+
+	// std::cout << "["<< P_CONFIG.name << "]\u001b[32m\u001b[1m";	
+	// std::cout << "[ConnectionEstablishedEnb] "
+	// 	<< Simulator::Now().GetSeconds() << "s \t"
+	// 	<< "node (" << nodeId << ") "
+	// 	<< "eNB CellId " << cellid << ": "
+	// 	<< "successful connection of UE with IMSI " << imsi << " "
+	// 	<< "RNTI " << rnti << " "
+	// 	<< "\u001b[0m"
+	// 	<< std::endl;
+}
+void NotifyConnectionEstablishedUe (std::string context, uint64_t imsi, uint16_t cellid, uint16_t rnti){
+	std::vector<std::string> splited_context;
+	boost::split(splited_context, context, boost::is_any_of ("/"), boost::token_compress_on);
+	int nodeId = std::stoi(splited_context[2]);
+
+	UE_NODEID_IMSI[nodeId] = imsi;
+
+	// NS_LOG_UNCOND
+	std::stringstream log_msg;
+	log_msg << context << "\t"
+	<< "UE IMSI [" << imsi << "]:"
+	<< "\tconnected to CellId [" << cellid << "]"
+	<< " with RNTI " << rnti;
+
+	// NS_LOG_UNCOND("["<< P_CONFIG.name <<"]\u001b[34m[NotifyConnectionEstablishedUe] " << Simulator::Now().GetSeconds() << "s " << "\u001b[0m " << log_msg.str().c_str());
+
+	
+	// Resetting connected devices from the other eNBs
+	for (uint32_t i = 0; i < NUMBER_ENBBS; ++i){
+		CONNECTIONS[i][imsi - 1] = 0;
+	}
+
+					// = std::vector<std::vector<int>>(NUMBER_ENBBS+1,				std::vector<int> (NUMBER_UES+1, -1));
+
+	log_msg.str(std::string());
+	log_msg << "CONNECTIONS["<< NUMBER_ENBBS+1 <<"]["<< NUMBER_UES+1 <<"]" << "\n";
+	log_msg << "UE_NODECONTAINER.GetN(): " << UE_NODECONTAINER.GetN() << "\n";
+	log_msg << "UAV_NODECONTAINER.GetN(): " << UAV_NODECONTAINER.GetN() << "\n";
+	log_msg << "BS_NODECONTAINER.GetN(): " << BS_NODECONTAINER.GetN() << "\n";
+	log_msg << "cellid = " << cellid << "\tcellid - 1 = "<< cellid - 1 << "\n";
+	log_msg << "imsi = " << imsi << "\timsi - 1 = "<< imsi - 1 << "\n";
+	log_msg << "\n";
+	
+	for (int i = 0; i < CONNECTIONS.size(); ++i){
+		for (int j = 0; j < CONNECTIONS[i].size(); ++j){
+			// log_msg << "CONN[" << i << "][" << j << "]=";
+			log_msg << CONNECTIONS[i][j] << "\t";
+		}
+		log_msg << "\n";
+	}
+	// print(log_msg.str().c_str());
+
+	CONNECTIONS[cellid - 1][imsi - 1] = rnti;
+	RNTI_CELLS[cellid][rnti] = imsi;
+
+}
+
+
+int getServingcell(int imsi){
+	int servingCell = 0;
+	for (uint32_t i = 0; i < NUMBER_ENBBS; i++){
+		if (CONNECTIONS[i][imsi - 1] != 0){
+			servingCell = i;
+		}
+	}
+	return servingCell;
+}
+
+
+void handoverManager(std::string path){
+	// random handover
+	// get serving cell of user
+	for (uint32_t i = 0; i < NUMBER_UES; i++){
+		int imsi = i + 1;
+		uint32_t servingCell = getServingcell(imsi);
+		int rsrp = std::numeric_limits<int>::lowest();
+		int strongestNeighborCell = 0;
+
+		for (uint32_t cell = 0; cell < NUMBER_ENBBS; cell++){
+			if (NEIGHBORS[cell][i] > rsrp && cell != servingCell)
+			{
+				rsrp = NEIGHBORS[cell][i];
+				strongestNeighborCell = cell;
+			}
+		}
+		
+		// Randomly handover to next strongest cell
+		if (rsrp > NEIGHBORS[servingCell][imsi - 1]){
+			print("Executing handover for path " << path);
+			LTE_HELPER->HandoverRequest(Simulator::Now(), UE_NETDEV.Get(i), BSENB_NETDEV.Get(servingCell), BSENB_NETDEV.Get(strongestNeighborCell));
+		}
+		// print("Strongest cell for user " << i << " is " << strongestNeighborCell);
+	}
+}
+
+
+
+
+void ReportUeMeasurementsCallback(
+	std::string path,
+	uint16_t rnti,
+	uint16_t cellId,
+	double rsrp,
+	double rsrq,
+	bool servingCell,
+	uint8_t componentCarrierId
+){
+	int imsi = get_imsi(cellId, rnti);
+	int node_id = populate_path_imsi(path, imsi);
+
+	if (VERBOSE){
+		print("Simulation time " << Simulator::Now().GetSeconds());
+		print(path);
+		print("rnti["	<< rnti		<< "]");
+		print("cellid["	<< cellId	<< "]");
+		print("rsrp "	<< rsrp);
+		print("rsrq "	<< rsrq);
+		print("imsi["	<< imsi		<< "]");
+		print("path imsi[" << PATH_IMSI[node_id] << "]");
+		print("serving cell[" << servingCell << "]");
+		print("cc id " << (int)componentCarrierId);
+		print("\n");
+
+		if (PATH_IMSI[node_id] != -1)
+		{
+			NEIGHBORS[cellId - 1][PATH_IMSI[node_id] - 1] = rsrp;
+		}
+	}
+	// call handover manager upon receiving new measurements
+	// todo: add some fail checks for signal levels
+	handoverManager(path);
+}
+
+void RecvMeasurementReportCallback(std::string path, uint64_t imsi,
+	uint16_t cellId, uint16_t rnti,
+	LteRrcSap::MeasurementReport meas)
+{
+	if (VERBOSE){
+		print("Simulation time " << Simulator::Now().GetSeconds());
+		print(path);
+		print(imsi);
+		print(cellId);
+		print(rnti);
+		print((int)meas.measResults.measId);
+		print("\n");
+	}
+}
+
+
+
+
+
+
+
+// ------- It provides Signal measurements obtained from users equipments, such as RSRP, RSRQ, etc. ---//
+void ReportUeSinr (std::string path, uint16_t cellId, uint16_t rnti, double rsrp, double sinr, uint8_t componentCarrierId){
+	std::vector<std::string> splited_context;
+	boost::split(splited_context, path, boost::is_any_of ("/"), boost::token_compress_on);
+	int nodeId = std::stoi(splited_context[2]);
+	// NS_LOG_UNCOND("["<< P_CONFIG.name <<"]\u001b[31m\u001b[34m[ReportUeSinr] " << Simulator::Now().GetSeconds() << "s " << "\u001b[0m");
+	// double sinrdB = 10 * log(sinrLinear);
+	// feed UE_info with actual SINR in dB.
+	// ue_info[cellId-1][imsi-1] = sinrdB;
+	// ue_info_cellid[imsi-1] = cellId;
+	// ue_imsi_sinr[imsi-1]=sinrdB; 
+	// ue_imsi_sinr_linear[imsi-1]=sinrLinear; //To pass SIRN Linear to python code to do the linear sum
+
+	uint16_t imsi = UE_NODEID_IMSI[nodeId];
+	UE_IMSI_SINR[imsi] = sinr;
+	int UABS_nodeId = UE_IMSI_UABS_NODEID[imsi];
+
+
+	// find where ue_imsi is connected
+
+	// if (UE_IMSI_SINR[imsi] <= 13){
+	if (UE_IMSI_SINR[imsi] < 7){
+		// NS_LOG_UNCOND("disconnecting " << imsi << " from [" << UE_IMSI_UABS_NODEID[imsi] << "]");
+		UABS_CONNECTED_UEIMSI[UE_IMSI_UABS_NODEID[imsi]].erase(std::remove(UABS_CONNECTED_UEIMSI[UE_IMSI_UABS_NODEID[imsi]].begin(), UABS_CONNECTED_UEIMSI[UE_IMSI_UABS_NODEID[imsi]].end(), imsi), UABS_CONNECTED_UEIMSI[UE_IMSI_UABS_NODEID[imsi]].end());
+
+		// HORIZONTAL DISTANCE:	~400m | 440.053m
+		// VERTICAL DISTANCE:	~100m | 120.305m
+
+		// Ptr<MobilityModel> mobModel_uav = UAV_NODECONTAINER.Get(0)->GetObject<Node>()->GetObject<MobilityModel> ();
+		// Ptr<MobilityModel> mobModel_ue = UE_NODECONTAINER.Get(0)->GetObject<Node>()->GetObject<MobilityModel> ();
+		// Vector3D pos_uav = mobModel_uav->GetPosition ();
+		// Vector3D pos_ue = mobModel_ue->GetPosition ();
+		// double distance = CalculateDistance(pos_uav, pos_ue);
+
+		// std::cout
+		// 	<< Simulator::Now().GetSeconds() << ": "
+		// 	<< "distance: " << distance << " "
+		// 	// << "Sinr: " << sinrdB << "\t"
+		// 	<< "Sinr: " << sinr << "\t"
+		// 	// << "Imsi: "<< imsi << "\t"
+		// 	// << "CellId: " << cellId << "\t"
+		// 	// << "rnti: "<< rnti << "\t"
+		// 	<< std::endl;
+		// exit(1);
+	}
+	else if(UABS_nodeId >= 0){
+		// insert the imsi to the vector of the UABS nodeId
+		if (std::find(UABS_CONNECTED_UEIMSI[UE_IMSI_UABS_NODEID[imsi]].begin(), UABS_CONNECTED_UEIMSI[UE_IMSI_UABS_NODEID[imsi]].end(), imsi) == UABS_CONNECTED_UEIMSI[UE_IMSI_UABS_NODEID[imsi]].end()) {
+			// NS_LOG_UNCOND("connecting " << imsi << " to [" << UE_IMSI_UABS_NODEID[imsi] << "]");
+			UABS_CONNECTED_UEIMSI[UE_IMSI_UABS_NODEID[imsi]].push_back(imsi);
+		}
+	}
+}
+
+void NotifyMeasureMentReport(string context,
+	uint64_t imsi,
+	uint16_t cellid,
+	uint16_t rnti,
+	LteRrcSap::MeasurementReport msg)
+{
+	std::vector<std::string> splited_context;
+	boost::split(splited_context, context, boost::is_any_of ("/"), boost::token_compress_on);
+	int nodeId = std::stoi(splited_context[2]);
+
+	double RSRQ = (double) ns3::EutranMeasurementMapping::RsrqRange2Db((uint16_t) msg.measResults.rsrqResult);
+	double RSRP = (double) ns3::EutranMeasurementMapping::RsrpRange2Dbm((uint16_t) msg.measResults.rsrpResult);
+	
+	// double RSRP = (double) ns3::EutranMeasurementMapping::RsrpRange2Dbm((uint16_t) msg.measResults.rsrpResult);
+
+
+	// Update rnti for each node
+
+	print("\u001b[33m\u001b[1m");
+	print( << "[NotifyMeasureMentReport] "
+		<< Simulator::Now().GetSeconds() << "s\tnode (" << nodeId << ")"
+		<< "\tCellId: "			<< cellid
+		<< "\tUser IMSI: "		<< imsi
+		<< "\tRSRQ: "			<< RSRQ
+		<< "\tRSRP: "			<< RSRP
+		<< "\tRNTI: "			<< rnti
+		<< "\tNeighbor Cells: "	<< msg.measResults.haveMeasResultNeighCells
+		<< "\u001b[0m"
+	);
+
+	// double test = -90;
+	// double compare = ns3::EutranMeasurementMapping::RsrpRange2Dbm((uint16_t) msg.measResults.rsrpResult);
+	// if(compare <= test){
+		// NS_LOG_UNCOND("["<< P_CONFIG.name <<"]\u001b[32m" << "[SETUP]: User can do handover to UABS" << "\u001b[0m");
+	// }
+}
+void NotifyHandoverStartUe(std::string context,
+	uint64_t imsi,
+	uint16_t cellId,
+	uint16_t rnti,
+	uint16_t targetCellId)
+{
+	std::vector<std::string> splited_context;
+	boost::split(splited_context, context, boost::is_any_of ("/"), boost::token_compress_on);
+	int nodeId = std::stoi(splited_context[2]);
+
+	std::stringstream log_msg;
+	log_msg << " UE[" << nodeId << "]"
+		<< " IMSI[" << imsi << "]"
+		<< ": previously connected to CellId [" << cellId << "]"
+		<< " with RNTI[" << rnti << "]"
+		<< ", doing handover to CellId [" << targetCellId << "]";
+
+	// NS_LOG_UNCOND("["<< P_CONFIG.name <<"]\u001b[31m[NotifyHandoverStartUe] " << Simulator::Now().GetSeconds() << "s " << "\u001b[0m " << log_msg.str().c_str());
+
+	// std::cout << "\u001b[33m\u001b[1m\u001b[3m";
+	// std::cout << "[NotifyHandoverStartUe] " 
+	// << Simulator::Now().GetSeconds() << "s\tnode (" << nodeId << ")"
+	// << " UE IMSI " << imsi
+	// << ": previously connected to CellId " << cellId
+	// << " with RNTI " << rnti
+	// << ", doing handover to CellId " << targetCellId
+	// << "\u001b[0m"
+	// << std::endl;
+}
+
+void NotifyHandoverEndOkUe(std::string context,
+	uint64_t imsi,
+	uint16_t cellId,
+	uint16_t rnti)
+{
+	std::vector<std::string> splited_context;
+	boost::split(splited_context, context, boost::is_any_of ("/"), boost::token_compress_on);
+	// int nodeId = std::stoi(splited_context[2]);
+
+	std::stringstream log_msg;
+	log_msg << context
+		<< " UE IMSI[" << imsi << "]"
+		<< ": successful handover to CellId " << cellId
+		<< " with RNTI [" << rnti << "]";
+	// NS_LOG_UNCOND("["<< P_CONFIG.name <<"]\u001b[31m[NotifyHandoverEndOkUe] " << Simulator::Now().GetSeconds() << "s " << "\u001b[0m " << log_msg.str().c_str());
+}
+
+void NotifyHandoverStartEnb(std::string context,
+	uint64_t imsi,
+	uint16_t cellId,
+	uint16_t rnti,
+	uint16_t targetCellId)
+{
+	std::vector<std::string> splited_context;
+	boost::split(splited_context, context, boost::is_any_of ("/"), boost::token_compress_on);
+	// int nodeId = std::stoi(splited_context[2]);
+
+	std::stringstream log_msg;
+	log_msg << context
+		<< " eNB CellId " << cellId
+		<< ": start handover of UE with IMSI " << imsi
+		<< " RNTI " << rnti
+		<< " to CellId " << targetCellId;
+
+	// NS_LOG_UNCOND("["<< P_CONFIG.name <<"]\u001b[31m[NotifyHandoverStartEnb] " << Simulator::Now().GetSeconds() << "s " << "\u001b[0m " << log_msg.str().c_str());
+}
+
+void NotifyHandoverEndOkEnb(std::string context,
+	uint64_t imsi,
+	uint16_t cellId,
+	uint16_t rnti)
+{
+	std::vector<std::string> splited_context;
+	boost::split(splited_context, context, boost::is_any_of ("/"), boost::token_compress_on);
+	// int nodeId = std::stoi(splited_context[2]);
+
+	std::stringstream log_msg;
+	log_msg << context
+		<< " eNB CellId " << cellId
+		<< ": completed handover of UE with IMSI[" << imsi << "]"
+		<< " RNTI[" << rnti << "]";
+	// NS_LOG_UNCOND("["<< P_CONFIG.name <<"]\u001b[31m[NotifyHandoverEndOkEnb] " << Simulator::Now().GetSeconds() << "s " << "\u001b[0m " << log_msg.str().c_str());
+}
+
+// ---------------------- Event handlers -----------------------
+void showPosition(Ptr<Node> node, double deltaTime){
+	uint32_t nodeId = node->GetId ();
+	Ptr<MobilityModel> mobModel = node->GetObject<MobilityModel> ();
+	Vector3D pos = mobModel->GetPosition ();
+	Vector3D speed = mobModel->GetVelocity ();
+
+	float speedResult = pow((pow(speed.x,2) + pow(speed.y,2) + pow(speed.z,2)),0.5);
+
+	print("[showPosition] ");
+	print(Simulator::Now().GetSeconds() << "s ");
+
+	if(std::find(NODETYPE_MAP_LIST["user"].begin(), NODETYPE_MAP_LIST["user"].end(),
+		(int)nodeId) != NODETYPE_MAP_LIST["user"].end()){
+			print("USER -\t");
+	}
+	else if(std::find(NODETYPE_MAP_LIST["drone"].begin(), NODETYPE_MAP_LIST["drone"].end(),
+		(int)nodeId) != NODETYPE_MAP_LIST["drone"].end()){
+			print("DRONE -\t");
+	}
+	else if(std::find(NODETYPE_MAP_LIST["bsenb"].begin(), NODETYPE_MAP_LIST["bsenb"].end(),
+		(int)nodeId) != NODETYPE_MAP_LIST["bsenb"].end()){
+			print("BSENB -\t");
+	}
+	else if(std::find(NODETYPE_MAP_LIST["remote"].begin(), NODETYPE_MAP_LIST["remote"].end(),
+		(int)nodeId) != NODETYPE_MAP_LIST["remote"].end()){
+			print("REMOTE -\t");
+	}
+	print("node (" << nodeId << "): "
+		<< "pos (" << pos.x << ", " << pos.y << ", " << pos.z << ");"
+		<< "\tSpeed: " << speedResult << " m/s" // << "\tSpeed (" << speed.x << ", " << speed.y << ", " << speed.z << ")"
+	);
+
+	Simulator::Schedule(Seconds(deltaTime), &showPosition, node, deltaTime);
+}
+
+void CourseChange(std::string path, Ptr<const MobilityModel> mobility){
+	Vector pos = mobility->GetPosition();
+	Ptr<Node> node = mobility->GetObject<Node> ();
+	// double currentTime = Simulator::Now().GetSeconds(); //Simulator::Now().As (Time::S)
+	
+	Vector speed = mobility->GetVelocity();
+	print("[CourseChange] ");
+	print(Simulator::Now().GetSeconds() << "s ");
+
+	if(std::find(NODETYPE_MAP_LIST["user"].begin(), NODETYPE_MAP_LIST["user"].end(), (int)node->GetId ()) != NODETYPE_MAP_LIST["user"].end()){
+		print("USER ");
+		// COURSECHANGE_EVENT_COUNTER++;
+
+	// 	// Testing if all users have changed its position
+	// 	if (currentTime > 0 && COURSECHANGE_EVENT_COUNTER % NODETYPE_MAP_LIST["user"].size() == 0){
+	// 		CALC_POS_FLAG = true;
+	// 		Simulator::Schedule(Seconds(0), &handle_user_courseChange);
+	// 	}
+	// 	else
+	// 		CALC_POS_FLAG = false;
+	}
+	else if(std::find(NODETYPE_MAP_LIST["drone"].begin(), NODETYPE_MAP_LIST["drone"].end(), (int)node->GetId ()) != NODETYPE_MAP_LIST["drone"].end()){
+		print("DRONE ");
+	// 	// MMWAVEHELPER->HandoverRequest (Seconds(0), Ptr<NetDevice> ueDev, Ptr<NetDevice> sourceEnbDev, Ptr<NetDevice> targetEnbDev);
+	// 	// MMWAVEHELPER->HandoverRequest (Seconds(0), UENETDEV, ENBNETDEV, 4);
+	// 	// MMWAVEHELPER->AttachToClosestEnb (UENETDEV, ENBNETDEV);
+	}
+	else if(std::find(NODETYPE_MAP_LIST["remote"].begin(), NODETYPE_MAP_LIST["remote"].end(), (int)node->GetId ()) != NODETYPE_MAP_LIST["remote"].end()){
+		print("REMOTE ");
+	}
+
+	if ((int(abs(speed.x)) <= 1) &&
+		(int(abs(speed.y)) <= 1) &&
+		(int(abs(speed.z)) <= 1))
+		print("node (" << node->GetId () << ") arrived at location: ");
+	else
+		print("node (" << node->GetId () << ") changing location: ");
+	print("pos: " << get_coord_str(pos) << "\t");
+	print("speed: "<< get_coord_str(speed) << "\t");
+}
+
+int getNodeIdFromAddress(Ipv4Address address, NodeContainer allNodes){
+	// .Get (1)->GetAddress ()
+	int nodeId = -1;
+
+	for(uint16_t i = 0; i < allNodes.GetN(); i++){
+		Ptr<Node> currNode = allNodes.Get(i)->GetObject<Node>();
+		Ptr<Ipv4> ip = currNode->GetObject<Ipv4> ();
+		if (ip){
+			for (uint32_t interfacesIndex = 0; interfacesIndex < ip->GetNInterfaces(); interfacesIndex++){
+				for (uint32_t addressIndex = 0; addressIndex < ip->GetNAddresses (interfacesIndex); addressIndex++){
+
+					Ipv4Address currAddress = ip->GetAddress (interfacesIndex, addressIndex).GetLocal();
+					if (currAddress == address){
+						nodeId = currNode->GetId ();
+						return nodeId;
+					}
+				}
+			}
+		}
+	}
+
+	return nodeId;
+}
+
+QoS_DATA_TYPE getDataFromNode(int nodeId_int){
+	string nodeId = to_string(nodeId_int);
+	std::vector< QoS_DATA_TYPE >::reverse_iterator it = std::find_if ( ALL_QOS_DATA_VECTOR.rbegin (), ALL_QOS_DATA_VECTOR.rend (), boost::bind ( &QoS_DATA_TYPE::nodeId, _1 ) == nodeId );
+	//                                                                                     ^ swap get the last occurance  ^
+    return *it;
+}
+
+void checkQoS(int nodeId, bool terminate){
+	QoS_DATA_TYPE status = getDataFromNode(nodeId);
+
+	// NS_LOG_UNCOND("");
+	// NS_LOG_UNCOND("Status from node[" << nodeId << "]: ");
+	// NS_LOG_UNCOND("\t Time: " << status.currentTime);
+	// NS_LOG_UNCOND("\t Node location: " << status.nodeLocation);
+	// NS_LOG_UNCOND("\t Delay: " << status.delaySum);
+	// NS_LOG_UNCOND("\t PDR: " << status.PDR);
+	// NS_LOG_UNCOND("\t Throughput: " << status.Throughput);
+
+	if (terminate)
+		exit(1);
+}
+
+void CalcConnectedUEs(NodeContainer eNBs, double deltaTime, bool firstWrite){
+	// NS_LOG_UNCOND("["<< P_CONFIG.name <<"]\u001b[34m[CalcConnectedUEs] " << Simulator::Now().GetSeconds() << "s " << "\u001b[0m");
+	// NS_LOG_UNCOND("Number of UAVs: " << eNBs.GetN());
+	int totalConnected = 0;
+	for (uint32_t i = 0; i < eNBs.GetN(); ++i){
+		int nodeId = eNBs.Get(i)->GetObject<Node>()->GetId();
+		// NS_LOG_UNCOND("\t[" << nodeId << "] " << UABS_CONNECTED_UEIMSI[nodeId].size() << " UEs connected");
+		totalConnected += UABS_CONNECTED_UEIMSI[nodeId].size();
+	}
+	// NS_LOG_UNCOND("\tTOTAL: " << totalConnected << " UEs connected");
+
+	if (deltaTime >= 0){
+		Simulator::Schedule(Seconds(deltaTime), &CalcConnectedUEs, eNBs, deltaTime, false);
+	}
+}
+
+
+
+// unused
+// static void TxTrace(std::string context, Ptr<const Packet> packet, const Address &fromaddr)
+// {
+// 	std::cout << "[TxTrace]: "
+// 	<< Simulator::Now().As(Time::S);
+// }
+
+// unused
+// static void RxTrace(std::string context, Ptr<const Packet> packet, const Address &from){
+// 	ByteCounter += packet->GetSize ();
+// }
+
+// unused
+// static void RxWithAddresses(std::string context, Ptr<const Packet> packet, const Address &fromaddr, const Address &localaddr){
+// 	std::cout << "[RxWithAddresses]: "
+// 	<< Simulator::Now().As(Time::S) << " ";
+
+// 	std::vector<std::string> splited_context;
+// 	boost::split(splited_context, context, boost::is_any_of ("/"), boost::token_compress_on);
+// 	int nodeId = std::stoi(splited_context[2]);
+// 	uint8_t sourceAddress[15];
+// 	uint8_t localAddress[15];
+// 	fromaddr.CopyTo (sourceAddress);
+// 	localaddr.CopyTo (localAddress);
+// 	Ipv4Address ipv4_addr_source = Ipv4Address::Deserialize (sourceAddress);
+// 	Ipv4Address ipv4_addr_local = Ipv4Address::Deserialize (localAddress);
+
+// 	if(std::find(NODETYPE_MAP_LIST["user"].begin(), NODETYPE_MAP_LIST["user"].end(),
+// 			(int)nodeId) != NODETYPE_MAP_LIST["user"].end()){
+// 		std::cout << "USER -\t";
+// 	}
+// 	else if(std::find(NODETYPE_MAP_LIST["drone"].begin(), NODETYPE_MAP_LIST["drone"].end(),
+// 			(int)nodeId) != NODETYPE_MAP_LIST["drone"].end()){
+// 		std::cout << "DRONE -\t";
+// 	}
+// 	else if(std::find(NODETYPE_MAP_LIST["remote"].begin(), NODETYPE_MAP_LIST["remote"].end(),
+// 			(int)nodeId) != NODETYPE_MAP_LIST["remote"].end()){
+// 		std::cout << "REMOTE -\t";
+// 	}
+
+// 	std::cout << "node (" << nodeId << ")\t"
+// 	<< "received packet of size " << packet->GetSize() << "\t"
+// 	// << "Uid " << packet->GetUid() << "\t"
+// 	<< "from ip address " << ipv4_addr_source << "\t"
+// 	<< "local ip address " << ipv4_addr_local << " "
+// 	<< std::endl;
+// }
+
+void saveLocations(NodeContainer allNodes, double deltaTime, bool firstWrite){
+	std::ofstream locationLogFile;
+	std::string pathName = RESULT_PREFIX+"_locationLogFile.txt";
+	if (firstWrite){
+		locationLogFile.open (pathName, std::ofstream::out);
+		firstWrite = false;
+	}
+	else{
+		locationLogFile.open (pathName, std::ofstream::app);
+		locationLogFile << ", ";
+	}
+	std::string broken = "false";
+
+	for (uint32_t i = 0; i < allNodes.GetN(); ++i){
+		uint32_t nodeId = allNodes.Get(i)->GetObject<Node>()->GetId();
+		Vector pos = allNodes.Get(i)->GetObject<MobilityModel>()->GetPosition();
+		// Vector vel = allNodes.Get(i)->GetObject<MobilityModel>()->GetVelocity();
+
+
+		std::string type = "";
+		if(std::find(NODETYPE_MAP_LIST["user"].begin(), NODETYPE_MAP_LIST["user"].end(),
+				(int)nodeId) != NODETYPE_MAP_LIST["user"].end()){
+			type = "UE";
+		}
+		else if(std::find(NODETYPE_MAP_LIST["drone"].begin(), NODETYPE_MAP_LIST["drone"].end(),
+				(int)nodeId) != NODETYPE_MAP_LIST["drone"].end()){
+			type = "RN";
+			// NS_LOG_UNCOND("\t\u001b[1m\u001b[31m[" << nodeId << "]Current VELOCITY: " << get_coord_str(vel) << "\u001b[0m saveLocations");
+		}
+		else if(std::find(NODETYPE_MAP_LIST["remote"].begin(), NODETYPE_MAP_LIST["remote"].end(),
+				(int)nodeId) != NODETYPE_MAP_LIST["remote"].end()){
+			type = "MT";
+		}
+		else if(std::find(NODETYPE_MAP_LIST["bsenb"].begin(), NODETYPE_MAP_LIST["bsenb"].end(),
+				(int)nodeId) != NODETYPE_MAP_LIST["bsenb"].end()){
+			type = "BS";
+		}
+
+		locationLogFile << "{ ";
+		locationLogFile << "\"id\": "		<< nodeId							<< ", ";
+		locationLogFile << "\"time\": "		<< Simulator::Now().GetSeconds()	<< ", ";
+		locationLogFile << "\"type\": \""	<< type								<< "\", ";
+		locationLogFile << "\"x\": "		<< pos.x							<< ", ";
+		locationLogFile << "\"y\": "		<< pos.y							<< ", ";
+		locationLogFile << "\"z\": "		<< pos.z							<< "";
+		// locationLogFile << "\"broken\":"	<< broken							<< "";
+		// locationLogFile << "\"ie\":"		<< getInitialEnergy() << ", ";
+		// locationLogFile << "\"re\":"		<< getResidualEnergy() << ", ";
+		if (i == allNodes.GetN()-1) // if last item from the list
+			locationLogFile << "}";
+		else
+			locationLogFile << "},"; // otherwise
+	}
+
+	Simulator::Schedule(Seconds (deltaTime), &saveLocations, allNodes, deltaTime, firstWrite);
+}
+
+
+// void RemainingEnergy (double oldValue, double remainingEnergy){
+// 	NS_LOG_UNCOND ("\t" << Simulator::Now ().GetSeconds () << "s Current remaining energy = " << remainingEnergy << "J oldValue: " << oldValue);
+// }
+
+void LandDroneToGround(double energyThreshold, bool loop, double deltaTime){
+	// NS_LOG_UNCOND("["<< P_CONFIG.name <<"]\u001b[34m[LandDroneToGround] " << Simulator::Now().GetSeconds() << "s " << "\u001b[0m"
+		// "energyThreshold: " << energyThreshold);
+	
+	if (loop && ENERGY_DEPLETED_DRONES.size() < UAV_NODECONTAINER.GetN()){
+
+		std::vector<int> energy_depleted_drones;
+		for (uint32_t i = 0; i < UAV_NODECONTAINER.GetN(); ++i){
+			Ptr<LiIonEnergySource> energy_source = 
+				UAV_NODECONTAINER.Get(i)->GetObject<LiIonEnergySource>();
+			double remainingEnergy = energy_source->GetRemainingEnergy();
+
+			if (remainingEnergy <= energyThreshold){
+				energy_depleted_drones.push_back(i);
+				// Simulator::Schedule(Seconds(0.1), &move_node_constVec, UAV_NODECONTAINER.Get(i), Vector(currentPosition.x, currentPosition.y, 0), DRONE_MIN_SPEED);
+
+				Ptr<ConstantVelocityMobilityModel> mobility =
+					UAV_NODECONTAINER.Get(i)->GetObject<ConstantVelocityMobilityModel>();
+				Vector currentPosition = mobility->GetPosition();
+				move_node_constVec(UAV_NODECONTAINER.Get(i), Vector(currentPosition.x, currentPosition.y, 0), DRONE_MIN_SPEED);
+			}
+		}
+
+		for (int i = 0; i < energy_depleted_drones.size(); ++i){
+			int uavNetDevIndex = ENB_DEVS.GetN() - UAV_NODECONTAINER.GetN();
+			uavNetDevIndex = uavNetDevIndex + energy_depleted_drones[i];
+			
+			Ptr<LteEnbPhy> enb0Phy = ENB_DEVS.Get(uavNetDevIndex)->GetObject<LteEnbNetDevice>()->GetPhy();
+			enb0Phy->SetTxPower(0.0);
+		}
+
+		Simulator::Schedule(Seconds(deltaTime), &LandDroneToGround, energyThreshold, loop, deltaTime);
+	}
+}
+
+// expected=CallbackImpl<
+// void,std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >,ns3::Ptr<ns3::psc::UavMobilityEnergyModel const>>
+void EnergyDepleted (std::string context, Ptr<const UavMobilityEnergyModel> energyModel){
+	std::vector<std::string> splited_context;
+	boost::split(splited_context, context, boost::is_any_of ("/"), boost::token_compress_on);
+	int nodeId = std::stoi(splited_context[2]);
+
+	// NS_LOG_UNCOND("["<< P_CONFIG.name <<"]\u001b[31m[EnergyDepleted] " << Simulator::Now().GetSeconds() << "s " << "\u001b[0m"
+	// 	<< "node [" << nodeId << "] ENERGY DEPLETED. Moving drone to the ground.");
+
+	if((std::find(ENERGY_DEPLETED_DRONES.begin(), ENERGY_DEPLETED_DRONES.end(),
+		(int)nodeId) != ENERGY_DEPLETED_DRONES.end() &&
+		ENERGY_DEPLETED_DRONES.size() < UAV_NODECONTAINER.GetN()) ||
+		ENERGY_DEPLETED_DRONES.size() <= 0
+	){
+		ENERGY_DEPLETED_DRONES.push_back(nodeId);
+		// Simulator::Schedule(Seconds(0.1), &move_node_constVec, UAV_NODECONTAINER.Get(i), Vector(currentPosition.x, currentPosition.y, 0), DRONE_MIN_SPEED);
+		LandDroneToGround(0, false, 0);
+	}
+}
+
+
+void UpdateEnergyLiIonEnergySource(NodeContainer &nodes){
+	// NS_LOG_UNCOND("["<< P_CONFIG.name <<"]\u001b[34m[UpdateEnergy] " << Simulator::Now().GetSeconds() << "s " << "\u001b[0m");
+	NodeContainer nodes_alive;
+
+	for (uint16_t i=0 ; i < nodes.GetN(); i++){
+		Ptr <MobilityModel> UABS_mobility = nodes.Get(i)->GetObject<MobilityModel>();
+		// Vector position = UABS_mobility->GetPosition ();
+		// Vector speed = UABS_mobility->GetVelocity ();
+		Ptr<LiIonEnergySource> energy_source = nodes.Get(i)->GetObject<LiIonEnergySource>();
+		Ptr<UavMobilityEnergyModel> uav_energymodel = nodes.Get(i)->GetObject<UavMobilityEnergyModel>();
+
+		double RE = energy_source->GetEnergyFraction();
+		// double initialEnergy = energy_source->GetInitialEnergy();
+		// double remainingEnergy = energy_source->GetRemainingEnergy();
+		// int state = uav_energymodel->GetState(); // State:int { ASCEND, DESCEND, HOVER, MOVE, STOP };
+
+		// NS_LOG_UNCOND("\t\u001b[1m\u001b[34m[" << nodes.Get(i)->GetObject<Node>()->GetId() << "]");
+		// NS_LOG_UNCOND("\t\t\u001b[1m\u001b[34m Speed: " << get_coord_str(speed) << "\u001b[0m");
+		// NS_LOG_UNCOND("\t\t\u001b[1m\u001b[34m Position: " << get_coord_str(position) << "\u001b[0m");
+		// NS_LOG_UNCOND("\t\t\u001b[1m\u001b[34m RE: " << int(RE*100) << "% \u001b[0m");
+		// NS_LOG_UNCOND("\t\t\u001b[1m\u001b[34m Initial Eenergy: " << initialEnergy << "\u001b[0m");
+		// NS_LOG_UNCOND("\t\t\u001b[1m\u001b[34m Remaining Eenergy: " << remainingEnergy << "\u001b[0m");
+		// NS_LOG_UNCOND("\t\t\u001b[1m\u001b[34m Flying state: " << state << "\u001b[0m");
+
+		// Calculate energy required to flight to the base station
+
+		if(RE > 0) nodes_alive.Add(nodes.Get(i));
+		
+		// NS_LOG_UNCOND(" ");
+	}
+
+	nodes = nodes_alive;
+	
+	// NS_LOG_UNCOND("\t\u001b[33mNúmero de UAVs ativos: \u001b[1m" << nodes.GetN() << "\u001b[0m");
+
+	Simulator::Schedule(Seconds(1), &UpdateEnergyLiIonEnergySource, nodes);
+}
+
+
+
+
+
+int getNodeId(Ptr<Node> node, string type = "server"){
+	// seleced the desired node container
+	NodeContainer tmpNodesContainer;
+	if (type == "server")
+		tmpNodesContainer = SERVER_NODECONTAINER;
+	else if (type == "ue")
+		tmpNodesContainer = UE_NODECONTAINER;
+	else if (type == "enb")
+		tmpNodesContainer = BS_NODECONTAINER;
+	// find th enode id
+
+	for (uint32_t i = 0; i < tmpNodesContainer.GetN(); ++i){
+		if (node == tmpNodesContainer.Get(i)){
+			// NS_LOG_UNCOND("node " << node << " is " << tmpNodesContainer.Get(i) <<
+			// " ?");
+			return i;
+		}
+	}
+	return -1;
+}
+
+
+Ptr<ListPositionAllocator> generatePositionAllocator(
+	int area = 1000,
+	int number_of_nodes = 300,
+	std::string allocation = "random"
+){
+	Ptr<ListPositionAllocator> HpnPosition =
+	CreateObject<ListPositionAllocator>();
+	std::uniform_int_distribution<int> distribution(0, area);
+
+	if (allocation == "koln"){
+		double multiplier = 1.0 / 5;
+		std::ifstream cellList("cellList_koln.txt");
+		double a, b, c;
+		while (cellList >> a >> b >> c){
+			HpnPosition->Add(Vector3D(b * multiplier, c * multiplier, 45));
+		}
+	} else if (allocation == "random"){
+		for (int i = 0; i < number_of_nodes; i++){
+			HpnPosition->Add(
+				Vector3D(distribution(GENERATOR), distribution(GENERATOR), 45));
+		}
+	} else{
+		NS_ASSERT_MSG(false, "come on, you only had two options.");
+	}
+
+	return HpnPosition;
+}
+
+
+
+/*  MIGRATION FUNCTIONS */
+
+int getEdge(int nodeId){
+	int edgeId = -1;
+	for (uint32_t i = 0; i < NUMBER_EDGESERVERS; ++i)
+		if (EDGE_UE[i][nodeId])
+			edgeId = i;
+	return edgeId;
+}
+
+void HandoverPrediction(int nodeId, int timeWindow){
+	// std::string mobilityTrace = "mobil/koln.tcl";
+	std::string mobilityTrace = TRACEFILE;
+	
+	// means no connection has been found
+	// happens if it's called too early in the simulation
+
+	int imsi = nodeId - 1;
+	int servingCell = getServingcell(imsi);
+	if (servingCell == -1)
+		return;
+
+	// receive a nodeId, and a time window, and return if a handover is going to
+	// happen in this time window.
+	std::ifstream mobilityFile(mobilityTrace);
+	NS_ASSERT_MSG(mobilityFile.is_open(), "Error opening prediction file.");
+
+	string nodeColumn;
+	string fileLines;
+
+	// coordinate variables
+	double node_x, node_y, node_z, node_position_time;
+	double shortestDistance = numeric_limits<int>::max();
+	int closestCell = numeric_limits<int>::max();
+
+	// tmp veriables to read file
+	// node_position_time = time of the position
+	string aux1, aux2, aux4, aux5;
+	string cell_id;
+
+	while (getline(mobilityFile, fileLines)){
+		if (fileLines.find("setdest") != string::npos){
+
+			std::stringstream ss(fileLines);
+			// cout << ss.str();
+			ss >> aux1 >> aux2 >> node_position_time >> aux4 >> aux5 >> node_x >>
+			node_y >> node_z;
+
+			nodeColumn = "\"$node_(" + to_string(nodeId) + ")";
+			// cout << "nodeColumn" << nodeColumn << "\n";
+			// cout << "aux: " << aux4 << "\n";
+			// cin.get();
+
+			// for (int time_offset = 0; time_offset < timeWindow; time_offset++)
+			if (aux4 == nodeColumn && Simulator::Now().GetSeconds() + timeWindow == round(node_position_time)){
+				Vector uePos = Vector(node_x, node_y, node_z);
+
+				// double distanceServingCell = CalculateDistance(uePos,
+				// enbNodes.Get(getCellId(nodeId))->GetObject<MobilityModel>()->GetPosition
+				// ());
+
+				// calculate distance from node to each enb
+				for (uint32_t i = 0; i < NUMBER_ENBBS; ++i){
+					// get Ith enb  position
+					Vector enbPos = BS_NODECONTAINER.Get(i)->GetObject<MobilityModel>()->GetPosition();
+					// get distance
+					double distanceUeEnb = CalculateDistance(uePos, enbPos);
+
+					// get closest enb
+					if (distanceUeEnb < shortestDistance){
+						closestCell = i;
+						shortestDistance = distanceUeEnb;
+					}
+				}
+
+				// if closest enb != current, predict handover
+				if (closestCell != servingCell){
+					print("Handover to happen at " << node_position_time);
+					print("Node " << nodeId << " from cell " << servingCell << " to cell " << closestCell);
+					HANDOVER_PREDICTIONS[nodeId][0] = node_position_time;
+					HANDOVER_PREDICTIONS[nodeId][1] = servingCell;
+					HANDOVER_PREDICTIONS[nodeId][2] = closestCell;
+				}
+			}
+		}
+	}
+}
+
+void migrate(Ptr<Node> sourceServer, Ptr<Node> targetServer,
+	Ipv4Address sourceServerAddress, Ipv4Address targetServerAddress
+){
+	static int migrationPort = 10000;
+
+	// return if migration is not available
+	if (!DOMIGRATE){
+		print("Migration not enabled. :(");
+		// return;
+	}
+
+	if (RESOURCES[getNodeId(targetServer)] <= 0){
+		// NS_LOG_UNCOND("MIGRATION FAILED FOR LACK OF RESOURCES");
+		return;
+	}
+	if (getNodeId(targetServer) < 0)
+		return;
+
+	// NS_LOG_UNCOND("Migration from node " << getNodeId(sourceServer) << " to node "
+		// << getNodeId(targetServer));
+
+	RESOURCES[getNodeId(sourceServer)]++;
+	RESOURCES[getNodeId(targetServer)]--;
+
+	// stop before any traffic is actually sent
+	// do this to speed up the simulation
+	return;
+
+	// cout << "Starting migration from node " << sourceServerAddress << " to node
+	// " << targetServerAddress << ".\n";
+	++migrationPort;
+	UdpServerHelper server(migrationPort);
+	ApplicationContainer apps = server.Install(targetServer);
+	apps.Start(Simulator::Now());
+	// apps.Stop (Simulator::Now()+Seconds(5));
+
+	// Create one UdpClient application to send UDP datagrams from node zero to
+	// node one.
+
+	uint32_t MaxPacketSize = 1024;
+	// uint32_t maxPacketCount = migrationSize / MaxPacketSize;
+	uint32_t maxPacketCount = 10000;
+	// tyr to migrate this in 10 senconds at most
+	Time interPacketInterval = MilliSeconds(1);
+	UdpClientHelper client(targetServerAddress, migrationPort);
+	client.SetAttribute("MaxPackets", UintegerValue(maxPacketCount));
+	client.SetAttribute("Interval", TimeValue(interPacketInterval));
+	client.SetAttribute("PacketSize", UintegerValue(MaxPacketSize));
+
+	apps = client.Install(sourceServer);
+	apps.Start(Simulator::Now());
+}
+
+void requestApplication(Ptr<Node> ueNode, Ptr<Node> targetServer, int addrIndex){
+	if (addrIndex >= SERVER_NODES_ADDRESSES.size() )
+		addrIndex = 0;
+
+	Ipv4Address targetServerAddress = SERVER_NODES_ADDRESSES[addrIndex][0];
+
+	static int applicationPort = 11000;
+	// return if migration is not available
+	// and if node is being served
+	if (!DOMIGRATE || getEdge(getNodeId(ueNode, "ue")) < 0)
+	{
+		// NS_LOG_UNCOND("["<< P_CONFIG.name <<"]\u001b[34m[requestApplication] " << Simulator::Now().GetSeconds() << "s " << "\u001b[0m"
+			// << "Migration not enabled. :(");
+		return;
+	}
+
+	// NS_LOG_UNCOND("Node " << getNodeId(ueNode, "ue") << " requesting
+	// application from node " << getNodeId(targetServer, "server"));
+	if (RESOURCES[getNodeId(targetServer)] <= 0){
+		// NS_LOG_UNCOND("["<< P_CONFIG.name <<"]\u001b[34m[requestApplication] " << Simulator::Now().GetSeconds() << "s " << "\u001b[0m"
+			// << "Application failed for lack of resources in this address: " << targetServerAddress
+			// << "Trying another address.");
+
+		Simulator::Schedule(Seconds(1), &requestApplication,
+			ueNode, targetServer, addrIndex+1);
+		return;
+	}
+
+	// cout << "Starting migration from node " << sourceServerAddress << " to node
+	// " << targetServerAddress << ".\n";
+	++applicationPort;
+	UdpServerHelper server(applicationPort);
+	ApplicationContainer apps = server.Install(targetServer);
+	apps.Start(Simulator::Now());
+	// apps.Stop (Simulator::Now()+Seconds(5));
+
+	// Create one UdpClient application to send UDP datagrams from node zero to
+	// node one.
+	uint32_t MaxPacketSize = 1024;
+	// uint32_t maxPacketCount = migrationSize / MaxPacketSize;
+	uint32_t maxPacketCount = 50;
+	// tyr to migrate this in 10 senconds at most
+	Time interPacketInterval = MilliSeconds(10);
+	UdpClientHelper client(targetServerAddress, applicationPort);
+	client.SetAttribute("MaxPackets", UintegerValue(maxPacketCount));
+	client.SetAttribute("Interval", TimeValue(interPacketInterval));
+	client.SetAttribute("PacketSize", UintegerValue(MaxPacketSize));
+	apps = client.Install(ueNode);
+	apps.Start(Simulator::Now());
+}
+
+
+bool IsTopLevelSourceDir(std::string path){
+	bool haveVersion = false;
+	bool haveLicense = false;
+  //
+  // If there's a file named VERSION and a file named LICENSE in this
+  // directory, we assume it's our top level source directory.
+  //
+	std::list<std::string> files = SystemPath::ReadFiles(path);
+	for (std::list<std::string>::const_iterator i = files.begin();
+		i != files.end(); ++i){
+		if (*i == "VERSION"){
+			haveVersion = true;
+		}
+		else if (*i == "LICENSE"){
+			haveLicense = true;
+		}
+	}
+	return haveVersion && haveLicense;
+}
+
+std::string GetTopLevelSourceDir(void){
+	std::string self = SystemPath::FindSelfDirectory();
+	std::list<std::string> elements = SystemPath::Split(self);
+	while (!elements.empty()){
+		std::string path = SystemPath::Join(elements.begin(), elements.end());
+		if (IsTopLevelSourceDir(path)){
+			return path;
+		}
+		elements.pop_back();
+	}
+	NS_FATAL_ERROR("Could not find source directory from self=" << self);
+}
+
+
+void QoSMonitor(Ptr<FlowMonitor> flowMon, double deltaTime, bool firstWrite){
+	// NS_LOG_UNCOND("["<< P_CONFIG.name <<"]\u001b[34m[QoSMonitor] " << Simulator::Now().GetSeconds() << "s " << "\u001b[0m");
+	std::string fileName = RESULT_PREFIX+"_qos.csv";
+	std::ofstream qos_monitor_file;
+
+	if (firstWrite){
+		qos_monitor_file.open (fileName.c_str (), std::ofstream::out);
+		qos_monitor_file << "time"
+			<< "," << "N_uavs"
+			<< "," << "N_ues"
+			<< "," << "N_bss"
+			<< "," << "proposal"
+			<< "," << "PDR"
+			<< "," << "PLR"
+			<< "," << "delay"
+			<< "," << "throughput"
+			<< "," << "total_connected_users"
+			<< "," << "rate_connected_users"
+			<< "," << "avg_energy_uavs"
+			<< std::endl;
+	}
+	else{
+		qos_monitor_file.open (fileName.c_str (), std::ofstream::app);
+	}
+	firstWrite = false;
+
+
+
+	Ptr<Ipv4FlowClassifier> classing = DynamicCast<Ipv4FlowClassifier> (FLOWMON_HELPER.GetClassifier ());
+	flowMon->CheckForLostPackets ();
+	classing = DynamicCast<Ipv4FlowClassifier> (FLOWMON_HELPER.GetClassifier ());
+	FlowMonitor::FlowStatsContainer stats = flowMon->GetFlowStats ();
+	auto flowStats = flowMon->GetFlowStats();
+	
+	float	TotalPacketSum = 0;
+	float	LostPacketSum = 0;
+	float	FoundPacketSum = 0;
+	float	DelaySum = 0;
+	float	ThroughputSum = 0;
+	
+	float PDR, PLR, Delay, Throughput;
+	int counter = 0;
+
+	for (auto stats : flowStats){
+		// Ipv4FlowClassifier::FiveTuple fiveTuple = classing->FindFlow(stats.first);
+		
+		float LostPacket = stats.second.txPackets - stats.second.rxPackets;
+		Delay = (stats.second.delaySum.GetSeconds()) / (stats.second.txPackets);
+
+		Throughput = stats.second.rxBytes * 8.0 /
+			(stats.second.timeLastRxPacket.GetSeconds() - stats.second.timeFirstTxPacket.GetSeconds()) /
+			1024 / 1024;
+
+
+		// PDR = (double)(100 * stats.second.rxPackets) / (stats.second.txPackets);
+		// PLR = (double)(LostPacket * 100) / stats.second.txPackets;
+
+		if ((stats.second.timeLastRxPacket.GetSeconds() - stats.second.timeFirstTxPacket.GetSeconds()) > 0){
+			LostPacketSum += LostPacket;
+			TotalPacketSum += stats.second.txPackets;
+			FoundPacketSum += stats.second.rxPackets;
+			DelaySum += Delay;
+			ThroughputSum += Throughput;
+			counter++;
+		}
+
+	}
+
+	PLR = ((100 * LostPacketSum) / TotalPacketSum);
+	PDR = ((100 * FoundPacketSum) / TotalPacketSum);
+	Throughput = ThroughputSum / counter;
+	Delay = DelaySum / counter;
+
+
+	int totalConnected = 0;
+	// std::stringstream log_msg;
+	for (int i = 0; i < CONNECTIONS.size(); ++i){
+		for (int j = 0; j < CONNECTIONS[i].size(); ++j){
+			if (CONNECTIONS[i][j] > 0){
+				totalConnected++;
+				// log_msg << "CONNECTIONS[" << i << "][" << j << "] = " << CONNECTIONS[i][j] << "\t";
+			}
+		}
+		// log_msg << "\n";
+	}
+
+
+
+
+	// print(log_msg.str().c_str());
+	double remainingEnergySum = 0;
+	for (uint32_t i = 0; i < UAV_NODECONTAINER.GetN(); ++i){
+		int nodeId = UAV_NODECONTAINER.Get(i)->GetObject<Node>()->GetId();
+		Ptr<LiIonEnergySource> energy_source = UAV_NODECONTAINER.Get(i)->GetObject<LiIonEnergySource>();
+		double remainingEnergy = energy_source->GetRemainingEnergy();
+
+		// print("\t INITIAL_ENERGY = " << INITIAL_ENERGY << "\t\tenergy_source->GetInitialEnergy = " << energy_source->GetInitialEnergy()  << "\t\tremainingEnergy = " << remainingEnergy);
+		if (INITIAL_ENERGY < remainingEnergy){
+			NS_ASSERT_MSG(false, "\u001b[31m nodeId[" << nodeId << "] INITIAL_ENERGY < remainingEnergy: " << INITIAL_ENERGY << " < " << remainingEnergy << ": \u001b[0m");
+		}
+		if (remainingEnergy <= 10){
+			// print("\t nodeId[" << nodeId << "] remainingEnergy <= 0: " << remainingEnergy);
+			// NS_ASSERT_MSG(false, "\u001b[31m nodeId[" << nodeId << "]: " << remainingEnergy << " <= 0: \u001b[0m");
+			remainingEnergy = 0;
+		}
+
+		remainingEnergySum += remainingEnergy;
+	}
+
+
+
+
+
+	qos_monitor_file << Simulator::Now().GetSeconds()
+		<< "," << UAV_NODECONTAINER.GetN()	// "N_uavs"
+		<< "," << UE_NODECONTAINER.GetN()	// "N_ues"
+		<< "," << BS_NODECONTAINER.GetN()	// "N_bss"
+		<< "," << P_CONFIG.name				// "proposal"
+		<< "," << PDR
+		<< "," << PLR
+		<< "," << Delay						// "delay"
+		<< "," << Throughput				// "throughput"
+		<< "," << totalConnected //"total_connected_users"
+		<< "," << (100 * totalConnected) / UE_NODECONTAINER.GetN() //"rate_connected_users"
+		<< "," << remainingEnergySum / UAV_NODECONTAINER.GetN() // "avg_energy_uavs" in joules
+		<< std::endl;
+
+	Simulator::Schedule(Seconds(deltaTime), &QoSMonitor, flowMon, deltaTime, firstWrite);
+}
+
+
+void ThroughputMonitor(FlowMonitorHelper *fmhelper, Ptr<FlowMonitor> flowMon){
+	flowMon->CheckForLostPackets();
+	uint32_t LostPacketSum = 0;
+	float PDR, PLR, Delay, Throughput;
+	auto flowStats = flowMon->GetFlowStats();
+	Ptr<Ipv4FlowClassifier> classing =
+		DynamicCast<Ipv4FlowClassifier>(fmhelper->GetClassifier());
+	std::ofstream qos_file;
+	qos_file.open("qos.csv", std::ofstream::out | std::ofstream::trunc);
+
+	for (auto stats : flowStats){
+		Ipv4FlowClassifier::FiveTuple fiveTuple = classing->FindFlow(stats.first);
+		
+		LostPacketSum = (double)(stats.second.txPackets) - (stats.second.rxPackets);
+		PDR = (double)(100 * stats.second.rxPackets) / (stats.second.txPackets);
+		PLR = (double)(LostPacketSum * 100) / stats.second.txPackets;
+		Delay = (stats.second.delaySum.GetSeconds()) / (stats.second.txPackets);
+		Throughput = stats.second.rxBytes * 8.0 /
+			(stats.second.timeLastRxPacket.GetSeconds() - stats.second.timeFirstTxPacket.GetSeconds()) /
+			1024 / 1024;
+
+		print("Flow ID			: " << stats.first << " ; " << fiveTuple.sourceAddress << " -----> " << fiveTuple.destinationAddress);
+		print("Tx Packets = " << stats.second.txPackets);
+		print("Rx Packets = " << stats.second.rxPackets);
+		print("Lost Packets = " << (stats.second.txPackets) - (stats.second.rxPackets));
+		print("Packets Delivery Ratio (PDR) = " << PDR << "%");
+		print("Packets Lost Ratio (PLR) = " << PLR << "%");
+		print("Delay = " << Delay << " Seconds");
+		print("Total Duration		: " << stats.second.timeLastRxPacket.GetSeconds() - stats.second.timeFirstTxPacket.GetSeconds() << " Seconds");
+		print("Last Received Packet	: " << stats.second.timeLastRxPacket.GetSeconds() << " Seconds");
+		print("Throughput: " << Throughput << " Mbps");
+		print("---------------------------------------------------------------------------");
+		qos_file << fiveTuple.sourceAddress << " --> " << fiveTuple.destinationAddress << "," << PDR << "," << PLR << "," << Delay << "," << Throughput << "\n";
+	}
+	qos_file.close();
+}
+
+
+
+
+
+int main (int argc, char *argv[]){
+	BooleanValue booleanValue;
+	StringValue stringValue;
+	IntegerValue integerValue;
+	UintegerValue uintegerValue;
+	DoubleValue doubleValue;
+	
+	// ------ Core Global Variables
+	GlobalValue::GetValueByName ("udpInterval"		, doubleValue);		// use optional NLOS equation
+	GlobalValue::GetValueByName ("udpPacketSize"	, uintegerValue);	// use optional NLOS equation
+	GlobalValue::GetValueByName ("udpFullBuffer"	, booleanValue);	//
+	GlobalValue::GetValueByName ("bandwidth"		, doubleValue);		//
+	GlobalValue::GetValueByName ("outputDir"		, stringValue);
+	GlobalValue::GetValueByName ("simTag"			, stringValue);
+	// double		udpInterval		= doubleValue.Get();
+	// uint32_t	udpPacketSize 	= uintegerValue.Get();
+	// bool		udpFullBuffer	= booleanValue.Get();
+	// double		bandwidth		= doubleValue.Get();
+	std::string	outputDir		= stringValue.Get();
+	std::string	simTag			= stringValue.Get();
+
+
+
+
+	// -------------------------- TERMINAL COMMAND LINE INPUT ------------------------
+	std::string positionAlgorithm = "froglet";
+	// std::string positionAlgorithm = "ga";
+	int randomSeed = 1000;
+	double interPacketInterval = 1000;
+
+	string rechargePosition_str = "#0,0,0;";
+
+	CommandLine cmd;
+	cmd.AddValue("simTime",				"Simulation time",							SIMTIME);
+	cmd.AddValue("simRuns",				"Number of runs",							SIMRUNS);
+	cmd.AddValue("n_ue",				"Number of UEs",							NUMBER_UES);
+	cmd.AddValue("n_enb",				"Number of eNBs",							NUMBER_ENBBS);
+	cmd.AddValue("maxLongRange",		"Long communication range reference",		MAX_LONGRANGE_REF);
+	cmd.AddValue("maxShortRange",		"Short communication range reference",		MAX_SHORTRANGE_REF);
+	cmd.AddValue("mobilityTraceUE",		"User equipment mobility trace",			TRACEFILE);
+	cmd.AddValue("initialEnergy",		"initialEnergy",							INITIAL_ENERGY);
+	cmd.AddValue("batteryVoltage",		"batteryVoltage",							INITIAL_BATT_VOLTAGE);
+	cmd.AddValue("positionAlgorithm",	"Position algorithm for drone placement",	positionAlgorithm);
+	cmd.AddValue("randomSeed",			"value of seed for random",					randomSeed);
+	cmd.AddValue("interPacketInterval",	"Inter packet interval [ms])",				interPacketInterval);
+	cmd.AddValue("rechargeStations",	"List of recharge stations",				rechargePosition_str);
+
+	// cmd.AddValue("scen", "scenario to run", scen);
+	// cmd.AddValue("graphType","Type of graphs", graphType);
+	ConfigStore inputConfig;
+	inputConfig.ConfigureDefaults ();
+	cmd.Parse (argc, argv); // parse again so you can override input file default values via command line
+	
+	NUMBER_EDGESERVERS = NUMBER_ENBBS;
+
+	RECHARGE_STATION_POSITION_LIST = vector_from_string(rechargePosition_str.substr(1, rechargePosition_str.size() - 2));
+
+	// Initializing proposal configurarion global variables
+	P_CONFIG.id		= FROGLET_ALGORITHM;
+	P_CONFIG.name	= "froglet";
+	P_CONFIG.py_dir	= "~/git/CoverageMaximizationProblem/main.py";
+
+	if(positionAlgorithm == "froglet"){
+		P_CONFIG.id				= FROGLET_ALGORITHM;
+		P_CONFIG.name			= positionAlgorithm;
+		P_CONFIG.py_dir			= "~/git/CoverageMaximizationProblem/main.py";
+	}
+
+	if(positionAlgorithm == "suap"){
+		P_CONFIG.id				= GA_ALGORITHM;
+		P_CONFIG.name			= positionAlgorithm;
+		P_CONFIG.py_dir			= "~/git/pyGA-pandas/main.py";
+	}
+
+	if(positionAlgorithm == "gaEnergy2"){
+		P_CONFIG.id				= GA_ENERGY_2_ALGORITHM;
+		P_CONFIG.name			= positionAlgorithm;
+		P_CONFIG.py_dir			= "~/git/pyGA-pandas/energy_2.py";
+	}
+
+	if(positionAlgorithm == "gaEnergy3"){
+		P_CONFIG.id				= GA_ENERGY_3_ALGORITHM;
+		P_CONFIG.name			= positionAlgorithm;
+		P_CONFIG.py_dir			= "~/git/pyGA-pandas/energy_3.py";
+	}
+
+	if(positionAlgorithm == "gaEnergy4"){
+		P_CONFIG.id				= GA_ENERGY_4_ALGORITHM;
+		P_CONFIG.name			= positionAlgorithm;
+		P_CONFIG.py_dir			= "~/git/pyGA-pandas/energy_4.py";
+	}
+
+	if(positionAlgorithm == "gaEnergy5"){
+		P_CONFIG.id				= GA_ENERGY_5_ALGORITHM;
+		P_CONFIG.name			= positionAlgorithm;
+		P_CONFIG.py_dir			= "~/git/pyGA-pandas/energy_5.py";
+	}
+	
+	// NS_LOG_UNCOND("\033[2J\033[1;1H" << "\u001b[32m" << "= = = = = = = = = = = = = = = = = = = =\n[NS3] " << SIM_NAME << "\n= = = = = = = = = = = = = = = = = = = =\u001b[0m");
+
+	// NS_LOG_UNCOND("["<< P_CONFIG.name <<"]\u001b[32m" << "[SETUP]: udpInterval: " << udpInterval << "\u001b[0m");
+	// NS_LOG_UNCOND("["<< P_CONFIG.name <<"]\u001b[32m" << "[SETUP]: udpPacketSize: " << udpPacketSize << "\u001b[0m");
+	// NS_LOG_UNCOND("["<< P_CONFIG.name <<"]\u001b[32m" << "[SETUP]: udpFullBuffer: " << udpFullBuffer << "\u001b[0m");
+	// NS_LOG_UNCOND("["<< P_CONFIG.name <<"]\u001b[32m" << "[SETUP]: bandwidth: " << bandwidth << "\u001b[0m");
+
+	
+	// NS_LOG_UNCOND("["<< P_CONFIG.name <<"]\u001b[32m" << "[SETUP]: Setting position algorithm to " << P_CONFIG.name << "\u001b[0m");
+	// ------------------------------------------------------------------------------
+
+
+
+
+
+
+	ns3::RngSeedManager::SetSeed(randomSeed);
+	NS3_DIR = GetTopLevelSourceDir();
+
+	// NS_LOG_UNCOND("["<< P_CONFIG.name <<"]\u001b[32m" << "[SETUP]: Enabling simulation settings\u001b[0m");
+
+	// NS_LOG_UNCOND("["<< P_CONFIG.name <<"]\u001b[32m" << "[SETUP]: Create epc helper and set as default\u001b[0m");
+	// ==== create epc helper and set as default ====
+	Ptr<PointToPointEpcHelper> epcHelper = CreateObject<PointToPointEpcHelper>();
+	LTE_HELPER->SetEpcHelper(epcHelper);
+
+	// NS_LOG_UNCOND("["<< P_CONFIG.name <<"]\u001b[32m" << "[SETUP]: Get pgw node\u001b[0m");
+	// ==== get pgw node ====
+	Ptr<Node> pgw = epcHelper->GetPgwNode();
+
+	// NS_LOG_UNCOND("["<< P_CONFIG.name <<"]\u001b[32m" << "[SETUP]: Lte specific config\u001b[0m");
+	// ==== lte specific config ====
+	LTE_HELPER->SetAttribute("PathlossModel", StringValue("ns3::FriisPropagationLossModel"));
+	LTE_HELPER->SetHandoverAlgorithmType("ns3::NoOpHandoverAlgorithm");
+	
+	// ==== todo: change for uavs ====
+	LTE_HELPER->SetEnbDeviceAttribute("DlBandwidth", UintegerValue(25)); // Set Download BandWidth
+	LTE_HELPER->SetEnbDeviceAttribute("UlBandwidth", UintegerValue(25)); // Set Upload Bandwidth
+
+	// // ==== Network config ====
+	// if (useCa){
+	// 	Config::SetDefault("ns3::LteHelper::UseCa", BooleanValue(useCa));
+	// 	Config::SetDefault("ns3::LteHelper::NumberOfComponentCarriers",
+	// 		UintegerValue(2));
+	// 	Config::SetDefault("ns3::LteHelper::EnbComponentCarrierManager",
+	// 		StringValue("ns3::RrComponentCarrierManager"));
+	// }
+	// Config::SetDefault("ns3::LteEnbPhy::TxPower", DoubleValue(eNodeBTxPower));
+	Config::SetDefault("ns3::LteEnbRrc::SrsPeriodicity", UintegerValue(320));
+	// error modes for ctrl and data planes
+	Config::SetDefault("ns3::LteSpectrumPhy::CtrlErrorModelEnabled", BooleanValue(false));
+	Config::SetDefault("ns3::LteSpectrumPhy::DataErrorModelEnabled", BooleanValue(false));
+
+
+
+
+
+
+
+
+
+	// ==== create nodes in global containers ====
+	// NS_LOG_UNCOND("["<< P_CONFIG.name <<"]\u001b[32m" << "[SETUP]: Create " << NUMBER_UES << " UE_NODECONTAINER nodes in global containers\u001b[0m");
+	UE_NODECONTAINER.Create(NUMBER_UES);
+
+	// NS_LOG_UNCOND("["<< P_CONFIG.name <<"]\u001b[32m" << "[SETUP]: Create " << NUMBER_ENBBS << " BS_NODECONTAINER nodes in global containers\u001b[0m");
+	BS_NODECONTAINER.Create(NUMBER_ENBBS);
+
+	// NS_LOG_UNCOND("["<< P_CONFIG.name <<"]\u001b[32m" << "[SETUP]: Create " << NUMBER_ENBBS << " SERVER_NODECONTAINER nodes in global containers\u001b[0m");
+	SERVER_NODECONTAINER.Create(NUMBER_ENBBS);
+
+
+
+
+
+
+	// set up mobility
+	MobilityHelper mobility;
+	mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
+	// mobility.Install(remoteHost);
+	mobility.Install(pgw);
+	BuildingsHelper::Install(pgw);
+	
+	/*user device mobility according to ns2 trace*/
+	// NS_LOG_UNCOND("["<< P_CONFIG.name <<"]\u001b[32m" << "[SETUP]: Installing Mobility Model in the UEs from " << TRACEFILE << "\u001b[0m");
+	// Ns2MobilityHelper ped_mobil = Ns2MobilityHelper("./src/mobility/my_mobility/koln.tcl");
+	Ns2MobilityHelper ped_mobil = Ns2MobilityHelper(TRACEFILE);
+	ped_mobil.Install(UE_NODECONTAINER.Begin(), UE_NODECONTAINER.End());
+
+	MobilityHelper mobilityEnb;
+	mobilityEnb.SetMobilityModel("ns3::ConstantPositionMobilityModel");
+	auto BSPosition = generatePositionAllocator(4000, NUMBER_ENBBS, "koln");
+	mobilityEnb.SetPositionAllocator(BSPosition);
+	// NS_LOG_UNCOND("["<< P_CONFIG.name <<"]\u001b[32m" << "[SETUP]: Installing Mobility Model in the BSs \u001b[0m");
+	mobilityEnb.Install(BS_NODECONTAINER);
+	mobilityEnb.Install(SERVER_NODECONTAINER);
+
+	Ptr<ListPositionAllocator> posAlloc_uabs = CreateObject<ListPositionAllocator> ();
+	posAlloc_uabs = loadInitialFroglet(UE_NODECONTAINER, DRONE_ALTITUDE, &NUMBER_UAVS);
+
+	// NS_LOG_UNCOND("["<< P_CONFIG.name <<"]\u001b[32m" << "[SETUP]: Create " << NUMBER_UAVS << " UAV_NODECONTAINER nodes in global containers\u001b[0m");
+	UAV_NODECONTAINER.Create(NUMBER_UAVS);
+
+
+	/*reassign for uav random positioning*/
+	// MobilityHelper mobilityUAV;
+	// auto UAVPosition = generatePositionAllocator(1000, NUMBER_UAVS, "random");
+	// mobilityUAV.SetMobilityModel("ns3::ConstantPositionMobilityModel");
+	// mobilityUAV.SetPositionAllocator(UAVPosition);
+	// mobilityUAV.Install(UAV_NODECONTAINER);
+
+	MobilityHelper mobilityUAV;
+	mobilityUAV.SetMobilityModel ("ns3::ConstantVelocityMobilityModel");
+	mobilityUAV.SetPositionAllocator(posAlloc_uabs);
+	mobilityUAV.Install(UAV_NODECONTAINER);
+
+
+
+
+
+	int total_eNBs = BS_NODECONTAINER.GetN() + UAV_NODECONTAINER.GetN();
+	int total_UEs = UE_NODECONTAINER.GetN();
+
+	CONNECTIONS				= std::vector<std::vector<int>>(total_eNBs,					std::vector<int> (total_UEs, -1));
+	NEIGHBORS				= std::vector<std::vector<int>>(total_eNBs,					std::vector<int> (total_UEs, -1));
+	HANDOVER_PREDICTIONS	= std::vector<std::vector<int>>(total_UEs,					std::vector<int> (3, 0));
+	EDGE_UE					= std::vector<std::vector<int>>(NUMBER_EDGESERVERS,			std::vector<int> (total_UEs, -1));
+	EDGE_MIGRATION_CHART	= std::vector<std::vector<int>>(total_UEs,					std::vector<int> (NUMBER_EDGESERVERS, -1));
+	SERVER_NODES_ADDRESSES	= std::vector<std::vector<Ipv4Address>>(NUMBER_EDGESERVERS,	std::vector<Ipv4Address> (2));
+
+
+
+
+
+
+
+
+	// NS_LOG_UNCOND("["<< P_CONFIG.name <<"]\u001b[32m" << "[SETUP]: Create and install internet\u001b[0m");
+	// ==== create and install internet ====
+	InternetStackHelper internet;
+	internet.Install(UE_NODECONTAINER);
+	internet.Install(SERVER_NODECONTAINER);
+
+	// NS_LOG_UNCOND("["<< P_CONFIG.name <<"]\u001b[32m" << "[SETUP]: Address base for servers\u001b[0m");
+	// ==== address base for servers ====
+	Ipv4AddressHelper ipv4h;
+	ipv4h.SetBase("1.0.0.0", "255.0.0.0");
+
+	// NS_LOG_UNCOND("["<< P_CONFIG.name <<"]\u001b[32m" << "[SETUP]: Set up  links between pgw and edge servers\u001b[0m");
+	// ==== set up  links between pgw and edge servers ====
+	Ipv4StaticRoutingHelper ipv4RoutingHelper;
+
+
+
+
+
+
+
+
+
+
+
+	// NS_LOG_UNCOND("["<< P_CONFIG.name <<"]\u001b[32m" << "[SETUP]: Create " << SERVER_NODECONTAINER.GetN() << " edge nodes with different delays, some of them unfit for the application\u001b[0m");
+	for (uint32_t i = 0; i < SERVER_NODECONTAINER.GetN(); ++i){
+		// NS_LOG_UNCOND("["<< P_CONFIG.name <<"]\u001b[32m" << "[SETUP]:\t Create edge node " << i+1 << " of " << SERVER_NODECONTAINER.GetN() << " \u001b[0m");
+		// create all edge nodes with different delays, some of them unfit fot the application
+		Ptr<Node> node = SERVER_NODECONTAINER.Get(i);
+
+		// delay value, should be set up on initialization way above todo: fix later
+		int delay = 40;
+
+		// Create the Internet
+		PointToPointHelper p2ph;
+		p2ph.SetDeviceAttribute("DataRate", DataRateValue(DataRate("100Gb/s")));
+		p2ph.SetDeviceAttribute("Mtu", UintegerValue(1500));
+
+		// random link delay
+		p2ph.SetChannelAttribute("Delay", TimeValue(MilliSeconds(delay)));
+		NetDeviceContainer internetDevices = p2ph.Install(pgw, node);
+		Ipv4InterfaceContainer internetIpIfaces = ipv4h.Assign(internetDevices);
+
+		// interface 0 is localhost, 1 is the p2p device
+		SERVER_NODES_ADDRESSES[i][0] = internetIpIfaces.GetAddress(1);
+
+
+		// add network routes to fog nodes
+		Ptr<Ipv4StaticRouting> remoteHostStaticRouting =
+		ipv4RoutingHelper.GetStaticRouting(node->GetObject<Ipv4>());
+		remoteHostStaticRouting->AddNetworkRouteTo(Ipv4Address("7.0.0.0"), Ipv4Mask("255.0.0.0"), 1);
+		// p2ph.EnablePcapAll("lena-simple-epc-backhaul");
+	}
+
+
+
+
+
+	// set default gateway for users
+	// NS_LOG_UNCOND("["<< P_CONFIG.name <<"]\u001b[32m" << "[SETUP]: Create " << UE_NODECONTAINER.GetN() << " UE_NODECONTAINER nodes \u001b[0m");
+	for (uint32_t u = 0; u < UE_NODECONTAINER.GetN(); ++u){
+		// NS_LOG_UNCOND("["<< P_CONFIG.name <<"]\u001b[32m" << "[SETUP]:\t Create UE_NODECONTAINER nodes " << u+1 << " of " << UE_NODECONTAINER.GetN() << " \u001b[0m");
+		Ptr<Node> ueNode = UE_NODECONTAINER.Get(u);
+		Ptr<Ipv4StaticRouting> ueStaticRouting = ipv4RoutingHelper.GetStaticRouting(ueNode->GetObject<Ipv4>());
+		ueStaticRouting->SetDefaultRoute(epcHelper->GetUeDefaultGatewayAddress(), 1);
+	}
+
+
+
+
+	// set up backhaul channel
+	// links between servers for migrations!!
+	Ipv4AddressHelper edgeIpv4AddressHelper;
+	CsmaHelper csma;
+	csma.SetChannelAttribute("DataRate", StringValue("100Gbps"));
+	csma.SetChannelAttribute("Delay", StringValue("0ms"));
+	NetDeviceContainer backhaulCsma = csma.Install(SERVER_NODECONTAINER);
+
+
+	Ipv4InterfaceContainer serversIpIfaces = edgeIpv4AddressHelper.Assign(backhaulCsma);
+	for (uint32_t i = 0; i < serversIpIfaces.GetN(); ++i){
+		SERVER_NODES_ADDRESSES[i][1] = serversIpIfaces.GetAddress(i);
+	}
+
+
+
+
+
+
+	// ==== Energy ====
+	// NS_LOG_UNCOND("["<< P_CONFIG.name <<"]\u001b[32m" << "[SETUP]: Installing Energy on UAVs\u001b[0m");
+	UavMobilityEnergyModelHelper energy_helper;
+	energy_helper.SetMobilityModel("ns3::ConstantVelocityMobilityModel");
+	energy_helper.Set("AscendEnergyConversionFactor",DoubleValue(25.0));
+	energy_helper.Set("DescendEnergyConversionFactor",DoubleValue(20.9));
+	energy_helper.Set("MoveEnergyConversionFactor",DoubleValue(22.0));
+	energy_helper.Set("HoverCurrent",DoubleValue(21.1));
+	
+	// energy_helper.SetEnergySource("ns3::BasicEnergySource",
+	// 	"BasicEnergySourceInitialEnergyJ", DoubleValue (INITIAL_ENERGY),
+	// 	"BasicEnergySupplyVoltageV", DoubleValue(INITIAL_BATT_VOLTAGE));
+	print("INITIAL_ENERGY: " << INITIAL_ENERGY);
+
+	energy_helper.SetEnergySource("ns3::LiIonEnergySource",
+		"LiIonEnergySourceInitialEnergyJ", DoubleValue (INITIAL_ENERGY),
+		"InitialCellVoltage", DoubleValue(23),
+		"NominalCellVoltage", DoubleValue(22.2),
+		"ExpCellVoltage", DoubleValue(20.2),
+		"ThresholdVoltage", DoubleValue(22.2)
+		// "RatedCapacity", DoubleValue(5000), // 8
+		);
+
+	UAV_ENERGY_MODE = energy_helper.Install (UAV_NODECONTAINER);
+	
+	// for (int i = 0; i < UAV_ENERGY_MODE.GetN(); ++i){
+	// 	Ptr<ConstantVelocityMobilityModel> mobilityModel =
+	// 		UAV_ENERGY_MODE.Get(i)->GetObject<ConstantVelocityMobilityModel>();
+	// 	UAV_ENERGY_MODE.Get(i)->TraceConnectWithoutContext ("EnergyDepleted",
+	// 		MakeBoundCallback (&EnergyDepleted,mobilityModel));
+	// }
+
+	
+
+
+
+
+
+
+
+	// ==== Building result output file name ====
+	RESULT_PREFIX = SIM_OUTPUT_FOLDER+SIM_NAME + "_"
+		+ P_CONFIG.name + "_"
+		+ std::to_string (UAV_NODECONTAINER.GetN()) + "UAV_"
+		+ std::to_string (UE_NODECONTAINER.GetN()) + "UE_"
+		+ std::to_string ((int) SIMTIME) + "s"
+		+ "_simruns-" + std::to_string (SIMRUNS)
+		+ "_maxLongRange-" + to_string(MAX_LONGRANGE_REF)
+		+ "_maxShortRange-" + to_string(MAX_SHORTRANGE_REF)
+		// + "_[metricname]_"
+		// + ".out"
+		+ "";
+	// ====
+
+
+
+
+
+
+
+	ENB_DEVS = LTE_HELPER->InstallEnbDevice(NodeContainer(BS_NODECONTAINER, UAV_NODECONTAINER));
+	UE_DEVS = LTE_HELPER->InstallUeDevice(UE_NODECONTAINER);
+
+	Ipv4InterfaceContainer ueIpIface;
+	ueIpIface = epcHelper->AssignUeIpv4Address(NetDeviceContainer(UE_DEVS));
+
+	// set up different transmission powers for drones
+	for (uint32_t i = 0; (unsigned)i < ENB_DEVS.GetN(); i++){
+		auto enb0Phy = ENB_DEVS.Get(i)->GetObject<LteEnbNetDevice>()->GetPhy();
+		if (i < NUMBER_ENBBS){
+			// enb0Phy->SetTxPower(43);
+			enb0Phy->SetTxPower(TXPOWER_BSENB);
+		}
+		else{
+			// enb0Phy->SetTxPower(23);
+			enb0Phy->SetTxPower(TXPOWER_UABS);
+		}
+	}
+	// print("set up different transmission powers for drones");
+	// for (uint32_t i = 0; i < UAV_NODECONTAINER.GetN(); i++){
+	// 	Ptr<LteEnbPhy> enb0Phy = UAV_NODECONTAINER.Get(i)->GetObject<LteEnbNetDevice>()->GetPhy();
+	// 	enb0Phy->SetTxPower(TXPOWER_UABS);
+	// }
+	// print("done");
+
+
+	// attach to cells with the highest sinr
+	LTE_HELPER->Attach(UE_DEVS);
+
+
+
+
+
+
+	AnimationInterface animator("lte_animation.xml");
+
+	animator.SetMobilityPollInterval(Seconds(1));
+	for (uint32_t i = 0; i < UAV_NODECONTAINER.GetN(); ++i){
+		NODETYPE_MAP_LIST["drone"].push_back(UAV_NODECONTAINER.Get(i)->GetObject<Node>()->GetId());
+		animator.UpdateNodeDescription(UAV_NODECONTAINER.Get(i), "UAV " + std::to_string(i));
+		animator.UpdateNodeColor(UAV_NODECONTAINER.Get(i), 0, 128, 255);
+		animator.UpdateNodeSize(UAV_NODECONTAINER.Get(i)->GetId(), 100, 100); // to change the node size in the animation.
+	}
+
+	for (uint32_t j = 0; j < UE_NODECONTAINER.GetN(); ++j){
+		NODETYPE_MAP_LIST["user"].push_back(UE_NODECONTAINER.Get(j)->GetObject<Node>()->GetId());
+		animator.UpdateNodeDescription(UE_NODECONTAINER.Get(j), "UE " + std::to_string(j));
+		animator.UpdateNodeColor(UE_NODECONTAINER.Get(j), 204, 204, 0);
+		animator.UpdateNodeSize(UE_NODECONTAINER.Get(j)->GetId(), 100, 100);
+	}
+
+	for (uint32_t j = 0; j < BS_NODECONTAINER.GetN(); ++j){
+		NODETYPE_MAP_LIST["bsenb"].push_back(BS_NODECONTAINER.Get(j)->GetObject<Node>()->GetId());
+		animator.UpdateNodeDescription(BS_NODECONTAINER.Get(j), "Cell " + std::to_string(j));
+		animator.UpdateNodeColor(BS_NODECONTAINER.Get(j), 0, 153, 0);
+		animator.UpdateNodeSize(BS_NODECONTAINER.Get(j)->GetId(), 100, 100);
+	}
+
+
+	// Joining all nodes
+	NodeContainer allNodes;
+	allNodes.Add (UE_NODECONTAINER);
+	allNodes.Add (BS_NODECONTAINER);
+	allNodes.Add (UAV_NODECONTAINER);
+	// Simulator::Schedule(Seconds(0), &Throughput, true, binSize, fileNameOutput);
+	// Simulator::Schedule(Seconds(0), &saveLocations, allNodes, 1, true);
+	Simulator::Schedule(Seconds(0), &saveLocations, UE_NODECONTAINER, 1, true);
+	Simulator::Schedule(Seconds(1), &saveLocations, UAV_NODECONTAINER, 1, false);
+	Simulator::Schedule(Seconds(1), &saveLocations, BS_NODECONTAINER, 1, false);
+
+
+
+	allNodes.Add (pgw);
+	// intall flow monitor and get stats
+	Ptr<FlowMonitor> monitor = FLOWMON_HELPER.InstallAll();
+	Ptr<Ipv4FlowClassifier> classifier =
+		DynamicCast<Ipv4FlowClassifier>(FLOWMON_HELPER.GetClassifier());
+
+
+
+	// monitor->SetAttribute ("DelayBinWidth",				DoubleValue (0.001));	// já estava
+	// monitor->SetAttribute ("JitterBinWidth",			DoubleValue (0.001));	// já estava
+	// monitor->SetAttribute ("PacketSizeBinWidth",		DoubleValue (20));		// já estava
+	// monitor->SetAttribute ("FlowInterruptionsBinWidth",	DoubleValue (0.250));
+	// monitor->SetAttribute ("MaxPerHopDelay",			TimeValue (Seconds (10.0)));
+	monitor->SetAttribute ("StartTime",					TimeValue (Seconds (0)));
+	// monitor->SetAttribute ("FlowInterruptionsMinTime",	TimeValue (Seconds (0.5)));
+	// monitor->SetAttribute ("FlowInterruptionsMinTime",	TimeValue (Seconds (1)));
+
+
+	// Simulator::Schedule(Seconds(1), &CalculateThroughput);
+	// Simulator::Schedule(Seconds(SIMTIME - 0.01), ThroughputMonitor, &FLOWMON_HELPER, monitor);
+	Simulator::Schedule(Seconds(1), &QoSMonitor, monitor, 1, true);
+	Simulator::Schedule(Seconds(1), &LandDroneToGround, 10, true, 1);
+
+	// Simulator::Schedule(Seconds(1), &send_drones_to_cluster_centers, NodeContainer(ueNodes), UAVNodes);
+
+
+
+
+	switch(P_CONFIG.id){
+		case FROGLET_ALGORITHM:
+			print("FROGLET_ALGORITHM");
+			Simulator::Schedule(Seconds (0), &updateDronePosition, calculate_Froglet, 5);
+			break;
+		case GA_ALGORITHM:
+			print("GA_ALGORITHM");
+			Simulator::Schedule(Seconds (0), &updateDronePosition, calculate_GA, 5);
+			break;
+		case GA_ENERGY_1_ALGORITHM:
+			print("GA_ENERGY_1_ALGORITHM");
+			Simulator::Schedule(Seconds (0), &updateDronePosition, calculate_GA, 5);
+			break;
+		case GA_ENERGY_2_ALGORITHM:
+			print("GA_ENERGY_2_ALGORITHM");
+			Simulator::Schedule(Seconds (0), &updateDronePosition, calculate_GA, 5);
+			break;
+		case GA_ENERGY_3_ALGORITHM:
+			print("GA_ENERGY_3_ALGORITHM");
+			Simulator::Schedule(Seconds (0), &updateDronePosition, calculate_GA, 5);
+			break;
+		case GA_ENERGY_4_ALGORITHM:
+			print("GA_ENERGY_4_ALGORITHM");
+			Simulator::Schedule(Seconds (0), &updateDronePosition, calculate_GA, 5);
+			break;
+		case GA_ENERGY_5_ALGORITHM:
+			print("GA_ENERGY_5_ALGORITHM");
+			Simulator::Schedule(Seconds (0), &updateDronePosition, calculate_GA, 5);
+			break;
+		default:
+			Simulator::Schedule(Seconds (0), &updateDronePosition, calculate_Froglet, 5);
+			print("default");
+			break;
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	// // ---------------------------------- Application --------------------------------//
+	for (int ue = 0; ue < UE_NODECONTAINER.GetN(); ++ue){
+		for (int sn = 0; sn < SERVER_NODECONTAINER.GetN(); ++sn){
+			Simulator::Schedule(Seconds(2), &requestApplication,
+				UE_NODECONTAINER.Get(ue), SERVER_NODECONTAINER.Get(sn), sn);
+		}
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	/* handover reporting callbacks*/
+	Config::Connect("/NodeList/*/DeviceList/*/LteEnbRrc/HandoverStart",
+		MakeCallback(&NotifyHandoverStartEnb));
+
+	Config::Connect("/NodeList/*/DeviceList/*/LteUeRrc/ConnectionEstablished",
+		MakeCallback(&NotifyConnectionEstablishedUe));
+
+	Config::Connect("/NodeList/*/DeviceList/*/LteUeRrc/HandoverStart",
+		MakeCallback(&NotifyHandoverStartUe));
+
+	Config::Connect("/NodeList/*/DeviceList/*/LteEnbRrc/HandoverEndOk",
+		MakeCallback(&NotifyHandoverEndOkEnb));
+
+	Config::Connect("/NodeList/*/DeviceList/*/LteUeRrc/HandoverEndOk",
+		MakeCallback(&NotifyHandoverEndOkUe));
+
+
+	// /* signal reporting callbacks */
+	Config::Connect("/NodeList/*/DeviceList/*/ComponentCarrierMapUe/*/LteUePhy/ReportUeMeasurements",
+		MakeCallback(&ReportUeMeasurementsCallback));
+
+	Config::Connect("/NodeList/*/DeviceList/*/LteEnbRrc/RecvMeasurementReport",
+		MakeCallback(&RecvMeasurementReportCallback));
+
+
+
+
+	// Config::Connect("/NodeList/*/UavMobilityEnergyModel/EnergyDepleted",
+	// Config::Connect("/NodeList/*/DeviceList/*/psc/UavMobilityEnergyModel/EnergyDepleted",
+	// Config::Connect("/NodeList/*/psc/UavMobilityEnergyModel/EnergyDepleted",
+	Config::Connect("/NodeList/*/$ns3::psc::UavMobilityEnergyModel/EnergyDepleted",
+		MakeCallback(&EnergyDepleted));	
+
+
+	LTE_HELPER->EnableTraces(); // enable all traces
+	// LTE_HELPER->EnablePhyTraces();
+	// LTE_HELPER->EnableUlPhyTraces();
+	// LTE_HELPER->EnableDlPhyTraces();
+	// LTE_HELPER->EnableMacTraces();
+	// LTE_HELPER->EnableRlcTraces();
+	// LTE_HELPER->EnablePdcpTraces();
+
+	// NS_LOG_UNCOND("["<< P_CONFIG.name <<"]\u001b[32m\u001b[1m[SIMULATION]:\tRunning...\u001b[0m");
+	Simulator::Stop(Seconds(SIMTIME));
+	Simulator::Run();
+
+	monitor->CheckForLostPackets ();
+	classifier = DynamicCast<Ipv4FlowClassifier> (FLOWMON_HELPER.GetClassifier ());
+	FlowMonitor::FlowStatsContainer stats = monitor->GetFlowStats ();
+	
+	double averageFlowThroughput = 0.0;
+	double averageFlowDelay = 0.0;
+	double averagePDR = 0.0;
+
+	std::ofstream outFile;
+	// std::string rootpath = (std::__fs::filesystem::current_path());
+	std::string fileName = RESULT_PREFIX + "_output.txt"; //outputDir + "/" + simTag;
+	
+	outFile.open (fileName.c_str (), std::ofstream::out | std::ofstream::app);
+	if (!outFile.is_open ()){
+		// NS_LOG_ERROR ("Can't open file " << fileName);
+		print("Can't open file " << fileName << "\n");
+		return 1;
+	}
+	outFile.setf(std::ios_base::fixed);
+	// outFile << "==================================================\n";
+	for (std::map<FlowId, FlowMonitor::FlowStats>::const_iterator i = stats.begin (); i != stats.end (); ++i){
+		Ipv4FlowClassifier::FiveTuple t = classifier->FindFlow (i->first);
+		std::stringstream protoStream;
+		protoStream << (uint16_t) t.protocol;
+		if (t.protocol == 6){
+			protoStream.str ("TCP");
+		}
+		if (t.protocol == 17){
+			protoStream.str ("UDP");
+		}
+		outFile << "Flow " << i->first << " (" << t.sourceAddress << ":" << t.sourcePort << " -> " << t.destinationAddress << ":" << t.destinationPort << ") proto " << protoStream.str () << "\n";
+		outFile << "\tTx Packets: " << i->second.txPackets << "\n";
+		outFile << "\tTx Bytes:   " << i->second.txBytes << "\n";
+		outFile << "\tTxOffered:  " << i->second.txBytes * 8.0 / (SIMTIME - UDPAPPSTARTTIME) / 1024 / 1024  << " Mbps\n";
+		outFile << "\tRx Bytes:   " << i->second.rxBytes << "\n";
+		if (i->second.rxPackets > 0){
+	      // Measure the duration of the flow from receiver's perspective
+			double rxDuration = i->second.timeLastRxPacket.GetSeconds () - i->second.timeFirstTxPacket.GetSeconds ();
+
+			averageFlowThroughput += i->second.rxBytes * 8.0 / rxDuration / 1024 / 1024;
+			averageFlowDelay += 1024 * i->second.delaySum.GetSeconds () / i->second.rxPackets;
+			averagePDR += (int)(100*(double)i->second.rxPackets/(double)i->second.txPackets);
+
+			// Throughput = stats.second.rxBytes * 8.0 /
+			// 	(stats.second.timeLastRxPacket.GetSeconds() - stats.second.timeFirstTxPacket.GetSeconds()) /
+			// 	1024 / 1024;
+			outFile << "\tThroughput: " << i->second.rxBytes / rxDuration / 1024 / 1024  << " MBps\n";
+			// outFile << "\tThroughput: " << i->second.rxBytes * 8.0 / rxDuration / 1024 / 1024  << " Mbps\n";
+			outFile << "\tMean delay:  " << 1024 * i->second.delaySum.GetSeconds () / i->second.rxPackets << " ms\n";
+			// outFile << "\tMean upt:  " << i->second.uptSum / i->second.rxPackets / 1024/1024 << " Mbps \n";
+			outFile << "\tMean jitter:  " << 1024 * i->second.jitterSum.GetSeconds () / i->second.rxPackets  << " ms\n";
+		}
+		else{
+			outFile << "\tThroughput:  0 Mbps\n";
+			outFile << "\tMean delay:  0 ms\n";
+			outFile << "\tMean upt:  0  Mbps \n";
+			outFile << "\tMean jitter: 0 ms\n";
+		}
+		outFile << "\tRx Packets: " << i->second.rxPackets << "\n";
+		outFile << "\n";
+		outFile << "\tPDR: " << (int)(100*(double)i->second.rxPackets/(double)i->second.txPackets) << "%\n";
+		outFile << "\n";
+
+	}
+
+	// outFile << "\n\tMean flow throughput: " << averageFlowThroughput / stats.size() << "\n";
+	// outFile << "\tMean flow delay: " << averageFlowDelay / stats.size () << "\n";
+	// outFile << "\tMean PDR: " << averagePDR / stats.size () << "%\n";
+	outFile.close ();
+	Simulator::Destroy();
+	return 0;
+}

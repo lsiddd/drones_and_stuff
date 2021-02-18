@@ -57,7 +57,8 @@ bool enableHandover = false;
 std::string ns3_dir;
 
 bool useCa = false;
-const uint32_t numUAVs = 5;
+const uint32_t numUAVs = 10;
+const uint32_t number_of_surges = 10;
 const uint32_t numUes = 20;
 const uint32_t numStaticCells = 30;
 const uint32_t numEdgeServers = numStaticCells;
@@ -70,7 +71,7 @@ uint16_t node_remote = 1; // HOST_REMOTO
 std::string mobil_trace = "koln.tcl";
 std::string requests_trace = "requests.tcl_but_not_really";
 float distance_multiplier = 1.0 / 10;
-double cell_thr_average = 0; //average throughput of used cells
+double cell_thr_average = 0; // average throughput of used cells
 
 /* connection management structures */
 int connections[numBSs][numUes]{{0}};
@@ -146,6 +147,12 @@ int populate_path_imsi(std::string path, int imsi)
     path_imsi[nodeid] = imsi;
 
   return nodeid;
+}
+
+Vector get_node_position(Ptr<Node> node)
+{
+  Ptr<MobilityModel> mob = node->GetObject<MobilityModel>();
+  return mob->GetPosition();
 }
 
 int get_cell(int user_id)
@@ -369,7 +376,7 @@ void NotifyHandoverEndOkEnb(std::string context, uint64_t imsi, uint16_t cellId,
 }
 
 Ptr<ListPositionAllocator>
-generatePositionAllocator(int area = 1000, int number_of_nodes = 300,
+generatePositionAllocator(int number_of_nodes = 300, int area = 1000,
                           std::string allocation = "random")
 {
 
@@ -390,7 +397,7 @@ generatePositionAllocator(int area = 1000, int number_of_nodes = 300,
     }
   }
 
-  else if (allocation == "random")
+  else
   {
     for (int i = 0; i < number_of_nodes; i++)
     {
@@ -398,12 +405,6 @@ generatePositionAllocator(int area = 1000, int number_of_nodes = 300,
           Vector3D(distribution(generator), distribution(generator), 45));
     }
   }
-
-  else
-  {
-    NS_ASSERT_MSG(false, "come on, you only had two options.");
-  }
-
   return HpnPosition;
 }
 
@@ -575,7 +576,8 @@ void migrate(Ptr<Node> sourceServer, Ptr<Node> targetServer,
   apps.Start(Simulator::Now());
 }
 
-void requestApplication(Ptr<Node> ueNode, Ptr<Node> targetServer, double payload = 0)
+void requestApplication(Ptr<Node> ueNode, Ptr<Node> targetServer,
+                        double payload = 0)
 {
 
   static int applicationPort = 11000;
@@ -596,6 +598,11 @@ void requestApplication(Ptr<Node> ueNode, Ptr<Node> targetServer, double payload
   if (payload != 0)
   {
     maxPacketCount = payload / 1024;
+
+    //call a default value in case no valid amount is available
+    if (maxPacketCount == 0) {
+      maxPacketCount = 100;
+    }
     interPacketInterval = Seconds(1) / maxPacketCount;
   }
   else
@@ -871,8 +878,7 @@ void move_drones(Ptr<Node> drone, Vector position, double n_vel)
   double new_n_vel = interval * n_vel;
 
   // get mobility model for drone
-  Ptr<MobilityModel> mob = drone->GetObject<MobilityModel>();
-  Vector m_position = mob->GetPosition();
+  Vector m_position = get_node_position(drone);
   double distance = CalculateDistance(position, m_position);
 
   // 1meter of accuracy is acceptable
@@ -885,14 +891,19 @@ void move_drones(Ptr<Node> drone, Vector position, double n_vel)
                                          (diff.y / len) * new_n_vel,
                                          (diff.z / len) * new_n_vel);
     // making sure not to overshoot
-    if (CalculateDistance(new_pos, position) > CalculateDistance(position, m_position))
+    if (CalculateDistance(new_pos, position) >
+        CalculateDistance(position, m_position))
     {
       new_pos = position;
       return;
     }
 
+    // set new node position for a smoother movement
+    auto mob = drone->GetObject<MobilityModel>();
     mob->SetPosition(new_pos);
-    Simulator::Schedule(Seconds(interval), &move_drones, drone, position, n_vel);
+
+    Simulator::Schedule(Seconds(interval), &move_drones, drone, position,
+                        n_vel);
     return;
   }
   LOG("drone arrived at " << Simulator::Now().GetSeconds());
@@ -956,9 +967,11 @@ void ThroughputMonitor(FlowMonitorHelper *fmhelper, Ptr<FlowMonitor> flowMon)
     qos_file << fiveTuple.sourceAddress << " --> "
              << fiveTuple.destinationAddress << "," << PDR << "," << PLR << ","
              << Delay << "," << Throughput << "\n";
-    LOG("target node = " << get_user_id_from_ipv4(fiveTuple.destinationAddress));
+    LOG("target node = " << get_user_id_from_ipv4(
+            fiveTuple.destinationAddress));
     if (get_user_id_from_ipv4(fiveTuple.destinationAddress) != -1)
-      cell_throughput[get_user_id_from_ipv4(fiveTuple.destinationAddress)] += Throughput;
+      cell_throughput[get_user_id_from_ipv4(fiveTuple.destinationAddress)] +=
+          Throughput;
   }
 
   qos_file.close();
@@ -1090,32 +1103,64 @@ std::string GetTopLevelSourceDir(void)
   NS_FATAL_ERROR("Could not find source directory from self=" << self);
 }
 
-void generate_requests(Ptr<Node> remoteHost)
+std::vector<std::pair<int, int>> create_hot_spots()
+{
+  std::vector<std::pair<int, int>> centers;
+  std::uniform_int_distribution<int> distribution(0, 2000);
+
+  for (uint32_t i = 0; i < number_of_surges; i++)
+  {
+    std::pair<int, int> center;
+    center.first = distribution(generator);
+    center.second = distribution(generator);
+    LOG("Adding centroid to " << center.first << " " << center.second);
+    centers.push_back(center);
+  }
+
+  return centers;
+}
+
+int get_closest_center_index(Ptr<Node> node,
+                             std::vector<std::pair<int, int>> centers)
+{
+  Vector m_position = get_node_position(node);
+  double dist = INT_MAX;
+  int closest = -1;
+  for (uint32_t i = 0; i < number_of_surges; i++)
+  {
+    if (dist > CalculateDistance(m_position, Vector3D(centers[i].first,
+                                                      centers[i].second, 1)))
+    {
+      closest = i;
+    }
+  }
+  return closest;
+}
+
+void generate_requests(Ptr<Node> remoteHost,
+                       std::vector<std::pair<int, int>> centers)
 {
   // at 978 user 99 requests 1043.98848 bytes
   std::ifstream trace_file(requests_trace);
-  int currentTime = Simulator::Now().GetSeconds();
+  // int currentTime = Simulator::Now().GetSeconds();
   std::unordered_map<int, double> requests;
   std::string str;
-
-  while (getline(trace_file, str))
-  {
-    std::vector<std::string> split_line;
-    boost::split(split_line, str, boost::is_any_of(" "));
-    int time = stoi(split_line[1]);
-    int user = stoi(split_line[3]);
-    double payload = stoi(split_line[5]);
-    if (time == currentTime)
-    {
-      requests[user] = payload;
-    }
-  }
 
   for (uint32_t i = 0; i < ueNodes.GetN(); i++)
   {
     int serving_node = 0;
-    // int payload = requests[i] * 1024 * 10;
-    int payload = 2 * 1024; // request 2mb for every user and see behavior
+    double max_payload = 10 * 1024; // request 2mb for every user and see behavior
+
+    // get distance to closest hot spot and calculate payload
+    int index_to_closest = get_closest_center_index(ueNodes.Get(i), centers);
+    std::pair<int, int> closest_surge = centers[index_to_closest];
+    Vector3D surge(closest_surge.first, closest_surge.second, 1);
+
+    // payload follows an exponential function with max when dist to hot spot =
+    // 0
+    Vector node_position = get_node_position(ueNodes.Get(i));
+    double dist = CalculateDistance(surge, node_position);
+    int payload = max_payload * exp((dist * -1) / 1000);
 
     if (payload)
     {
@@ -1129,7 +1174,7 @@ void generate_requests(Ptr<Node> remoteHost)
   }
 
   trace_file.close();
-  Simulator::Schedule(Seconds(1), &generate_requests, remoteHost);
+  Simulator::Schedule(Seconds(1), &generate_requests, remoteHost, centers);
 }
 
 int main(int argc, char *argv[])
@@ -1199,7 +1244,7 @@ int main(int argc, char *argv[])
   PointToPointHelper p2ph;
   p2ph.SetDeviceAttribute("DataRate", DataRateValue(DataRate("100Gb/s")));
   p2ph.SetDeviceAttribute("Mtu", UintegerValue(1500));
-  p2ph.SetChannelAttribute("Delay", TimeValue(Seconds(0.010))); //0.010
+  p2ph.SetChannelAttribute("Delay", TimeValue(Seconds(0.010))); // 0.010
   NetDeviceContainer internetDevices = p2ph.Install(pgw, remoteHost);
 
   Ipv4AddressHelper ipv4h;
@@ -1209,8 +1254,10 @@ int main(int argc, char *argv[])
   // Ipv4Address remoteHostAddr = internetIpIfaces.GetAddress (1);
 
   Ipv4StaticRoutingHelper ipv4RoutingHelper;
-  Ptr<Ipv4StaticRouting> remoteHostStaticRouting = ipv4RoutingHelper.GetStaticRouting(remoteHost->GetObject<Ipv4>());
-  remoteHostStaticRouting->AddNetworkRouteTo(Ipv4Address("7.0.0.0"), Ipv4Mask("255.0.0.0"), 1);
+  Ptr<Ipv4StaticRouting> remoteHostStaticRouting =
+      ipv4RoutingHelper.GetStaticRouting(remoteHost->GetObject<Ipv4>());
+  remoteHostStaticRouting->AddNetworkRouteTo(Ipv4Address("7.0.0.0"),
+                                             Ipv4Mask("255.0.0.0"), 1);
 
   // set up mobility
   MobilityHelper mobility;
@@ -1225,7 +1272,7 @@ int main(int argc, char *argv[])
 
   MobilityHelper mobilityEnb;
   mobilityEnb.SetMobilityModel("ns3::ConstantPositionMobilityModel");
-  auto BSPosition = generatePositionAllocator(1000, numStaticCells, "koln");
+  auto BSPosition = generatePositionAllocator(numStaticCells, 2000, "koln");
   mobilityEnb.SetPositionAllocator(BSPosition);
   mobilityEnb.Install(BSNodes);
 
@@ -1233,7 +1280,7 @@ int main(int argc, char *argv[])
 
   /*reassign for uav random positioning*/
   MobilityHelper mobilityUAV;
-  auto UAVPosition = generatePositionAllocator(1000, numUAVs, "random");
+  auto UAVPosition = generatePositionAllocator(numUAVs, 1000, "random");
   mobilityUAV.SetMobilityModel("ns3::WaypointMobilityModel");
   mobilityUAV.SetPositionAllocator(UAVPosition);
   mobilityUAV.Install(UAVNodes);
@@ -1265,8 +1312,10 @@ int main(int argc, char *argv[])
   {
     Ptr<Node> ueNode = ueNodes.Get(u);
     // Set the default gateway for the UE
-    Ptr<Ipv4StaticRouting> ueStaticRouting = ipv4RoutingHelper.GetStaticRouting(ueNode->GetObject<Ipv4>());
-    ueStaticRouting->SetDefaultRoute(epcHelper->GetUeDefaultGatewayAddress(), 1);
+    Ptr<Ipv4StaticRouting> ueStaticRouting =
+        ipv4RoutingHelper.GetStaticRouting(ueNode->GetObject<Ipv4>());
+    ueStaticRouting->SetDefaultRoute(epcHelper->GetUeDefaultGatewayAddress(),
+                                     1);
   }
 
   // attach to cells with the highest sinr
@@ -1311,10 +1360,13 @@ int main(int argc, char *argv[])
   Ptr<Ipv4FlowClassifier> classifier =
       DynamicCast<Ipv4FlowClassifier>(flowmon.GetClassifier());
 
+  // populate centroids
+  auto centers = create_hot_spots();
+
   /* all scheduled functions*/
   Simulator::Schedule(Seconds(1), &ThroughputMonitor, &flowmon, monitor);
   Simulator::Schedule(Seconds(1), &UAVManager);
-  Simulator::Schedule(Seconds(1), &generate_requests, remoteHost);
+  Simulator::Schedule(Seconds(1), &generate_requests, remoteHost, centers);
   for (uint32_t i = 0; i < UAVNodes.GetN(); i++)
     Simulator::Schedule(Seconds(2), &move_drones, UAVNodes.Get(i),
                         Vector(1000, 1000, 20), 100);

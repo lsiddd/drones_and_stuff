@@ -26,7 +26,6 @@
 namespace ns3 {
 
 class WifiMac;
-class NetDevice;
 
 /**
  * \brief create MAC layers for a ns3::WifiNetDevice.
@@ -84,7 +83,7 @@ public:
    * \param v10 the value of the attribute to set
    *
    * All the attributes specified in this method should exist
-   * in the requested MAC.
+   * in the requested mac.
    */
   virtual void SetType (std::string type,
                         std::string n0 = "", const AttributeValue &v0 = EmptyAttributeValue (),
@@ -100,12 +99,11 @@ public:
                         std::string n10 = "", const AttributeValue &v10 = EmptyAttributeValue ());
 
   /**
-   * \param device the device within which the MAC object will reside
    * \returns a new MAC object.
    *
    * This allows the ns3::WifiHelper class to create MAC objects from ns3::WifiHelper::Install.
    */
-  virtual Ptr<WifiMac> Create (Ptr<NetDevice> device) const;
+  virtual Ptr<WifiMac> Create (void) const;
 
 
 protected:

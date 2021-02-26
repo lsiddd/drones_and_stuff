@@ -75,7 +75,7 @@ int main (int argc, char *argv[])
   //  LogComponentEnable("PacketSink", LOG_LEVEL_ALL);
   //  LogComponentEnable("TcpLargeTransfer", LOG_LEVEL_ALL);
 
-  CommandLine cmd (__FILE__);
+  CommandLine cmd;
   cmd.Parse (argc, argv);
 
   // initialize the tx buffer.
@@ -212,8 +212,5 @@ void WriteUntilBufferFull (Ptr<Socket> localSocket, uint32_t txSpace)
         }
       currentTxBytes += amountSent;
     }
-  if (currentTxBytes >= totalTxBytes)
-    {
-      localSocket->Close ();
-    }
+  localSocket->Close ();
 }

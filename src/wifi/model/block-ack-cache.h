@@ -37,7 +37,7 @@ class BlockAckCache
 {
 public:
   /**
-   * Initialization function
+   * Init function
    * \param winStart the window start
    * \param winSize the window size
    */
@@ -70,15 +70,15 @@ public:
 
 private:
   /**
-   * Reset portion of bitmap function
+   * Reset portion of bitmap functiion
    * \param start the starting position
    * \param end the ending position
    */
   void ResetPortionOfBitmap (uint16_t start, uint16_t end);
 
   uint16_t m_winStart; ///< window start
-  uint16_t m_winSize;  ///< window size
-  uint16_t m_winEnd;   ///< window end
+  uint16_t m_winSize; ///< window size
+  uint16_t m_winEnd; ///< window end
 
   uint16_t m_bitmap[4096]; ///< bitmap
 };

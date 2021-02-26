@@ -127,7 +127,8 @@ protected:
    */
   uint32_t GetSize () const;
   IE_VECTOR m_elements; //!< Information element vector
-  uint16_t m_maxSize;   //!< Size in bytes (actually, max packet length)
+  /// Size in bytes (actually, max packet length)
+  uint16_t m_maxSize;
 };
 
 } //namespace ns3

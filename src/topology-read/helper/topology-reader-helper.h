@@ -25,12 +25,6 @@
 #include "ns3/topology-reader.h"
 #include <string>
 
-/**
- * \file
- * \ingroup topology
- * ns3::TopologyHelper declaration.
- */
-
 namespace ns3 {
 
 /**

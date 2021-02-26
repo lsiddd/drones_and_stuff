@@ -19,24 +19,18 @@
  *
  */
 
-/**
- * \file
- * \ingroup mpi
- * Declaration of class ns3::RemoteChannelBundleManager.
- */
-
 #ifndef NS3_REMOTE_CHANNEL_BUNDLE_MANAGER
 #define NS3_REMOTE_CHANNEL_BUNDLE_MANAGER
 
 #include <ns3/nstime.h>
 #include <ns3/ptr.h>
-#include <unordered_map>
+#include <map>
 
 namespace ns3 {
 
 class RemoteChannelBundle;
 
-  /**
+/*
  * \ingroup mpi
  * 
  * \brief Singleton for managing the RemoteChannelBundles for each process.
@@ -48,26 +42,19 @@ class RemoteChannelBundleManager
 
 public:
   /**
-   * Get the bundle corresponding to a remote rank.
-   *
-   * \param [in] systemId The remote system id.
-   * \return The bundle for the specified system id.
+   * \return remote channel bundle for specified SystemId.
    */
   static Ptr<RemoteChannelBundle> Find (uint32_t systemId);
 
   /**
-   * Add RemoteChannelBundle from this task to MPI task
-   * on other side of the link.
+   * Add RemoteChannelBundle from this task to MPI task on other side of the link.
    * Can not be invoked after InitializeNullMessageEvents has been invoked.
-   *
-   * \param [in] systemId The remote system id.
-   * \return The newly added bundle.
    */
   static Ptr<RemoteChannelBundle> Add (uint32_t systemId);
 
   /**
-   * Get the number of ns-3 channels in this bundle
-   * \return The number of channels.
+   * \return number of remote channel bundles
+   * 
    */
   static std::size_t Size (void);
 
@@ -78,12 +65,13 @@ public:
   static void InitializeNullMessageEvents (void);
 
   /**
-   * Get the safe time across all channels in this bundle.
-   * \return The safe time.
+   * \return safe time across all remote channels.
    */
   static Time GetSafeTime (void);
 
-  /** Destroy the singleton. */
+  /**
+   * Destroy the singleton.
+   */
   static void Destroy (void);
 
 private:
@@ -95,22 +83,19 @@ private:
   {
   }
 
-  /**
-   * Private dtor to prevent destruction outside of singleton pattern. 
-   */
   ~RemoteChannelBundleManager ()
   {
   }
 
-  /**
+  /*
    * Container for all remote channel bundles for this task.
    *
+   * Would be more efficient to use unordered_map when C++11 is adopted for NS3.
    */
-  typedef std::unordered_map<uint32_t, Ptr<RemoteChannelBundle> > RemoteChannelMap;
-  /** The remote channel bundles. */
+  typedef std::map<uint32_t, Ptr<RemoteChannelBundle> > RemoteChannelMap;
   static RemoteChannelMap g_remoteChannelBundles;
 
-  /**
+  /*
    * Protect manager class from being initialized twice or incorrect
    * ordering of method calls.
    */

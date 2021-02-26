@@ -36,7 +36,7 @@ using namespace ns3;
 NS_LOG_COMPONENT_DEFINE ("TestStringValueFormatting");
 
 namespace {
-
+  
 /**
  * \ingroup string-value-formatting
  *
@@ -60,7 +60,6 @@ public:
    * \returns the test variable
    */
   Ptr<RandomVariableStream> GetTestVariable (void) const;
-
 private:
   Ptr<RandomVariableStream> m_testVariable; //!< The test variable
 };
@@ -82,7 +81,8 @@ FormattingTestObject::GetTypeId (void)
 }
 
 FormattingTestObject::FormattingTestObject ()
-{}
+{
+}
 
 Ptr<RandomVariableStream>
 FormattingTestObject::GetTestVariable (void) const
@@ -104,14 +104,13 @@ public:
    * Set an attribute by name
    * \param name the attribute
    * \param value the attribute value
-   */
+   */ 
   void SetAttribute (std::string name, const AttributeValue &value);
   /**
    * Create an Object as configured by SetAttribute
    * \returns the newly created Object
    */
   Ptr<Object> CreateFromFactory (void);
-
 private:
   ObjectFactory m_factory; //!< Object factory
 };
@@ -136,7 +135,7 @@ FormattingTestObjectHelper::CreateFromFactory (void)
 }  // unnamed namespace
 
 
-int
+int 
 main (int argc, char *argv[])
 {
   // CreateObject parsing

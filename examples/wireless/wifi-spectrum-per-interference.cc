@@ -20,7 +20,7 @@
  *          Sebastien Deronne <sebastien.deronne@gmail.com>
  *          Tom Henderson <tomhend@u.washington.edu>
  *
- * Adapted from wifi-ht-network.cc example
+ * Adapted from ht-wifi-network.cc example
  */
 
 #include <iomanip>
@@ -75,7 +75,7 @@
 //    --wifiType:        select ns3::SpectrumWifiPhy or ns3::YansWifiPhy [ns3::SpectrumWifiPhy]
 //    --errorModelType:  select ns3::NistErrorRateModel or ns3::YansErrorRateModel [ns3::NistErrorRateModel]
 //    --enablePcap:      enable pcap output [false]
-//    --waveformPower:   Waveform power (linear W) [0]
+//    --waveformPower:   Waveform power [0]
 //
 // By default, the program will step through 32 index values, corresponding
 // to the following MCS, channel width, and guard interval combinations:
@@ -107,8 +107,7 @@ void MonitorSniffRx (Ptr<const Packet> packet,
                      uint16_t channelFreqMhz,
                      WifiTxVector txVector,
                      MpduInfo aMpdu,
-                     SignalNoiseDbm signalNoise,
-                     uint16_t staId)
+                     SignalNoiseDbm signalNoise)
 
 {
   g_samples++;
@@ -150,7 +149,7 @@ int main (int argc, char *argv[])
   const uint32_t tcpPacketSize = 1448;
   double waveformPower = 0;
 
-  CommandLine cmd (__FILE__);
+  CommandLine cmd;
   cmd.AddValue ("simulationTime", "Simulation time in seconds", simulationTime);
   cmd.AddValue ("udp", "UDP if set to 1, TCP otherwise", udp);
   cmd.AddValue ("distance", "meters separation between nodes", distance);
@@ -158,7 +157,7 @@ int main (int argc, char *argv[])
   cmd.AddValue ("wifiType", "select ns3::SpectrumWifiPhy or ns3::YansWifiPhy", wifiType);
   cmd.AddValue ("errorModelType", "select ns3::NistErrorRateModel or ns3::YansErrorRateModel", errorModelType);
   cmd.AddValue ("enablePcap", "enable pcap output", enablePcap);
-  cmd.AddValue ("waveformPower", "Waveform power (linear W)", waveformPower);
+  cmd.AddValue ("waveformPower", "Waveform power", waveformPower);
   cmd.Parse (argc,argv);
 
   uint16_t startIndex = 0;
@@ -199,8 +198,8 @@ int main (int argc, char *argv[])
       NodeContainer interferingNode;
       interferingNode.Create (1);
 
-      YansWifiPhyHelper phy;
-      SpectrumWifiPhyHelper spectrumPhy;
+      YansWifiPhyHelper phy = YansWifiPhyHelper::Default ();
+      SpectrumWifiPhyHelper spectrumPhy = SpectrumWifiPhyHelper::Default ();
       Ptr<MultiModelSpectrumChannel> spectrumChannel;
       if (wifiType == "ns3::YansWifiPhy")
         {
@@ -210,9 +209,33 @@ int main (int argc, char *argv[])
           channel.SetPropagationDelay ("ns3::ConstantSpeedPropagationDelayModel");
           phy.SetChannel (channel.Create ());
           phy.Set ("Frequency", UintegerValue (5180));
+
+          if (i <= 7)
+            {
+              phy.Set ("ShortGuardEnabled", BooleanValue (false));
+              phy.Set ("ChannelWidth", UintegerValue (20));
+            }
+          else if (i > 7 && i <= 15)
+            {
+              phy.Set ("ShortGuardEnabled", BooleanValue (true));
+              phy.Set ("ChannelWidth", UintegerValue (20));
+            }
+          else if (i > 15 && i <= 23)
+            {
+              phy.Set ("ShortGuardEnabled", BooleanValue (false));
+              phy.Set ("ChannelWidth", UintegerValue (40));
+            }
+          else
+            {
+              phy.Set ("ShortGuardEnabled", BooleanValue (true));
+              phy.Set ("ChannelWidth", UintegerValue (40));
+            }
         }
       else if (wifiType == "ns3::SpectrumWifiPhy")
         {
+          //Bug 2460: CcaMode1Threshold default should be set to -62 dBm when using Spectrum
+          Config::SetDefault ("ns3::WifiPhy::CcaMode1Threshold", DoubleValue (-62.0));
+
           spectrumChannel
             = CreateObject<MultiModelSpectrumChannel> ();
           Ptr<FriisPropagationLossModel> lossModel
@@ -227,6 +250,27 @@ int main (int argc, char *argv[])
           spectrumPhy.SetChannel (spectrumChannel);
           spectrumPhy.SetErrorRateModel (errorModelType);
           spectrumPhy.Set ("Frequency", UintegerValue (5180)); // channel 36 at 20 MHz
+
+          if (i <= 7)
+            {
+              spectrumPhy.Set ("ShortGuardEnabled", BooleanValue (false));
+              spectrumPhy.Set ("ChannelWidth", UintegerValue (20));
+            }
+          else if (i > 7 && i <= 15)
+            {
+              spectrumPhy.Set ("ShortGuardEnabled", BooleanValue (true));
+              spectrumPhy.Set ("ChannelWidth", UintegerValue (20));
+            }
+          else if (i > 15 && i <= 23)
+            {
+              spectrumPhy.Set ("ShortGuardEnabled", BooleanValue (false));
+              spectrumPhy.Set ("ChannelWidth", UintegerValue (40));
+            }
+          else
+            {
+              spectrumPhy.Set ("ShortGuardEnabled", BooleanValue (true));
+              spectrumPhy.Set ("ChannelWidth", UintegerValue (40));
+            }
         }
       else
         {
@@ -234,7 +278,7 @@ int main (int argc, char *argv[])
         }
 
       WifiHelper wifi;
-      wifi.SetStandard (WIFI_STANDARD_80211n_5GHZ);
+      wifi.SetStandard (WIFI_PHY_STANDARD_80211n_5GHZ);
       WifiMacHelper mac;
 
       Ssid ssid = Ssid ("ns380211n");
@@ -428,27 +472,6 @@ int main (int argc, char *argv[])
           apDevice = wifi.Install (spectrumPhy, mac, wifiApNode);
         }
 
-      if (i <= 7)
-        {
-          Config::Set ("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/Phy/ChannelWidth", UintegerValue (20));
-          Config::Set ("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/HtConfiguration/ShortGuardIntervalSupported", BooleanValue (false));
-        }
-      else if (i > 7 && i <= 15)
-        {
-          Config::Set ("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/Phy/ChannelWidth", UintegerValue (20));
-          Config::Set ("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/HtConfiguration/ShortGuardIntervalSupported", BooleanValue (true));
-        }
-      else if (i > 15 && i <= 23)
-        {
-          Config::Set ("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/Phy/ChannelWidth", UintegerValue (40));
-          Config::Set ("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/HtConfiguration/ShortGuardIntervalSupported", BooleanValue (false));
-        }
-      else
-        {
-          Config::Set ("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/Phy/ChannelWidth", UintegerValue (40));
-          Config::Set ("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/HtConfiguration/ShortGuardIntervalSupported", BooleanValue (true));
-        }
-
       // mobility.
       MobilityHelper mobility;
       Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator> ();
@@ -490,7 +513,7 @@ int main (int argc, char *argv[])
 
           UdpClientHelper client (staNodeInterface.GetAddress (0), port);
           client.SetAttribute ("MaxPackets", UintegerValue (4294967295u));
-          client.SetAttribute ("Interval", TimeValue (Time ("0.0001"))); //packets/s
+          client.SetAttribute ("Interval", TimeValue (Time ("0.00001"))); //packets/s
           client.SetAttribute ("PacketSize", UintegerValue (payloadSize));
           ApplicationContainer clientApp = client.Install (wifiApNode.Get (0));
           clientApp.Start (Seconds (1.0));
@@ -520,7 +543,7 @@ int main (int argc, char *argv[])
 
       // Configure waveform generator
       Ptr<SpectrumValue> wgPsd = Create<SpectrumValue> (SpectrumModelWifi5180MHz);
-      *wgPsd = waveformPower / 20e6;  // PSD spread across 20 MHz
+      *wgPsd = waveformPower / (100 * 180000);
       NS_LOG_INFO ("wgPsd : " << *wgPsd << " integrated power: " << Integral (*(GetPointer (wgPsd))));
 
       if (wifiType == "ns3::SpectrumWifiPhy")

@@ -31,7 +31,6 @@
  * Code changes for ns-3 from upstream are marked with `//PDB'
  */
 
-#include <climits>
 #include "cairo-wideint-private.h"
 
 /**
@@ -39,8 +38,6 @@
  * \ingroup highprec
  * Implementation of the cairo_x functions which implement high precision arithmetic.
  */
-
-// *NS_CHECK_STYLE_OFF*
 
 #if HAVE_UINT64_T
 

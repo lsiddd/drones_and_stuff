@@ -68,7 +68,11 @@ There are five trace sources that may be hooked:
 * ``DropBeforeEnqueue``
 * ``DropAfterDequeue``
 
-Also, the QueueBase class defines two additional trace sources:
+Also, the QueueBase class defines one attribute:
+
+* ``MaxSize``: the maximum queue size
+
+and two trace sources:
 
 * ``PacketsInQueue``
 * ``BytesInQueue``
@@ -78,10 +82,6 @@ DropTail
 
 This is a basic first-in-first-out (FIFO) queue that performs a tail drop
 when the queue is full.
-
-The DropTailQueue class defines one attribute:
-
-* ``MaxSize``: the maximum queue size
 
 Usage
 *****

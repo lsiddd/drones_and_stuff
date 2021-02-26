@@ -46,31 +46,19 @@ enum HtProtectionType
  *
  * This class knows how to serialise and deserialise
  * the HT Operation Information Element
+ *
+ * \see attribute_HtOperation
  */
 class HtOperation : public WifiInformationElement
 {
 public:
   HtOperation ();
-
-  // Implementations of pure virtual methods of WifiInformationElement
-  WifiInformationElementId ElementId () const;
-  uint8_t GetInformationFieldSize () const;
-  void SerializeInformationField (Buffer::Iterator start) const;
-  uint8_t DeserializeInformationField (Buffer::Iterator start,
-                                       uint8_t length);
-  /* This information element is a bit special in that it is only
-     included if the STA is an HT STA. To support this we
-     override the Serialize and GetSerializedSize methods of
-     WifiInformationElement. */
-  Buffer::Iterator Serialize (Buffer::Iterator start) const;
-  uint16_t GetSerializedSize () const;
-
   /**
    * Set the HT Supported.
    *
-   * \param htSupported the HT Supported flag
+   * \param htsupported the HT Supported flag
    */
-  void SetHtSupported (uint8_t htSupported);
+  void SetHtSupported (uint8_t htsupported);
 
   /**
    * Set the Primary Channel field in the HT Operation information element.
@@ -107,77 +95,77 @@ public:
   /**
    * Set the secondary channel offset.
    *
-   * \param secondaryChannelOffset the secondary channel offset
+   * \param secondarychanneloffset the secondary channel offset
    */
-  void SetSecondaryChannelOffset (uint8_t secondaryChannelOffset);
+  void SetSecondaryChannelOffset (uint8_t secondarychanneloffset);
   /**
    * Set the STA channel width.
    *
-   * \param staChannelWidth the STA channel width
+   * \param stachannelwidth the STA channel width
    */
-  void SetStaChannelWidth (uint8_t staChannelWidth);
+  void SetStaChannelWidth (uint8_t stachannelwidth);
   /**
    * Set the RIFS mode.
    *
-   * \param rifsMode the RIFS mode
+   * \param rifsmode the RIFS mode
    */
-  void SetRifsMode (uint8_t rifsMode);
+  void SetRifsMode (uint8_t rifsmode);
 
   /**
    * Set the HT protection.
    *
-   * \param htProtection the HT protection
+   * \param htprotection the HT protection
    */
-  void SetHtProtection (uint8_t htProtection);
+  void SetHtProtection (uint8_t htprotection);
   /**
    * Set the non GF HT STAs present.
    *
-   * \param nonGfHtStasPresent the non GF HT STAs present
+   * \param nongfhtstaspresent the non GF HT STAs present
    */
-  void SetNonGfHtStasPresent (uint8_t nonGfHtStasPresent);
+  void SetNonGfHtStasPresent (uint8_t nongfhtstaspresent);
   /**
    * Set the OBSS non HT STAs present.
    *
-   * \param obssNonHtStasPresent the OBSS non HTA STAs present
+   * \param obssnonhtstaspresent the OBSS non HTA STAs present
    */
-  void SetObssNonHtStasPresent (uint8_t obssNonHtStasPresent);
+  void SetObssNonHtStasPresent (uint8_t obssnonhtstaspresent);
 
   /**
    * Set the dual beacon.
    *
-   * \param dualBeacon the dual beacon
+   * \param dualbeacon the dual beacon
    */
-  void SetDualBeacon (uint8_t dualBeacon);
+  void SetDualBeacon (uint8_t dualbeacon);
   /**
    * Set the dual CTS protection.
    *
-   * \param dualCtsProtection the dual CTS protection
+   * \param dualctsprotection the dual CTS protection
    */
-  void SetDualCtsProtection (uint8_t dualCtsProtection);
+  void SetDualCtsProtection (uint8_t dualctsprotection);
   /**
    * Set the STBC beacon.
    *
-   * \param stbcBeacon the STBC beacon
+   * \param stbcbeacon the STBC beacon
    */
-  void SetStbcBeacon (uint8_t stbcBeacon);
+  void SetStbcBeacon (uint8_t stbcbeacon);
   /**
    * Set the LSIG TXOP protection full support.
    *
-   * \param lSigTxopProtectionFullSupport the LSIG TXOP protection full support
+   * \param lsigtxopprotectionfullsupport the LSIG TXOP protection full support
    */
-  void SetLSigTxopProtectionFullSupport (uint8_t lSigTxopProtectionFullSupport);
+  void SetLSigTxopProtectionFullSupport (uint8_t lsigtxopprotectionfullsupport);
   /**
    * Set the PCO active.
    *
-   * \param pcoActive the PCO active
+   * \param pcoactive the PCO active
    */
-  void SetPcoActive (uint8_t pcoActive);
+  void SetPcoActive (uint8_t pcoactive);
   /**
    * Set the PCO phase.
    *
-   * \param pcoPhase the PCO phase
+   * \param pcophase the PCO phase
    */
-  void SetPhase (uint8_t pcoPhase);
+  void SetPhase (uint8_t pcophase);
 
   /**
    * Set the receive MCS bitmask.
@@ -188,33 +176,33 @@ public:
   /**
    * Set the receive highest supported data rate.
    *
-   * \param maxSupportedRate the maximum supported data rate
+   * \param maxsupportedrate the maximum supported data rate
    */
-  void SetRxHighestSupportedDataRate (uint16_t maxSupportedRate);
+  void SetRxHighestSupportedDataRate (uint16_t maxsupportedrate);
   /**
    * Set the transmit MCS set defined.
    *
-   * \param txMcsSetDefined the transmit MCS set defined
+   * \param txmcssetdefined the transmit MCS set defined
    */
-  void SetTxMcsSetDefined (uint8_t txMcsSetDefined);
+  void SetTxMcsSetDefined (uint8_t txmcssetdefined);
   /**
    * Set the transmit / receive MCS set unequal.
    *
-   * \param txRxMcsSetUnequal the transmit / receive MCS set unequal
+   * \param txrxmcssetunequal the transmit / reeive MCS set unequal
    */
-  void SetTxRxMcsSetUnequal (uint8_t txRxMcsSetUnequal);
+  void SetTxRxMcsSetUnequal (uint8_t txrxmcssetunequal);
   /**
    * Set the transmit maximum number spatial streams.
    *
-   * \param maxTxSpatialStreams the maximum transmit spatial streams
+   * \param maxtxspatialstreams the maximum transmit spatial streams
    */
-  void SetTxMaxNSpatialStreams (uint8_t maxTxSpatialStreams);
+  void SetTxMaxNSpatialStreams (uint8_t maxtxspatialstreams);
   /**
    * Set the transmit unequal modulation.
    *
-   * \param txUnequalModulation the transmit unequal modulation
+   * \param txunequalmodulation the transmit unequal modulation
    */
-  void SetTxUnequalModulation (uint8_t txUnequalModulation);
+  void SetTxUnequalModulation (uint8_t txunequalmodulation);
 
   /**
    * Return the Primary Channel field in the HT Operation information element.
@@ -367,56 +355,93 @@ public:
    */
   uint8_t GetTxUnequalModulation (void) const;
 
+  /**
+   * Return element ID.
+   *
+   * \return element ID
+   */
+  WifiInformationElementId ElementId () const;
+  /**
+   * Return information field size.
+   *
+   * \return information field size
+   */
+  uint8_t GetInformationFieldSize () const;
+  /**
+   * Serialize information field.
+   *
+   * \param start iterator
+   */
+  void SerializeInformationField (Buffer::Iterator start) const;
+  /**
+   * DeSerialize information field.
+   *
+   * \param start iterator
+   * \param length length
+   * \returns information field
+   */
+  uint8_t DeserializeInformationField (Buffer::Iterator start,
+                                       uint8_t length);
+  /**
+   * This information element is a bit special in that it is only
+   * included if the STA is an HT STA. To support this we
+   * override the Serialize and GetSerializedSize methods of
+   * WifiInformationElement.
+   *
+   * \param start
+   *
+   * \return an iterator
+   */
+  Buffer::Iterator Serialize (Buffer::Iterator start) const;
+  /**
+   * Return the serialized size of this HT Operation IE.
+   *
+   * \return the serialized size of this HT Operation IE
+   */
+  uint16_t GetSerializedSize () const;
+
 
 private:
   uint8_t m_primaryChannel; ///< primary channel
 
   //HT Information Subset 1
-  uint8_t m_secondaryChannelOffset;     ///< secondary channel offset
-  uint8_t m_staChannelWidth;            ///< STA channel width
-  uint8_t m_rifsMode;                   ///< RIFS mode
+  uint8_t m_secondaryChannelOffset; ///< secondary channel offset
+  uint8_t m_staChannelWidth; ///< STA channel width
+  uint8_t m_rifsMode; ///< RIFS mode
   uint8_t m_reservedInformationSubset1; ///< reserved information subset 1
 
   //HT Information Subset 2
-  uint8_t m_htProtection;                 ///< HT protection
-  uint8_t m_nonGfHtStasPresent;           ///< non GF HT STAs present
+  uint8_t m_htProtection; ///< HT protection
+  uint8_t m_nonGfHtStasPresent; ///< non GF HT STAs present
   uint8_t m_reservedInformationSubset2_1; ///< reserved information subset 2-1
-  uint8_t m_obssNonHtStasPresent;         ///< OBSS NON HT STAs present
+  uint8_t m_obssNonHtStasPresent; ///< OBSS NON HT STAs present
   uint8_t m_reservedInformationSubset2_2; ///< reserved information subset 2-2
 
   //HT Information Subset 3
-  uint8_t m_reservedInformationSubset3_1;  ///< reserved information subset 3-1
-  uint8_t m_dualBeacon;                    ///< dual beacon
-  uint8_t m_dualCtsProtection;             ///< dual CTS protection
-  uint8_t m_stbcBeacon;                    ///< STBC beacon
-  uint8_t m_lSigTxopProtectionFullSupport; ///< L-SIG TXOP protection full support
-  uint8_t m_pcoActive;                     ///< PCO active
-  uint8_t m_pcoPhase;                      ///< PCO phase
-  uint8_t m_reservedInformationSubset3_2;  ///< reserved information subset 3-2
+  uint8_t m_reservedInformationSubset3_1; ///< reserved information subset 3-1
+  uint8_t m_dualBeacon; ///< dual beacon
+  uint8_t m_dualCtsProtection; ///< dual CTS protection
+  uint8_t m_stbcBeacon; ///< STBC beacon
+  uint8_t m_lSigTxopProtectionFullSupport; ///< LSIG TXOP protection full support
+  uint8_t m_pcoActive; ///< PCO active
+  uint8_t m_pcoPhase; ///< PCO phase
+  uint8_t m_reservedInformationSubset3_2; ///< reserved information subset 3-2
 
   //Basic MCS Set field
-  uint8_t m_reservedMcsSet1;                 ///< reserved MCS set 1
-  uint16_t m_rxHighestSupportedDataRate;     ///< receive highest supported data rate
-  uint8_t m_reservedMcsSet2;                 ///< reserved MCS set2
-  uint8_t m_txMcsSetDefined;                 ///< transmit MCS set defined
-  uint8_t m_txRxMcsSetUnequal;               ///< transmit / receive MCS set unequal
-  uint8_t m_txMaxNSpatialStreams;            ///< transmit maximum number spatial streams
-  uint8_t m_txUnequalModulation;             ///< transmit unequal modulation
-  uint32_t m_reservedMcsSet3;                ///< reserved MCS set 3
+  uint8_t m_reservedMcsSet1; ///< reserved MCS set 1
+  uint16_t m_rxHighestSupportedDataRate; ///< receive highest supported data rate
+  uint8_t m_reservedMcsSet2; ///< reserved MCS set2
+  uint8_t m_txMcsSetDefined; ///< transmit MCS set defined
+  uint8_t m_txRxMcsSetUnequal; ///< transmit / receive MCS set unequal
+  uint8_t m_txMaxNSpatialStreams; ///< transmit maximum number spatial streams
+  uint8_t m_txUnequalModulation; ///< transmit unequal modulation
+  uint32_t m_reservedMcsSet3; ///< reserved MCS set 3
   uint8_t m_rxMcsBitmask[MAX_SUPPORTED_MCS]; ///< receive MCS bitmask
 
   /// This is used to decide whether this element should be added to the frame or not
   uint8_t m_htSupported;
 };
 
-/**
- * output stream output operator
- *
- * \param os output stream
- * \param htOperation the HT operation
- *
- * \returns output stream
- */
 std::ostream &operator << (std::ostream &os, const HtOperation &htOperation);
 
 } //namespace ns3

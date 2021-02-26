@@ -15,14 +15,12 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifndef TCP_SOCKET_STATE_H
-#define TCP_SOCKET_STATE_H
+#pragma once
 
 #include "ns3/object.h"
 #include "ns3/data-rate.h"
 #include "ns3/traced-value.h"
 #include "ns3/sequence-number.h"
-#include "tcp-rx-buffer.h"
 
 namespace ns3 {
 
@@ -79,9 +77,9 @@ public:
     CA_DISORDER,  /**< In all the respects it is "Open",
                     *  but requires a bit more attention. It is entered when
                     *  we see some SACKs or dupacks. It is split of "Open" */
-    CA_CWR,       /**< cWnd was reduced due to some congestion notification
-                    *  event, such as ECN, ICMP source quench, local device
-                    *  congestion. */
+    CA_CWR,       /**< cWnd was reduced due to some Congestion Notification event.
+                    *  It can be ECN, ICMP source quench, local device congestion.
+                    *  Not used in NS-3 right now. */
     CA_RECOVERY,  /**< CWND was reduced, we are fast-retransmitting. */
     CA_LOSS,      /**< CWND was reduced due to RTO timeout or SACK reneging. */
     CA_LAST_STATE /**< Used only in debug messages */
@@ -99,39 +97,6 @@ public:
     CA_EVENT_DELAYED_ACK,  /**< Delayed ack is sent */
     CA_EVENT_NON_DELAYED_ACK, /**< Non-delayed ack is sent */
   } TcpCAEvent_t;
-
-  /**
-   * \brief Parameter value related to ECN enable/disable functionality
-   *        similar to sysctl for tcp_ecn. Currently value 2 from
-   *        https://www.kernel.org/doc/Documentation/networking/ip-sysctl.txt
-   *        is not implemented.
-   */
-  typedef enum
-    {
-      Off        = 0,   //!< Disable
-      On         = 1,   //!< Enable
-      AcceptOnly = 2,   //!< Enable only when the peer endpoint is ECN capable
-    } UseEcn_t;
-
-  /**
-   * \brief ECN code points
-   */
-  typedef enum
-    {
-      NotECT   = 0,   //!< Unmarkable
-      Ect1     = 1,   //!< Markable
-      Ect0     = 2,   //!< Markable
-      CongExp  = 3,   //!< Marked
-    } EcnCodePoint_t;
-
-  /**
-   * \brief ECN Modes
-   */
-  typedef enum
-    {
-      ClassicEcn,  //!< ECN functionality as described in RFC 3168.
-      DctcpEcn,    //!< ECN functionality as described in RFC 8257. Note: this mode is specific to DCTCP.
-    } EcnMode_t;
 
    /**
    * \brief Definition of the Ecn state machine
@@ -165,11 +130,6 @@ public:
   uint32_t               m_initialCWnd      {0}; //!< Initial cWnd value
   uint32_t               m_initialSsThresh  {0}; //!< Initial Slow Start Threshold value
 
-  // Recovery
-  // This variable is used for implementing following flag of Linux: FLAG_RETRANS_DATA_ACKED
-  // and is used only during a recovery phase to keep track of acknowledgement of retransmitted packet.
-  bool                   m_isRetransDataAcked  {false}; //!< Retransmitted data is ACKed if true
-
   // Segment
   uint32_t               m_segmentSize   {0}; //!< Segment size
   SequenceNumber32       m_lastAckedSeq  {0}; //!< Last sequence ACKed
@@ -187,22 +147,12 @@ public:
   // Pacing related variables
   bool                   m_pacing            {false}; //!< Pacing status
   DataRate               m_maxPacingRate     {0};    //!< Max Pacing rate
-  TracedValue<DataRate>  m_pacingRate {0};           //!< Current Pacing rate
-  uint16_t               m_pacingSsRatio {0};        //!< SS pacing ratio
-  uint16_t               m_pacingCaRatio {0};        //!< CA pacing ratio
-  bool                   m_paceInitialWindow {false}; //!< Enable/Disable pacing for the initial window
+  DataRate               m_currentPacingRate {0};    //!< Current Pacing rate
 
   Time                   m_minRtt  {Time::Max ()};   //!< Minimum RTT observed throughout the connection
 
   TracedValue<uint32_t>  m_bytesInFlight {0};        //!< Bytes in flight
   TracedValue<Time>      m_lastRtt {Seconds (0.0)};  //!< Last RTT sample collected
-
-  Ptr<TcpRxBuffer>       m_rxBuffer;                 //!< Rx buffer (reordering buffer)
-
-  EcnMode_t              m_ecnMode {ClassicEcn}; //!< ECN mode
-  UseEcn_t               m_useEcn {Off};         //!< Socket ECN capability
-
-  EcnCodePoint_t         m_ectCodePoint {Ect0};  //!< ECT code point to use
 
   /**
    * \brief Get cwnd in segments rather than bytes
@@ -223,8 +173,6 @@ public:
   {
     return m_ssThresh / m_segmentSize;
   }
-
-  Callback <void, uint8_t> m_sendEmptyPacketCallback;
 };
 
 namespace TracedValueCallback {
@@ -252,5 +200,3 @@ namespace TracedValueCallback {
 }  // namespace TracedValueCallback
 
 } //namespace ns3
-
-#endif /* TCP_SOCKET_STATE_H */

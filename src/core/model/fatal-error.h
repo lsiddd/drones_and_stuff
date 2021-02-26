@@ -26,7 +26,6 @@
 #include <cstdlib>
 
 #include "fatal-impl.h"
-#include "log.h"  // NS_LOG_APPEND...
 
 /**
  * \file
@@ -73,8 +72,6 @@
 #define NS_FATAL_ERROR_IMPL_NO_MSG(fatal) \
   do                                                      \
     {                                                     \
-      NS_LOG_APPEND_TIME_PREFIX_IMPL;                     \
-      NS_LOG_APPEND_NODE_PREFIX_IMPL;                     \
       std::cerr << "file=" << __FILE__ << ", line=" <<    \
         __LINE__ << std::endl;                            \
       ::ns3::FatalImpl::FlushStreams ();                  \

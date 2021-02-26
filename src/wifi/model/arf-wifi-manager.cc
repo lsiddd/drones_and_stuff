@@ -40,6 +40,7 @@ struct ArfWifiRemoteStation : public WifiRemoteStation
   uint32_t m_success; ///< success count
   uint32_t m_failed; ///< failed count
   bool m_recovery; ///< recovery
+  uint32_t m_retry; ///< retry count
   uint32_t m_timerTimeout; ///< timer timeout
   uint32_t m_successThreshold; ///< success threshold
   uint8_t m_rate; ///< rate
@@ -83,24 +84,6 @@ ArfWifiManager::~ArfWifiManager ()
   NS_LOG_FUNCTION (this);
 }
 
-void
-ArfWifiManager::DoInitialize ()
-{
-  NS_LOG_FUNCTION (this);
-  if (GetHtSupported ())
-    {
-      NS_FATAL_ERROR ("WifiRemoteStationManager selected does not support HT rates");
-    }
-  if (GetVhtSupported ())
-    {
-      NS_FATAL_ERROR ("WifiRemoteStationManager selected does not support VHT rates");
-    }
-  if (GetHeSupported ())
-    {
-      NS_FATAL_ERROR ("WifiRemoteStationManager selected does not support HE rates");
-    }
-}
-
 WifiRemoteStation *
 ArfWifiManager::DoCreateStation (void) const
 {
@@ -113,6 +96,7 @@ ArfWifiManager::DoCreateStation (void) const
   station->m_success = 0;
   station->m_failed = 0;
   station->m_recovery = false;
+  station->m_retry = 0;
   station->m_timer = 0;
 
   return station;
@@ -133,21 +117,22 @@ ArfWifiManager::DoReportRtsFailed (WifiRemoteStation *station)
  * The fundamental reason for this is that there is a backoff between each data
  * transmission, be it an initial transmission or a retransmission.
  *
- * \param st the station that we failed to send Data
+ * \param st the station that we failed to send DATA
  */
 void
 ArfWifiManager::DoReportDataFailed (WifiRemoteStation *st)
 {
   NS_LOG_FUNCTION (this << st);
-  ArfWifiRemoteStation *station = static_cast<ArfWifiRemoteStation*> (st);
+  ArfWifiRemoteStation *station = (ArfWifiRemoteStation *)st;
   station->m_timer++;
   station->m_failed++;
+  station->m_retry++;
   station->m_success = 0;
 
   if (station->m_recovery)
     {
-      NS_ASSERT (station->m_failed >= 1);
-      if (station->m_failed == 1)
+      NS_ASSERT (station->m_retry >= 1);
+      if (station->m_retry == 1)
         {
           //need recovery fallback
           if (station->m_rate != 0)
@@ -159,8 +144,8 @@ ArfWifiManager::DoReportDataFailed (WifiRemoteStation *st)
     }
   else
     {
-      NS_ASSERT (station->m_failed >= 1);
-      if (((station->m_failed - 1) % 2) == 1)
+      NS_ASSERT (station->m_retry >= 1);
+      if (((station->m_retry - 1) % 2) == 1)
         {
           //need normal fallback
           if (station->m_rate != 0)
@@ -168,7 +153,7 @@ ArfWifiManager::DoReportDataFailed (WifiRemoteStation *st)
               station->m_rate--;
             }
         }
-      if (station->m_failed >= 2)
+      if (station->m_retry >= 2)
         {
           station->m_timer = 0;
         }
@@ -189,15 +174,16 @@ void ArfWifiManager::DoReportRtsOk (WifiRemoteStation *station,
   NS_LOG_DEBUG ("station=" << station << " rts ok");
 }
 
-void ArfWifiManager::DoReportDataOk (WifiRemoteStation *st, double ackSnr, WifiMode ackMode,
-                                     double dataSnr, uint16_t dataChannelWidth, uint8_t dataNss)
+void ArfWifiManager::DoReportDataOk (WifiRemoteStation *st,
+                                     double ackSnr, WifiMode ackMode, double dataSnr)
 {
-  NS_LOG_FUNCTION (this << st << ackSnr << ackMode << dataSnr << dataChannelWidth << +dataNss);
-  ArfWifiRemoteStation *station = static_cast<ArfWifiRemoteStation*> (st);
+  NS_LOG_FUNCTION (this << st << ackSnr << ackMode << dataSnr);
+  ArfWifiRemoteStation *station = (ArfWifiRemoteStation *) st;
   station->m_timer++;
   station->m_success++;
   station->m_failed = 0;
   station->m_recovery = false;
+  station->m_retry = 0;
   NS_LOG_DEBUG ("station=" << station << " data ok success=" << station->m_success << ", timer=" << station->m_timer);
   if ((station->m_success == m_successThreshold
        || station->m_timer == m_timerThreshold)
@@ -227,10 +213,11 @@ WifiTxVector
 ArfWifiManager::DoGetDataTxVector (WifiRemoteStation *st)
 {
   NS_LOG_FUNCTION (this << st);
-  ArfWifiRemoteStation *station = static_cast<ArfWifiRemoteStation*> (st);
+  ArfWifiRemoteStation *station = (ArfWifiRemoteStation *) st;
   uint16_t channelWidth = GetChannelWidth (station);
   if (channelWidth > 20 && channelWidth != 22)
     {
+      //avoid to use legacy rate adaptation algorithms for IEEE 802.11n/ac
       channelWidth = 20;
     }
   WifiMode mode = GetSupported (station, station->m_rate);
@@ -239,19 +226,20 @@ ArfWifiManager::DoGetDataTxVector (WifiRemoteStation *st)
       NS_LOG_DEBUG ("New datarate: " << mode.GetDataRate (channelWidth));
       m_currentRate = mode.GetDataRate (channelWidth);
     }
-  return WifiTxVector (mode, GetDefaultTxPowerLevel (), GetPreambleForTransmission (mode.GetModulationClass (), GetShortPreambleEnabled (), UseGreenfieldForDestination (GetAddress (station))), 800, 1, 1, 0, channelWidth, GetAggregation (station));
+  return WifiTxVector (mode, GetDefaultTxPowerLevel (), GetPreambleForTransmission (mode, GetAddress (station)), 800, 1, 1, 0, channelWidth, GetAggregation (station), false);
 }
 
 WifiTxVector
 ArfWifiManager::DoGetRtsTxVector (WifiRemoteStation *st)
 {
   NS_LOG_FUNCTION (this << st);
-  /// \todo we could/should implement the ARF algorithm for
+  /// \todo we could/should implement the Arf algorithm for
   /// RTS only by picking a single rate within the BasicRateSet.
-  ArfWifiRemoteStation *station = static_cast<ArfWifiRemoteStation*> (st);
+  ArfWifiRemoteStation *station = (ArfWifiRemoteStation *) st;
   uint16_t channelWidth = GetChannelWidth (station);
   if (channelWidth > 20 && channelWidth != 22)
     {
+      //avoid to use legacy rate adaptation algorithms for IEEE 802.11n/ac
       channelWidth = 20;
     }
   WifiTxVector rtsTxVector;
@@ -264,8 +252,44 @@ ArfWifiManager::DoGetRtsTxVector (WifiRemoteStation *st)
     {
       mode = GetNonErpSupported (station, 0);
     }
-  rtsTxVector = WifiTxVector (mode, GetDefaultTxPowerLevel (), GetPreambleForTransmission (mode.GetModulationClass (), GetShortPreambleEnabled (), UseGreenfieldForDestination (GetAddress (station))), 800, 1, 1, 0, channelWidth, GetAggregation (station));
+  rtsTxVector = WifiTxVector (mode, GetDefaultTxPowerLevel (), GetPreambleForTransmission (mode, GetAddress (station)), 800, 1, 1, 0, channelWidth, GetAggregation (station), false);
   return rtsTxVector;
+}
+
+bool
+ArfWifiManager::IsLowLatency (void) const
+{
+  return true;
+}
+
+void
+ArfWifiManager::SetHtSupported (bool enable)
+{
+  //HT is not supported by this algorithm.
+  if (enable)
+    {
+      NS_FATAL_ERROR ("WifiRemoteStationManager selected does not support HT rates");
+    }
+}
+
+void
+ArfWifiManager::SetVhtSupported (bool enable)
+{
+  //VHT is not supported by this algorithm.
+  if (enable)
+    {
+      NS_FATAL_ERROR ("WifiRemoteStationManager selected does not support VHT rates");
+    }
+}
+
+void
+ArfWifiManager::SetHeSupported (bool enable)
+{
+  //HE is not supported by this algorithm.
+  if (enable)
+    {
+      NS_FATAL_ERROR ("WifiRemoteStationManager selected does not support HE rates");
+    }
 }
 
 } //namespace ns3

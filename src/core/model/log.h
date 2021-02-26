@@ -27,8 +27,6 @@
 #include <map>
 #include <vector>
 
-#include "node-printer.h"
-#include "time-printer.h"
 #include "log-macros-enabled.h"
 #include "log-macros-disabled.h"
 
@@ -47,9 +45,9 @@
  * LOG functionality: macros which allow developers to
  * send information to the \c std::clog output stream.
  *
- * All logging messages are disabled by default. To enable selected logging
+ * All logging messages are disabled by default. To enable selected logging 
  * messages, use the ns3::LogComponentEnable
- * function or use the NS_LOG environment variable
+ * function or use the NS_LOG environment variable 
  *
  * Use the environment variable NS_LOG to define a ':'-separated list of
  * logging components to enable. For example (using bash syntax),
@@ -90,8 +88,7 @@ namespace ns3 {
 /**
  *  Logging severity classes and levels.
  */
-enum LogLevel
-{
+enum LogLevel {
   LOG_NONE           = 0x00000000, //!< No logging.
 
   LOG_ERROR          = 0x00000001, //!< Serious error messages only.
@@ -172,10 +169,10 @@ void LogComponentDisableAll (enum LogLevel level);
 /**
  * Define a Log component with a specific name.
  *
- * This macro should be used at the top of every file in which you want
+ * This macro should be used at the top of every file in which you want 
  * to use the NS_LOG macro. This macro defines a new
  * "log component" which can be later selectively enabled
- * or disabled with the ns3::LogComponentEnable and
+ * or disabled with the ns3::LogComponentEnable and 
  * ns3::LogComponentDisable functions or with the NS_LOG
  * environment variable.
  *
@@ -247,7 +244,7 @@ void LogComponentDisableAll (enum LogLevel level);
  * \param [in] name The log component name.
  */
 #define NS_LOG_STATIC_TEMPLATE_DEFINE(name) \
-  static LogComponent & NS_UNUSED_GLOBAL (g_log) = GetLogComponent (name)
+    static LogComponent & NS_UNUSED_GLOBAL (g_log) = GetLogComponent (name)
 
 /**
  * Use \ref NS_LOG to output a message of level LOG_ERROR.
@@ -300,34 +297,45 @@ namespace ns3 {
 void LogComponentPrintList (void);
 
 /**
- * Set the TimePrinter function to be used
+ * Function signature for prepending the simulation time
+ * to a log message.
+ *
+ * \param [in,out] os The output stream to print on.
+ */
+typedef void (*LogTimePrinter)(std::ostream &os);
+/**
+ * Function signature for prepending the node id
+ * to a log message.
+ *
+ * \param [in,out] os The output stream to print on.
+ */
+typedef void (*LogNodePrinter)(std::ostream &os);
+
+/**
+ * Set the LogTimePrinter function to be used
  * to prepend log messages with the simulation time.
  *
- * The default is DefaultTimePrinter().
- *
- * \param [in] lp The TimePrinter function.
+ * \param [in] lp The LogTimePrinter function.
  */
-void LogSetTimePrinter (TimePrinter lp);
+void LogSetTimePrinter (LogTimePrinter lp);
 /**
  * Get the LogTimePrinter function currently in use.
- * \returns The current LogTimePrinter function.
+ * \returns The LogTimePrinter function.
  */
-TimePrinter LogGetTimePrinter (void);
+LogTimePrinter LogGetTimePrinter (void);
 
 /**
  * Set the LogNodePrinter function to be used
  * to prepend log messages with the node id.
  *
- * The default is DefaultNodePrinter().
- *
  * \param [in] np The LogNodePrinter function.
  */
-void LogSetNodePrinter (NodePrinter np);
+void LogSetNodePrinter (LogNodePrinter np);
 /**
  * Get the LogNodePrinter function currently in use.
- * \returns The current LogNodePrinter function.
+ * \returns The LogNodePrinter function.
  */
-NodePrinter LogGetNodePrinter (void);
+LogNodePrinter LogGetNodePrinter (void);
 
 
 /**
@@ -378,7 +386,7 @@ public:
    *
    * \return The name of this LogComponent.
    */
-  char const * Name (void) const;
+  char const *Name (void) const;
   /**
    * Get the compilation unit defining this LogComponent.
    * \returns The file name.
@@ -390,7 +398,7 @@ public:
    * \param [in] level The LogLevel to get the label for.
    * \return The string label for \c level.
    */
-  static std::string GetLevelLabel (const enum LogLevel level);
+  static std::string GetLevelLabel(const enum LogLevel level);
   /**
    * Prevent the enabling of a specific LogLevel.
    *
@@ -418,15 +426,16 @@ public:
    *
    * \returns The list of LogComponents.
    */
-  static ComponentList * GetComponentList (void);
+  static ComponentList *GetComponentList (void);
 
+  
 private:
   /**
    * Parse the `NS_LOG` environment variable for options relating to this
    * LogComponent.
    */
   void EnvVarCheck (void);
-
+  
   int32_t     m_levels;  //!< Enabled LogLevels.
   int32_t     m_mask;    //!< Blocked LogLevels.
   std::string m_name;    //!< LogComponent name.
@@ -449,7 +458,6 @@ class ParameterLogger
 {
   bool m_first;        //!< First argument flag, doesn't get `, `.
   std::ostream &m_os;  //!< Underlying output stream.
-
 public:
   /**
    * Constructor.
@@ -512,26 +520,26 @@ ParameterLogger::operator<< (std::vector<T> vector)
  * \return This ParameterLogger, so it's chainable.
  */
 template<>
-ParameterLogger &
-ParameterLogger::operator<< <std::string> (const std::string param);
-
+ParameterLogger&
+ParameterLogger::operator<< <std::string>(const std::string param);
+  
 /**
  * Specialization for C-strings.
  * \param [in] param The function parameter.
  * \return This ParameterLogger, so it's chainable.
  */
 template<>
-ParameterLogger &
-ParameterLogger::operator<< <const char *> (const char * param);
-
+ParameterLogger&
+ParameterLogger::operator<< <const char *>(const char * param);
+  
 /**
  * Specialization for int8_t.
  * \param [in] param The function parameter.
  * \return This ParameterLogger, so it's chainable.
  */
 template<>
-ParameterLogger &
-ParameterLogger::operator<< <int8_t> (int8_t param);
+ParameterLogger&
+  ParameterLogger::operator<< <int8_t>(int8_t param);
 
 /**
  * Specialization for uint8_t.
@@ -539,8 +547,8 @@ ParameterLogger::operator<< <int8_t> (int8_t param);
  * \return This ParameterLogger, so it's chainable.
  */
 template<>
-ParameterLogger &
-ParameterLogger::operator<< <uint8_t> (uint8_t param);
+ParameterLogger&
+  ParameterLogger::operator<< <uint8_t>(uint8_t param);
 
 } // namespace ns3
 

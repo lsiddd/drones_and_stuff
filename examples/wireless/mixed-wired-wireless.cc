@@ -116,7 +116,7 @@ main (int argc, char *argv[])
   // system so that they can be overridden with flags such as
   // "--backboneNodes=20"
   //
-  CommandLine cmd (__FILE__);
+  CommandLine cmd;
   cmd.AddValue ("backboneNodes", "number of backbone nodes", backboneNodes);
   cmd.AddValue ("infraNodes", "number of leaf nodes", infraNodes);
   cmd.AddValue ("lanNodes", "number of LAN nodes", lanNodes);
@@ -155,7 +155,7 @@ main (int argc, char *argv[])
   mac.SetType ("ns3::AdhocWifiMac");
   wifi.SetRemoteStationManager ("ns3::ConstantRateWifiManager",
                                 "DataMode", StringValue ("OfdmRate54Mbps"));
-  YansWifiPhyHelper wifiPhy;
+  YansWifiPhyHelper wifiPhy = YansWifiPhyHelper::Default ();
   YansWifiChannelHelper wifiChannel = YansWifiChannelHelper::Default ();
   wifiPhy.SetChannel (wifiChannel.Create ());
   NetDeviceContainer backboneDevices = wifi.Install (wifiPhy, mac, backbone);
@@ -301,7 +301,8 @@ main (int argc, char *argv[])
       NetDeviceContainer staDevices = wifiInfra.Install (wifiPhy, macInfra, stas);
       // setup ap.
       macInfra.SetType ("ns3::ApWifiMac",
-                        "Ssid", SsidValue (ssid));
+                        "Ssid", SsidValue (ssid),
+                        "BeaconInterval", TimeValue (Seconds (2.5)));
       NetDeviceContainer apDevices = wifiInfra.Install (wifiPhy, macInfra, backbone.Get (i));
       // Collect all of these new devices
       NetDeviceContainer infraDevices (apDevices, staDevices);

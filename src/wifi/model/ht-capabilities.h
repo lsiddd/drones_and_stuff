@@ -37,31 +37,19 @@ namespace ns3 {
  * \ingroup wifi
  *
  * This class knows how to serialise and deserialise the HT Capabilities Information Element
+ *
+ * \see attribute_HtCapabilities
  */
 class HtCapabilities : public WifiInformationElement
 {
 public:
   HtCapabilities ();
-
-  // Implementations of pure virtual methods of WifiInformationElement
-  WifiInformationElementId ElementId () const;
-  uint8_t GetInformationFieldSize () const;
-  void SerializeInformationField (Buffer::Iterator start) const;
-  uint8_t DeserializeInformationField (Buffer::Iterator start,
-                                       uint8_t length);
-  /* This information element is a bit special in that it is only
-     included if the STA is an HT STA. To support this we
-     override the Serialize and GetSerializedSize methods of
-     WifiInformationElement. */
-  Buffer::Iterator Serialize (Buffer::Iterator start) const;
-  uint16_t GetSerializedSize () const;
-
   /**
    * Set the HT supported field.
    *
-   * \param htSupported the HT supported field
+   * \param htsupported the HT supported field
    */
-  void SetHtSupported (uint8_t htSupported);
+  void SetHtSupported (uint8_t htsupported);
 
   /**
    * Set the HT Capabilities Info field in the HT Capabilities information element.
@@ -104,89 +92,89 @@ public:
   /**
    * Set the LDPC field.
    *
-   * \param ldpc the LDPC field
+   * \param ldpc
    */
   void SetLdpc (uint8_t ldpc);
   /**
    * Set the supported channel width field.
    *
-   * \param supportedChannelWidth the supported channel width field
+   * \param supportedchannelwidth
    */
-  void SetSupportedChannelWidth (uint8_t supportedChannelWidth);
+  void SetSupportedChannelWidth (uint8_t supportedchannelwidth);
   /**
-   * Set the Greenfield field.
+   * Set the green field.
    *
-   * \param greenfield the Greenfield field
+   * \param greenfield
    */
   void SetGreenfield (uint8_t greenfield);
   /**
    * Set the short guard interval 20 field.
    *
-   * \param shortGuardInterval the short guard interval
+   * \param shortguardinterval
    */
-  void SetShortGuardInterval20 (uint8_t shortGuardInterval);
+  void SetShortGuardInterval20 (uint8_t shortguardinterval);
   /**
    * Set the short guard interval 40 field.
    *
-   * \param shortGuardInterval the short guard interval
+   * \param shortguardinterval
    */
-  void SetShortGuardInterval40 (uint8_t shortGuardInterval);
+  void SetShortGuardInterval40 (uint8_t shortguardinterval);
   /**
    * Set the maximum AMSDU length.
    *
-   * \param maxAmsduLength Either 3839 or 7935
+   * \param maxamsdulength
    */
-  void SetMaxAmsduLength (uint16_t maxAmsduLength);
+  void SetMaxAmsduLength (uint8_t maxamsdulength);
   /**
    * Set the LSIG protection support.
    *
-   * \param lSigProtection the LSIG protection support field
+   * \param lsigprotection
    */
-  void SetLSigProtectionSupport (uint8_t lSigProtection);
+  void SetLSigProtectionSupport (uint8_t lsigprotection);
 
   /**
    * Set the maximum AMPDU length.
    *
-   * \param maxAmpduLength 2^(13 + x) - 1, x in the range 0 to 3
+   * \param maxampdulength
    */
-  void SetMaxAmpduLength (uint32_t maxAmpduLength);
+  void SetMaxAmpduLength (uint8_t maxampdulength);
 
   /**
    * Set the receive MCS bitmask.
    *
-   * \param index the index of the receive MCS
+   * \param index
    */
   void SetRxMcsBitmask (uint8_t index);
   /**
    * Set the receive highest supported data rate.
    *
-   * \param maxSupportedRate the maximum supported data rate
+   * \param maxsupportedrate
    */
-  void SetRxHighestSupportedDataRate (uint16_t maxSupportedRate);
+  void SetRxHighestSupportedDataRate (uint16_t maxsupportedrate);
   /**
    * Set the transmit MCS set defined.
    *
-   * \param txMcsSetDefined the TX MCS set defined
+   * \param txmcssetdefined
    */
-  void SetTxMcsSetDefined (uint8_t txMcsSetDefined);
+  void SetTxMcsSetDefined (uint8_t txmcssetdefined);
   /**
    * Set the transmit / receive MCS set unequal.
    *
-   * \param txRxMcsSetUnequal the TX/RX MCS set unequal field
+   * \param txrxmcssetunequal
    */
-  void SetTxRxMcsSetUnequal (uint8_t txRxMcsSetUnequal);
+  void SetTxRxMcsSetUnequal (uint8_t txrxmcssetunequal);
   /**
    * Set the transmit maximum N spatial streams.
    *
-   * \param maxTxSpatialStreams the maximum number of TX SSs
+   * \param maxtxspatialstreams
    */
-  void SetTxMaxNSpatialStreams (uint8_t maxTxSpatialStreams);
+  void SetTxMaxNSpatialStreams (uint8_t maxtxspatialstreams);
   /**
    * Set the transmit unequal modulation.
    *
-   * \param txUnequalModulation the TX unequal modulation field
+   * \param txunequalmodulation
    */
-  void SetTxUnequalModulation (uint8_t txUnequalModulation);
+  void SetTxUnequalModulation (uint8_t txunequalmodulation);
 
   /**
    * Return the HT Capabilities Info field in the HT Capabilities information element.
@@ -244,9 +232,9 @@ public:
    */
   uint8_t GetSupportedChannelWidth (void) const;
   /**
-   * Return the Greenfield field.
+   * Return the green field.
    *
-   * \return the Greenfield field
+   * \return the green field
    */
   uint8_t GetGreenfield (void) const;
   /**
@@ -255,18 +243,6 @@ public:
    * \return the short guard interval 20 value
    */
   uint8_t GetShortGuardInterval20 (void) const;
-  /**
-   * Return the maximum A-MSDU length.
-   *
-   * \return the maximum A-MSDU length
-   */
-  uint16_t GetMaxAmsduLength (void) const;
-  /**
-   * Return the maximum A-MPDU length.
-   *
-   * \return the maximum A-MPDU length
-   */
-  uint32_t GetMaxAmpduLength (void) const;
   /**
    * Return the is MCS supported flag.
    *
@@ -282,93 +258,132 @@ public:
    */
   uint8_t GetRxHighestSupportedAntennas (void) const;
 
+  /**
+   * Return the element ID.
+   *
+   * \return the element ID
+   */
+  WifiInformationElementId ElementId () const;
+  /**
+   * Return the information field size.
+   *
+   * \return the information field size
+   */
+  uint8_t GetInformationFieldSize () const;
+  /**
+   * Serialize the information field.
+   *
+   * \param start the information field
+   */
+  void SerializeInformationField (Buffer::Iterator start) const;
+  /**
+   * Return the information field.
+   *
+   * \param start field
+   * \param length field length
+   *
+   * \return the information field
+   */
+  uint8_t DeserializeInformationField (Buffer::Iterator start,
+                                       uint8_t length);
+  /**
+   * This information element is a bit special in that it is only
+   * included if the STA is an HT STA. To support this we
+   * override the Serialize and GetSerializedSize methods of
+   * WifiInformationElement.
+   *
+   * \param start
+   *
+   * \return an iterator
+   */
+  Buffer::Iterator Serialize (Buffer::Iterator start) const;
+  /**
+   * Return the serialized size of this HT capability
+   * information element.
+   *
+   * \return the serialized size of this HT capability information element
+   */
+  uint16_t GetSerializedSize () const;
+
 
 private:
   //HT Capabilities Info field
-  uint8_t m_ldpc;                  ///< LDPC
+  uint8_t m_ldpc; ///< LDPC
   uint8_t m_supportedChannelWidth; ///< supported channel width
-  uint8_t m_smPowerSave;           ///< SM power save
-  uint8_t m_greenField;            ///< Greenfield
-  uint8_t m_shortGuardInterval20;  ///< short guard interval 20 MHz
-  uint8_t m_shortGuardInterval40;  ///< short guard interval 40 MHz
-  uint8_t m_txStbc;                ///< transmit STBC
-  uint8_t m_rxStbc;                ///< receive STBC
-  uint8_t m_htDelayedBlockAck;     ///< HT delayed block ack
-  uint8_t m_maxAmsduLength;        ///< maximum A-MSDU length
-  uint8_t m_dssMode40;             ///< DSS mode 40
-  uint8_t m_psmpSupport;           ///< PSMP support
-  uint8_t m_fortyMhzIntolerant;    ///< 40 MHz intolerant
-  uint8_t m_lsigProtectionSupport; ///< L-SIG protection support
+  uint8_t m_smPowerSave; ///< SM power save
+  uint8_t m_greenField; ///< green field
+  uint8_t m_shortGuardInterval20; ///< short guard interval 20
+  uint8_t m_shortGuardInterval40; ///< short guard interval 40
+  uint8_t m_txStbc; ///< transmit STBC
+  uint8_t m_rxStbc; ///< receive STBC
+  uint8_t m_htDelayedBlockAck; ///< HT delayed block ack
+  uint8_t m_maxAmsduLength; ///< maximum AMSDU length
+  uint8_t m_dssMode40; ///< DSS mode 40
+  uint8_t m_psmpSupport; ///< PSMP support
+  uint8_t m_fortyMhzIntolerant; ///< 40 Mhz intolerant
+  uint8_t m_lsigProtectionSupport; ///< LSIG protection support
 
   //A-MPDU Parameters field
-  uint8_t m_maxAmpduLengthExponent; ///< maximum A-MPDU length
-  uint8_t m_minMpduStartSpace;      ///< minimum MPDU start space
-  uint8_t m_ampduReserved;          ///< A-MPDU reserved
+  uint8_t m_maxAmpduLength; ///< maximum AMPDU length
+  uint8_t m_minMpduStartSpace; ///< minimum MPDU start space
+  uint8_t m_ampduReserved; ///< AMPDU reserved
 
   //Supported MCS Set field
-  uint8_t m_reservedMcsSet1;                 ///< reserved MCS set 1
-  uint16_t m_rxHighestSupportedDataRate;     ///< receive highest supported data rate
-  uint8_t m_reservedMcsSet2;                 ///< reserved MCS set 2
-  uint8_t m_txMcsSetDefined;                 ///< transmit MCS set defined
-  uint8_t m_txRxMcsSetUnequal;               ///< transmit / receive MCS set unequal
-  uint8_t m_txMaxNSpatialStreams;            ///< transmit maximum number spatial streams
-  uint8_t m_txUnequalModulation;             ///< transmit unequal modulation
-  uint32_t m_reservedMcsSet3;                ///< reserved MCS set 3
+  uint8_t m_reservedMcsSet1; ///< reserved MCS set 1
+  uint16_t m_rxHighestSupportedDataRate; ///< receive highest supported data rate
+  uint8_t m_reservedMcsSet2; ///< reserved MCS set 2
+  uint8_t m_txMcsSetDefined; ///< transmit MCS set defined
+  uint8_t m_txRxMcsSetUnequal; ///< transmit / receive MCS set unequal
+  uint8_t m_txMaxNSpatialStreams; ///< transmit maximum number spatial streams
+  uint8_t m_txUnequalModulation; ///< transmit unequal modulation
+  uint32_t m_reservedMcsSet3; ///< reserved MCS set 3
   uint8_t m_rxMcsBitmask[MAX_SUPPORTED_MCS]; ///< receive MCS bitmask
 
   //HT Extended Capabilities field
-  uint8_t m_pco;                           ///< PCO
-  uint8_t m_pcoTransitionTime;             ///< PCO transition time
-  uint8_t m_reservedExtendedCapabilities;  ///< reserved extended capabilities
-  uint8_t m_mcsFeedback;                   ///< MCS feedback
-  uint8_t m_htcSupport;                    ///< HTC support
-  uint8_t m_reverseDirectionResponder;     ///< reverse direction responder
+  uint8_t m_pco; ///< PCO
+  uint8_t m_pcoTransitionTime; ///< PCO trnsition time
+  uint8_t m_reservedExtendedCapabilities; ///< reserved extended capabilities
+  uint8_t m_mcsFeedback; ///< MCS feedback
+  uint8_t m_htcSupport; ///< HTS support
+  uint8_t m_reverzeDirectionResponder; ///< reverse direction responder
   uint8_t m_reservedExtendedCapabilities2; ///< reserver extended capabilities 2
 
   //Transmit Beamforming Capabilities field
-  uint8_t m_implicitRxBfCapable;                       ///< implicit receive BF capable
-  uint8_t m_rxStaggeredSoundingCapable;                ///< receive staggered sounding capable
-  uint8_t m_txStaggeredSoundingCapable;                ///< transmit staggered sounding capable
-  uint8_t m_rxNdpCapable;                              ///< receive NDP capable
-  uint8_t m_txNdpCapable;                              ///< transmit NDP capable
-  uint8_t m_implicitTxBfCapable;                       ///< implicit transmit BF capable
-  uint8_t m_calibration;                               ///< calibration
-  uint8_t m_explicitCsiTxBfCapable;                    ///< explicit CSI transmit BF capable
-  uint8_t m_explicitNoncompressedSteeringCapable;      ///< explicit non compressed steeering capable
-  uint8_t m_explicitCompressedSteeringCapable;         ///< explicit compressed steeering capable
-  uint8_t m_explicitTxBfCsiFeedback;                   ///< explicit transmit BF CSI feedback
-  uint8_t m_explicitNoncompressedBfFeedbackCapable;    ///< explicit non compressed BF feedback capable
-  uint8_t m_explicitCompressedBfFeedbackCapable;       ///< explicit compressed BF feedback capable
-  uint8_t m_minimalGrouping;                           ///< minimal grouping
-  uint8_t m_csiNBfAntennasSupported;                   ///< CSI NBF antenna supported
+  uint8_t m_implicitRxBfCapable; ///< implicit receive BF capable
+  uint8_t m_rxStaggeredSoundingCapable; ///< receive staggered sounding capable
+  uint8_t m_txStaggeredSoundingCapable; ///< transmit staggered soundign capable
+  uint8_t m_rxNdpCapable; ///< receive NDP capable
+  uint8_t m_txNdpCapable; ///< transmit NDP capable
+  uint8_t m_implicitTxBfCapable; ///< implicit transmit BF capable
+  uint8_t m_calibration; ///< calibration
+  uint8_t m_explicitCsiTxBfCapable; ///< explicit CSI transmit BF capable
+  uint8_t m_explicitNoncompressedSteeringCapable; ///< explicit non compressed steeering capable
+  uint8_t m_explicitCompressedSteeringCapable; ///< explicit compressed steeering capable
+  uint8_t m_explicitTxBfCsiFeedback; ///< explicit transmit BF CSI feedback
+  uint8_t m_explicitNoncompressedBfFeedbackCapable; ///< eplicit non complressed BF feedback capable
+  uint8_t m_explicitCompressedBfFeedbackCapable; ///< explicit compressed BF feedback capable
+  uint8_t m_minimalGrouping; ///< minimal grouping
+  uint8_t m_csiNBfAntennasSupported; ///< CSI NBF antenna supported
   uint8_t m_noncompressedSteeringNBfAntennasSupported; ///< non compressed steering NBF antenna supported
-  uint8_t m_compressedSteeringNBfAntennasSupported;    ///< compressed steering NBF antenna supported
-  uint8_t m_csiMaxNRowsBfSupported;                    ///< CSI maximum number rows BF supported
-  uint8_t m_channelEstimationCapability;               ///< channel estimation capability
-  uint8_t m_reservedTxBf;                              ///< reserved  transmit BF
+  uint8_t m_compressedSteeringNBfAntennasSupported; ///< compressed steering NBF antenna supported
+  uint8_t m_csiMaxNRowsBfSupported; ///< CSI maximum number rows BF supported
+  uint8_t m_channelEstimationCapability; ///< channel estimation capability
+  uint8_t m_reservedTxBf; ///< reserved  transmit BF
 
   //ASEL Capabilities field
-  uint8_t m_antennaSelectionCapability;               ///< antenna selection capability
-  uint8_t m_explicitCsiFeedbackBasedTxASelCapable;    ///< explicit CSI feedback based transmit antenna selection capable
-  uint8_t m_antennaIndicesFeedbackBasedTxASelCapable; ///< antenna indices feedback based transmit antenna selection capable
-  uint8_t m_explicitCsiFeedbackCapable;               ///< explicit CSI feedback capable
-  uint8_t m_antennaIndicesFeedbackCapable;            ///< antenna indices feedback capable
-  uint8_t m_rxASelCapable;                            ///< receive antenna selection capable
-  uint8_t m_txSoundingPpdusCapable;                   ///< sounding PPDUS capable
-  uint8_t m_reservedASel;                             ///< reserved ASEL
+  uint8_t m_antennaSelectionCapability; ///< antenna selection capability
+  uint8_t m_explicitCsiFeedbackBasedTxASelCapable; ///< explicit CSI feedback based transmit a sel capable
+  uint8_t m_antennaIndicesFeedbackBasedTxASelCapable; ///< antenna indices feedback absed transmit a sel capable
+  uint8_t m_explicitCsiFeedbackCapable; ///< explicit CSI feedback capable
+  uint8_t m_antennaIndicesFeedbackCapable; ///< antenna indices feedback capable
+  uint8_t m_rxASelCapable; ///< receive a sel capable
+  uint8_t m_txSoundingPpdusCapable; ///< sounding PPDUS capable
+  uint8_t m_reservedASel; ///< reserved a sel
 
   /// This is used to decide whether this element should be added to the frame or not
   uint8_t m_htSupported;
 };
 
-/**
- * output stream output operator
- *
- * \param os output stream
- * \param htcapabilities the HT capabilities
- *
- * \returns output stream
- */
 std::ostream &operator << (std::ostream &os, const HtCapabilities &htcapabilities);
 
 } //namespace ns3

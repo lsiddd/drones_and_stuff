@@ -27,8 +27,6 @@
 
 namespace ns3 {
 
-#define SU_STA_ID 65535
-
 class WifiTxVector;
 
 /**
@@ -112,19 +110,19 @@ public:
    * \param guardInterval the considered guard interval duration in nanoseconds
    * \param nss the considered number of streams
    *
-   * \returns the physical bit rate of this signal in bps.
+   * \returns the physical bit rate of this signal.
    *
    * If a transmission mode uses 1/2 FEC, and if its
-   * data rate is 3.25Mbps, the PHY rate is 6.5Mbps
+   * data rate is 3.25Mbps, the phy rate is 6.5Mbps
    */
   uint64_t GetPhyRate (uint16_t channelWidth, uint16_t guardInterval, uint8_t nss) const;
   /**
    * \param txVector the WifiTxVector of the signal
    *
-   * \returns the physical bit rate of this signal in bps.
+   * \returns the physical bit rate of this signal.
    *
    * If a transmission mode uses 1/2 FEC, and if its
-   * data rate is 3.25Mbps, the PHY rate is 6.5Mbps
+   * data rate is 3.25Mbps, the phy rate is 6.5Mbps
    */
   uint64_t GetPhyRate (WifiTxVector txVector) const;
   /**
@@ -133,16 +131,15 @@ public:
    * \param guardInterval the considered guard interval duration in nanoseconds
    * \param nss the considered number of streams
    *
-   * \returns the data bit rate of this signal in bps.
+   * \returns the data bit rate of this signal.
    */
   uint64_t GetDataRate (uint16_t channelWidth, uint16_t guardInterval, uint8_t nss) const;
   /**
    * \param txVector the WifiTxVector of the signal
-   * \param staId the station ID for MU (unused if SU)
    *
    * \returns the data bit rate of this signal.
    */
-  uint64_t GetDataRate (WifiTxVector txVector, uint16_t staId = SU_STA_ID) const;
+  uint64_t GetDataRate (WifiTxVector txVector) const;
   /**
    * \param channelWidth the considered channel width in MHz
    *
@@ -173,11 +170,11 @@ public:
    */
   bool IsMandatory (void) const;
   /**
-   * \returns the UID associated to this wireless mode.
+   * \returns the uid associated to this wireless mode.
    *
-   * Each specific wireless mode should have a different UID.
+   * Each specific wireless mode should have a different uid.
    * For example, the 802.11b 1Mbps and the 802.11b 2Mbps modes
-   * should have different UIDs.
+   * should have different uids.
    */
   uint32_t GetUid (void) const;
   /**
@@ -196,13 +193,13 @@ public:
    */
   uint64_t GetNonHtReferenceRate (void) const;
   /**
-   * \param mode the WifiMode
+   * \param mode wifi mode
    * \returns true if this WifiMode has a
    * a code rate strictly higher than mode.
    */
   bool IsHigherCodeRate (WifiMode mode) const;
   /**
-   * \param mode the WifiMode
+   * \param mode wifi mode
    * \returns true if this WifiMode has a
    * a rate strictly higher than mode.
    */
@@ -227,6 +224,8 @@ public:
 private:
   /// allow WifiModeFactory class access
   friend class WifiModeFactory;
+  /// allow WifiPhyTag class access
+  friend class WifiPhyTag; // access the UID-based constructor
   /**
    * Create a WifiMode from a given unique ID.
    *
@@ -236,43 +235,10 @@ private:
   uint32_t m_uid; ///< UID
 };
 
-/**
- * Check if the two WifiModes are identical.
- *
- * \param a WifiMode
- * \param b WifiMode
- *
- * \return true if the two WifiModes are identical,
- *         false otherwise
- */
+/// equality operator
 bool operator == (const WifiMode &a, const WifiMode &b);
-/**
- * Compare two WifiModes
- *
- * \param a WifiMode
- * \param b WifiMode
- *
- * \return true if a is less than b,
- *         false otherwise
- */
 bool operator < (const WifiMode &a, const WifiMode &b);
-/**
- * Serialize WifiMode to ostream (human-readable).
- *
- * \param os the output stream
- * \param mode the WifiMode
- *
- * \return std::ostream
- */
 std::ostream & operator << (std::ostream & os, const WifiMode &mode);
-/**
- * Serialize WifiMode from istream (human-readable).
- *
- * \param is the input stream
- * \param mode the WifiMode
- *
- * \return std::istream
- */
 std::istream & operator >> (std::istream &is, WifiMode &mode);
 
 ATTRIBUTE_HELPER_HEADER (WifiMode);
@@ -312,7 +278,7 @@ public:
    *
    * \return WifiMode
    *
-   * Create a non-HT WifiMode.
+   * Create a WifiMode (not used for HT or VHT).
    */
   static WifiMode CreateWifiMode (std::string uniqueName,
                                   WifiModulationClass modClass,
@@ -323,12 +289,12 @@ public:
   /**
    * \param uniqueName the name of the associated WifiMode. This name
    *        must be unique across _all_ instances.
-   * \param mcsValue the MCS value
+   * \param mcsValue the mcs value
    * \param modClass the class of modulation
    *
    * \return WifiMode
    *
-   * Create a HT WifiMode.
+   * Create a HT or VHT WifiMode.
    */
   static WifiMode CreateWifiMcs (std::string uniqueName,
                                  uint8_t mcsValue,
@@ -368,23 +334,23 @@ private:
    *
    * \param name human-readable WifiMode
    *
-   * \return the WifiMode
+   * \return WifiMode
    */
   WifiMode Search (std::string name) const;
   /**
    * Allocate a WifiModeItem from a given uniqueUid.
    *
-   * \param uniqueUid the unique UID
+   * \param uniqueUid
    *
-   * \return the allocated UID index
+   * \return uid
    */
   uint32_t AllocateUid (std::string uniqueUid);
   /**
-   * Return a WifiModeItem at the given UID index.
+   * Return a WifiModeItem at the given uid index.
    *
-   * \param uid the UID index
+   * \param uid
    *
-   * \return WifiModeItem at the given UID
+   * \return WifiModeItem at the given uid
    */
   WifiModeItem* Get (uint32_t uid);
 

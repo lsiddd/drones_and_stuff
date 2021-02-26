@@ -48,7 +48,6 @@ LteUePowerControl::LteUePowerControl ()
 
   m_M_Pusch = 0;
   m_rsrpSet = false;
-  m_pcRsrpFilterCoefficient = 4; //Default value similar to the eNB (see lte-enb-rrc.cc)
 }
 
 LteUePowerControl::~LteUePowerControl ()
@@ -261,17 +260,9 @@ LteUePowerControl::SetRsrp (double value)
       return;
     }
 
-  double alphaRsrp = std::pow (0.5, m_pcRsrpFilterCoefficient / 4.0);
-  m_rsrp = (1 - alphaRsrp) * m_rsrp + alphaRsrp * value;
-
+  double coeff = 0.7;
+  m_rsrp = coeff * m_rsrp + (1 - coeff) * value;
   m_pathLoss = m_referenceSignalPower - m_rsrp;
-}
-
-void
-LteUePowerControl::SetRsrpFilterCoefficient (uint8_t rsrpFilterCoefficient)
-{
-  NS_LOG_FUNCTION (this);
-  m_pcRsrpFilterCoefficient = rsrpFilterCoefficient;
 }
 
 void

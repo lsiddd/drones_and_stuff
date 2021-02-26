@@ -124,7 +124,7 @@ public:
    * dequeued as soon as the channel access function determines that
    * access is granted to this MAC.
    */
-  virtual void Enqueue (Ptr<Packet> packet, Mac48Address to);
+  virtual void Enqueue (Ptr<const Packet> packet, Mac48Address to);
   /**
     * \param cwmin the min contention window
     * \param cwmax the max contention window
@@ -173,10 +173,10 @@ public:
    */
   void Reset (void);
 
-  // Inherited from base class
-  virtual void ConfigureStandard (enum WifiStandard standard);
+protected:
+  virtual void FinishConfigureStandard (enum WifiPhyStandard standard);
 private:
-  virtual void Receive (Ptr<WifiMacQueueItem> mpdu);
+  virtual void Receive (Ptr<Packet> packet, const WifiMacHeader *hdr);
 
   VendorSpecificContentManager m_vscManager; ///< VSC manager
 };

@@ -31,7 +31,6 @@ class WifiMacHeader;
 class OriginatorRxStatus;
 class Packet;
 class Mac48Address;
-class WifiMacQueueItem;
 
 /**
  * \ingroup wifi
@@ -44,7 +43,7 @@ public:
   /**
    * typedef for callback
    */
-  typedef Callback<void, Ptr<WifiMacQueueItem>> ForwardUpCallback;
+  typedef Callback<void, Ptr<Packet>, const WifiMacHeader*> ForwardUpCallback;
 
   MacRxMiddle ();
   ~MacRxMiddle ();
@@ -52,23 +51,24 @@ public:
   /**
    * Set a callback to forward the packet up.
    *
-   * \param callback the callback to set
+   * \param callback
    */
   void SetForwardCallback (ForwardUpCallback callback);
 
   /**
    * Set a callback to trigger the next PCF frame.
    *
-   * \param callback the callback to set
+   * \param callback
    */
   void SetPcfCallback (Callback<void> callback);
 
   /**
    * Receive a packet.
    *
-   * \param mpdu the MPDU
+   * \param packet the packet
+   * \param hdr MAC header
    */
-  void Receive (Ptr<WifiMacQueueItem> mpdu);
+  void Receive (Ptr<Packet> packet, const WifiMacHeader *hdr);
 
 
 private:
@@ -79,7 +79,7 @@ private:
    * (by looking at ADDR2 field in the header).
    * The method creates a new OriginatorRxStatus if one is not already presented.
    *
-   * \param hdr the MAC header
+   * \param hdr
    *
    * \return OriginatorRxStatus
    */
@@ -88,8 +88,8 @@ private:
    * Check if we have already received the packet from the sender before
    * (by looking at the sequence control field).
    *
-   * \param hdr the MAC header
-   * \param originator the packet originator status
+   * \param hdr
+   * \param originator
    *
    * \return true if we already received the packet previously,
    *         false otherwise
@@ -103,15 +103,15 @@ private:
    * If the packet is the last fragment, the method tries to re-construct the full packet
    * and return the packet if success.
    *
-   * \param packet the packet
-   * \param hdr the MAC header
-   * \param originator the packet originator status
+   * \param packet
+   * \param hdr
+   * \param originator
    *
    * \return a packet if the packet is successfully reassembled (or not a fragment),
    *         0 if we failed to reassemble the packet (e.g. missing fragments/out-of-order).
    */
-  Ptr<const Packet> HandleFragments (Ptr<const Packet> packet, const WifiMacHeader* hdr,
-                                     OriginatorRxStatus *originator);
+  Ptr<Packet> HandleFragments (Ptr<Packet> packet, const WifiMacHeader* hdr,
+                               OriginatorRxStatus *originator);
 
   /**
    * typedef for a map between address and OriginatorRxStatus

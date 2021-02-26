@@ -22,6 +22,8 @@
 #define PING6_H
 
 #include "ns3/application.h"
+#include "ns3/event-id.h"
+#include "ns3/ptr.h"
 #include "ns3/ipv6-address.h"
 
 namespace ns3

@@ -32,6 +32,7 @@
 #include "ns3/trace-source-accessor.h"
 #include "csma-net-device.h"
 #include "csma-channel.h"
+#include "ns3/net-device-queue-interface.h"
 
 namespace ns3 {
 
@@ -218,7 +219,42 @@ CsmaNetDevice::DoDispose ()
   m_channel = 0;
   m_node = 0;
   m_queue = 0;
+  m_queueInterface = 0;
   NetDevice::DoDispose ();
+}
+
+void
+CsmaNetDevice::DoInitialize (void)
+{
+  if (m_queueInterface)
+    {
+      NS_ASSERT_MSG (m_queue != 0, "A Queue object has not been attached to the device");
+
+      // connect the traced callbacks of m_queue to the static methods provided by
+      // the NetDeviceQueue class to support flow control and dynamic queue limits.
+      // This could not be done in NotifyNewAggregate because at that time we are
+      // not guaranteed that a queue has been attached to the netdevice
+      m_queueInterface->ConnectQueueTraces (m_queue, 0);
+    }
+
+  NetDevice::DoInitialize ();
+}
+
+void
+CsmaNetDevice::NotifyNewAggregate (void)
+{
+  NS_LOG_FUNCTION (this);
+  if (m_queueInterface == 0)
+    {
+      Ptr<NetDeviceQueueInterface> ndqi = this->GetObject<NetDeviceQueueInterface> ();
+      //verify that it's a valid netdevice queue interface and that
+      //the netdevice queue interface was not set before
+      if (ndqi != 0)
+        {
+          m_queueInterface = ndqi;
+        }
+    }
+  NetDevice::NotifyNewAggregate ();
 }
 
 void
@@ -495,7 +531,7 @@ CsmaNetDevice::TransmitStart (void)
           m_backoff.IncrNumRetries ();
           Time backoffTime = m_backoff.GetBackoffTime ();
 
-          NS_LOG_LOGIC ("Channel busy, backing off for " << backoffTime.As (Time::S));
+          NS_LOG_LOGIC ("Channel busy, backing off for " << backoffTime.GetSeconds () << " sec");
 
           Simulator::Schedule (backoffTime, &CsmaNetDevice::TransmitStart, this);
         }
@@ -523,7 +559,7 @@ CsmaNetDevice::TransmitStart (void)
           m_txMachineState = BUSY;
 
           Time tEvent = m_bps.CalculateBytesTxTime (m_currentPkt->GetSize ());
-          NS_LOG_LOGIC ("Schedule TransmitCompleteEvent in " << tEvent.As (Time::S));
+          NS_LOG_LOGIC ("Schedule TransmitCompleteEvent in " << tEvent.GetSeconds () << "sec");
           Simulator::Schedule (tEvent, &CsmaNetDevice::TransmitCompleteEvent, this);
         }
     }
@@ -601,7 +637,7 @@ CsmaNetDevice::TransmitCompleteEvent (void)
   m_phyTxEndTrace (m_currentPkt);
   m_currentPkt = 0;
 
-  NS_LOG_LOGIC ("Schedule TransmitReadyEvent in " << m_tInterframeGap.As (Time::S));
+  NS_LOG_LOGIC ("Schedule TransmitReadyEvent in " << m_tInterframeGap.GetSeconds () << "sec");
 
   Simulator::Schedule (m_tInterframeGap, &CsmaNetDevice::TransmitReadyEvent, this);
 }

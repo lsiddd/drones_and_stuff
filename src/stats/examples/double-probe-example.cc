@@ -90,7 +90,7 @@ void
 Emitter::Emit (void)
 {
   NS_LOG_FUNCTION (this);
-  NS_LOG_DEBUG ("Emitting at " << Simulator::Now ().As (Time::S));
+  NS_LOG_DEBUG ("Emitting at " << Simulator::Now ().GetSeconds ());
   Simulator::Schedule (Seconds (m_var->GetValue ()), &Emitter::Emit, this);
 }
 
@@ -98,7 +98,7 @@ void
 Emitter::Count (void)
 {
   NS_LOG_FUNCTION (this);
-  NS_LOG_DEBUG ("Counting at " << Simulator::Now ().As (Time::S));
+  NS_LOG_DEBUG ("Counting at " << Simulator::Now ().GetSeconds ());
   m_counter += 1.0;
   DoubleProbe::SetValueByPath ("/Names/StaticallyAccessedProbe", m_counter);
   Simulator::Schedule (Seconds (m_var->GetValue ()), &Emitter::Count, this);
@@ -120,7 +120,7 @@ NotifyViaProbe (std::string context, double oldVal, double newVal)
 
 int main (int argc, char *argv[])
 {
-  CommandLine cmd (__FILE__);
+  CommandLine cmd;
   cmd.Parse (argc, argv);
   bool connected;
 

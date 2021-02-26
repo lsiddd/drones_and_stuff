@@ -47,7 +47,7 @@ main (int argc, char *argv[])
   uint32_t nWifi = 3;
   bool tracing = false;
 
-  CommandLine cmd (__FILE__);
+  CommandLine cmd;
   cmd.AddValue ("nCsma", "Number of \"extra\" CSMA nodes/devices", nCsma);
   cmd.AddValue ("nWifi", "Number of wifi STA devices", nWifi);
   cmd.AddValue ("verbose", "Tell echo applications to log if true", verbose);
@@ -96,7 +96,7 @@ main (int argc, char *argv[])
   NodeContainer wifiApNode = p2pNodes.Get (0);
 
   YansWifiChannelHelper channel = YansWifiChannelHelper::Default ();
-  YansWifiPhyHelper phy;
+  YansWifiPhyHelper phy = YansWifiPhyHelper::Default ();
   phy.SetChannel (channel.Create ());
 
   WifiHelper wifi;

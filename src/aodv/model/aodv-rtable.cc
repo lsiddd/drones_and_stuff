@@ -160,7 +160,7 @@ RoutingTableEntry::GetPrecursors (std::vector<Ipv4Address> & prec) const
 void
 RoutingTableEntry::Invalidate (Time badLinkLifetime)
 {
-  NS_LOG_FUNCTION (this << badLinkLifetime.As (Time::S));
+  NS_LOG_FUNCTION (this << badLinkLifetime.GetSeconds ());
   if (m_flag == INVALID)
     {
       return;
@@ -171,7 +171,7 @@ RoutingTableEntry::Invalidate (Time badLinkLifetime)
 }
 
 void
-RoutingTableEntry::Print (Ptr<OutputStreamWrapper> stream, Time::Unit unit /* = Time::S */) const
+RoutingTableEntry::Print (Ptr<OutputStreamWrapper> stream) const
 {
   std::ostream* os = stream->GetStream ();
   *os << m_ipv4Route->GetDestination () << "\t" << m_ipv4Route->GetGateway ()
@@ -197,7 +197,7 @@ RoutingTableEntry::Print (Ptr<OutputStreamWrapper> stream, Time::Unit unit /* = 
   *os << "\t";
   *os << std::setiosflags (std::ios::fixed) <<
   std::setiosflags (std::ios::left) << std::setprecision (2) <<
-  std::setw (14) << (m_lifeTime - Simulator::Now ()).As (unit);
+  std::setw (14) << (m_lifeTime - Simulator::Now ()).GetSeconds ();
   *os << "\t" << m_hops << "\n";
 }
 
@@ -448,7 +448,7 @@ RoutingTable::Purge (std::map<Ipv4Address, RoutingTableEntry> &table) const
 bool
 RoutingTable::MarkLinkAsUnidirectional (Ipv4Address neighbor, Time blacklistTimeout)
 {
-  NS_LOG_FUNCTION (this << neighbor << blacklistTimeout.As (Time::S));
+  NS_LOG_FUNCTION (this << neighbor << blacklistTimeout.GetSeconds ());
   std::map<Ipv4Address, RoutingTableEntry>::iterator i =
     m_ipv4AddressEntry.find (neighbor);
   if (i == m_ipv4AddressEntry.end ())
@@ -464,7 +464,7 @@ RoutingTable::MarkLinkAsUnidirectional (Ipv4Address neighbor, Time blacklistTime
 }
 
 void
-RoutingTable::Print (Ptr<OutputStreamWrapper> stream, Time::Unit unit /* = Time::S */) const
+RoutingTable::Print (Ptr<OutputStreamWrapper> stream) const
 {
   std::map<Ipv4Address, RoutingTableEntry> table = m_ipv4AddressEntry;
   Purge (table);
@@ -473,7 +473,7 @@ RoutingTable::Print (Ptr<OutputStreamWrapper> stream, Time::Unit unit /* = Time:
   for (std::map<Ipv4Address, RoutingTableEntry>::const_iterator i =
          table.begin (); i != table.end (); ++i)
     {
-      i->second.Print (stream, unit);
+      i->second.Print (stream);
     }
   *stream->GetStream () << "\n";
 }

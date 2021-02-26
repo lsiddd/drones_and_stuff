@@ -148,9 +148,14 @@ protected:
   /**
    * Notify transmit opportunity
    *
-   * \param params LteMacSapUser::TxOpportunityParameters
+   * \param bytes number of bytes
+   * \param layer the layer
+   * \param harqId the HARQ ID
+   * \param componentCarrierId component carrier ID
+   * \param rnti the RNTI
+   * \param lcid the LCID
    */ 
-  virtual void DoNotifyTxOpportunity (LteMacSapUser::TxOpportunityParameters params) = 0;
+  virtual void DoNotifyTxOpportunity (uint32_t bytes, uint8_t layer, uint8_t harqId, uint8_t componentCarrierId, uint16_t rnti, uint8_t lcid) = 0;
   /**
    * Notify HARQ delivery failure
    */ 
@@ -158,9 +163,11 @@ protected:
   /**
    * Receive PDU function
    *
-   * \param params the LteMacSapUser::ReceivePduParameters
+   * \param p the packet
+   * \param rnti the RNTI
+   * \param lcid the LCID
    */ 
-  virtual void DoReceivePdu (LteMacSapUser::ReceivePduParameters params) = 0;
+  virtual void DoReceivePdu (Ptr<Packet> p, uint16_t rnti, uint8_t lcid) = 0;
 
   LteMacSapUser* m_macSapUser; ///< MAC SAP user
   LteMacSapProvider* m_macSapProvider; ///< MAC SAP provider
@@ -203,9 +210,9 @@ public:
   virtual void DoDispose ();
 
   virtual void DoTransmitPdcpPdu (Ptr<Packet> p);
-  virtual void DoNotifyTxOpportunity (LteMacSapUser::TxOpportunityParameters txOpParams);
+  virtual void DoNotifyTxOpportunity (uint32_t bytes, uint8_t layer, uint8_t harqId, uint8_t componentCarrierId, uint16_t rnti, uint8_t lcid);
   virtual void DoNotifyHarqDeliveryFailure ();
-  virtual void DoReceivePdu (LteMacSapUser::ReceivePduParameters rxPduParams);
+  virtual void DoReceivePdu (Ptr<Packet> p, uint16_t rnti, uint8_t lcid);
 
 
 

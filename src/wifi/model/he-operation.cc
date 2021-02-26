@@ -40,19 +40,13 @@ HeOperation::HeOperation ()
 WifiInformationElementId
 HeOperation::ElementId () const
 {
-  return IE_EXTENSION;
-}
-
-WifiInformationElementId
-HeOperation::ElementIdExt () const
-{
-  return IE_EXT_HE_OPERATION;
+  return IE_HE_OPERATION;
 }
 
 void
-HeOperation::SetHeSupported (uint8_t heSupported)
+HeOperation::SetHeSupported (uint8_t hesupported)
 {
-  m_heSupported = heSupported;
+  m_heSupported = hesupported;
 }
 
 uint8_t
@@ -60,7 +54,7 @@ HeOperation::GetInformationFieldSize () const
 {
   //we should not be here if he is not supported
   NS_ASSERT (m_heSupported > 0);
-  return 7;
+  return 10;
 }
 
 void
@@ -97,40 +91,13 @@ void
 HeOperation::SetMaxHeMcsPerNss (uint8_t nss, uint8_t maxHeMcs)
 {
   NS_ASSERT ((maxHeMcs >= 7 && maxHeMcs <= 11) && (nss >= 1 && nss <= 8));
-  uint8_t val = 3; //3 means not supported
-  if (maxHeMcs > 9) //MCS 0 - 11
-    {
-      val = 2;
-    }
-  else if (maxHeMcs > 7) //MCS 0 - 9
-    {
-      val = 1;
-    }
-  else if (maxHeMcs == 7) //MCS 0 - 7
-    {
-      val = 0;
-    }
-  m_basicHeMcsAndNssSet |= ((val & 0x03) << ((nss - 1) * 2));
+  m_basicHeMcsAndNssSet |= (((maxHeMcs - 7) & 0x07) << ((nss - 1) * 3));
 }
 
-uint16_t
+uint32_t
 HeOperation::GetBasicHeMcsAndNssSet (void) const
 {
   return m_basicHeMcsAndNssSet;
-}
-
-void
-HeOperation::SetBssColor (uint8_t bssColor)
-{
-  NS_ABORT_UNLESS (bssColor < 64); // 6 bits
-  m_bssColor = bssColor;
-  m_bssColorDisabled = 0;
-}
-
-uint8_t
-HeOperation::GetBssColor (void) const
-{
-  return m_bssColor;
 }
 
 Buffer::Iterator
@@ -160,8 +127,11 @@ HeOperation::SerializeInformationField (Buffer::Iterator start) const
     {
       //write the corresponding value for each bit
       start.WriteHtolsbU32 (GetHeOperationParameters ());
-      start.WriteU16 (GetBasicHeMcsAndNssSet ());
-      //todo: VHT Operation Information (variable)
+      uint32_t mcsset = GetBasicHeMcsAndNssSet ();
+      start.WriteU16 (mcsset & 0xffff);
+      start.WriteU8 ((mcsset >> 16) & 0xff);
+      start.WriteU16 (0); //todo: VHT Operation Information
+      start.WriteU8 (0); //todo: VHT Operation Information
     }
 }
 
@@ -170,12 +140,24 @@ HeOperation::DeserializeInformationField (Buffer::Iterator start, uint8_t length
 {
   Buffer::Iterator i = start;
   uint32_t heOperationParameters = i.ReadLsbtohU32 ();
-  m_basicHeMcsAndNssSet = i.ReadU16 ();
+  uint16_t mcsset_1 = i.ReadU16 ();
+  uint8_t mcsset_2 = i.ReadU8 ();
+  i.ReadU16 (); //todo: VHT Operation Information
+  i.ReadU8 (); //todo: VHT Operation Information
   SetHeOperationParameters (heOperationParameters);
-  //todo: VHT Operation Information (variable)
+  m_basicHeMcsAndNssSet |= mcsset_1 & 0xffff;
+  m_basicHeMcsAndNssSet |= (mcsset_2 & 0xff) << 16;
   return length;
 }
 
+/**
+ * output stream output operator
+ *
+ * \param os output stream
+ * \param HeOperation the HE operation
+ *
+ * \returns output stream
+ */
 std::ostream &
 operator << (std::ostream &os, const HeOperation &HeOperation)
 {

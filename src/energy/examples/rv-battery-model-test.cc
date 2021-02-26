@@ -637,7 +637,7 @@ BatteryLifetimeTest::CreateLoadProfiles (void)
 int
 main (int argc, char **argv)
 {
-  CommandLine cmd (__FILE__);
+  CommandLine cmd;
   cmd.Parse (argc, argv);
   
   NS_LOG_DEBUG ("Constant load run.");
@@ -732,9 +732,9 @@ BatteryLifetimeTest::ConstantLoadTest (double load, Time expLifetime)
 
   // install YansWifiPhy
   WifiHelper wifi;
-  wifi.SetStandard (WIFI_STANDARD_80211b);
+  wifi.SetStandard (WIFI_PHY_STANDARD_80211b);
 
-  YansWifiPhyHelper wifiPhy;
+  YansWifiPhyHelper wifiPhy =  YansWifiPhyHelper::Default ();
   /*
    * This is one parameter that matters when using FixedRssLossModel, set it to
    * zero; otherwise, gain will be added.
@@ -780,8 +780,8 @@ BatteryLifetimeTest::ConstantLoadTest (double load, Time expLifetime)
   Ptr<RvBatteryModel> srcPtr = DynamicCast<RvBatteryModel> (sources.Get (0));
   actualLifetime = srcPtr->GetLifetime ();
 
-  NS_LOG_DEBUG ("Expected lifetime = " << expLifetime.As (Time::S));
-  NS_LOG_DEBUG ("Actual lifetime = " << actualLifetime.As (Time::S));
+  NS_LOG_DEBUG ("Expected lifetime = " << expLifetime.GetSeconds () << "s");
+  NS_LOG_DEBUG ("Actual lifetime = " << actualLifetime.GetSeconds () << "s");
 
   Simulator::Destroy ();
 
@@ -819,9 +819,9 @@ BatteryLifetimeTest::VariableLoadTest (std::vector<double> loads,
 
   // install YansWifiPhy
   WifiHelper wifi;
-  wifi.SetStandard (WIFI_STANDARD_80211b);
+  wifi.SetStandard (WIFI_PHY_STANDARD_80211b);
 
-  YansWifiPhyHelper wifiPhy;
+  YansWifiPhyHelper wifiPhy =  YansWifiPhyHelper::Default ();
   /*
    * This is one parameter that matters when using FixedRssLossModel, set it to
    * zero; otherwise, gain will be added.
@@ -876,14 +876,15 @@ BatteryLifetimeTest::VariableLoadTest (std::vector<double> loads,
   Ptr<RvBatteryModel> srcPtr = DynamicCast<RvBatteryModel> (sources.Get (0));
   actualLifetime = srcPtr->GetLifetime ();
 
-  NS_LOG_DEBUG ("Expected lifetime = " << expLifetime.As (Time::S));
-  NS_LOG_DEBUG ("Actual lifetime = " << actualLifetime.As (Time::S));
-  NS_LOG_DEBUG ("Difference = " << (expLifetime - actualLifetime).As (Time::S));
+  NS_LOG_DEBUG ("Expected lifetime = " << expLifetime.GetSeconds () << "s");
+  NS_LOG_DEBUG ("Actual lifetime = " << actualLifetime.GetSeconds () << "s");
+  NS_LOG_DEBUG ("Difference = " << expLifetime.GetSeconds () - actualLifetime.GetSeconds () << "s");
 
   Simulator::Destroy ();
 
   // error tolerance = 120s
-  if (Abs (actualLifetime - expLifetime)  > Seconds (120))
+  if ((actualLifetime.GetSeconds ()) > (expLifetime.GetSeconds ()) + (120) ||
+      (actualLifetime.GetSeconds ()) < (expLifetime.GetSeconds ()) - (120))
     {
       std::cerr << "VariableLoadTest: Incorrect lifetime." << std::endl;
       return true;

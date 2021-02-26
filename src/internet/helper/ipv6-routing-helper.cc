@@ -93,39 +93,39 @@ Ipv6RoutingHelper::PrintEvery (Time printInterval, Ptr<Node> node, Ptr<OutputStr
 }
 
 void
-Ipv6RoutingHelper::PrintNeighborCacheAllAt (Time printTime, Ptr<OutputStreamWrapper> stream, Time::Unit unit /* = Time::S */)
+Ipv6RoutingHelper::PrintNeighborCacheAllAt (Time printTime, Ptr<OutputStreamWrapper> stream)
 {
   for (uint32_t i = 0; i < NodeList::GetNNodes (); i++)
     {
       Ptr<Node> node = NodeList::GetNode (i);
-      Simulator::Schedule (printTime, &Ipv6RoutingHelper::PrintNdiscCache, node, stream, unit);
+      Simulator::Schedule (printTime, &Ipv6RoutingHelper::PrintNdiscCache, node, stream);
     }
 }
 
 void
-Ipv6RoutingHelper::PrintNeighborCacheAllEvery (Time printInterval, Ptr<OutputStreamWrapper> stream, Time::Unit unit /* = Time::S */)
+Ipv6RoutingHelper::PrintNeighborCacheAllEvery (Time printInterval, Ptr<OutputStreamWrapper> stream)
 {
   for (uint32_t i = 0; i < NodeList::GetNNodes (); i++)
     {
       Ptr<Node> node = NodeList::GetNode (i);
-      Simulator::Schedule (printInterval, &Ipv6RoutingHelper::PrintNdiscCacheEvery, printInterval, node, stream, unit);
+      Simulator::Schedule (printInterval, &Ipv6RoutingHelper::PrintNdiscCacheEvery, printInterval, node, stream);
     }
 }
 
 void
-Ipv6RoutingHelper::PrintNeighborCacheAt (Time printTime, Ptr<Node> node, Ptr<OutputStreamWrapper> stream, Time::Unit unit /* = Time::S */)
+Ipv6RoutingHelper::PrintNeighborCacheAt (Time printTime, Ptr<Node> node, Ptr<OutputStreamWrapper> stream)
 {
-  Simulator::Schedule (printTime, &Ipv6RoutingHelper::PrintNdiscCache, node, stream, unit);
+  Simulator::Schedule (printTime, &Ipv6RoutingHelper::PrintNdiscCache, node, stream);
 }
 
 void
-Ipv6RoutingHelper::PrintNeighborCacheEvery (Time printInterval,Ptr<Node> node, Ptr<OutputStreamWrapper> stream, Time::Unit unit /* = Time::S */)
+Ipv6RoutingHelper::PrintNeighborCacheEvery (Time printInterval,Ptr<Node> node, Ptr<OutputStreamWrapper> stream)
 {
-  Simulator::Schedule (printInterval, &Ipv6RoutingHelper::PrintNdiscCacheEvery, printInterval, node, stream, unit);
+  Simulator::Schedule (printInterval, &Ipv6RoutingHelper::PrintNdiscCacheEvery, printInterval, node, stream);
 }
 
 void
-Ipv6RoutingHelper::PrintNdiscCache (Ptr<Node> node, Ptr<OutputStreamWrapper> stream, Time::Unit unit /* = Time::S */)
+Ipv6RoutingHelper::PrintNdiscCache (Ptr<Node> node, Ptr<OutputStreamWrapper> stream)
 {
   Ptr<Ipv6L3Protocol> ipv6 = node->GetObject<Ipv6L3Protocol> ();
   if (ipv6)
@@ -142,7 +142,7 @@ Ipv6RoutingHelper::PrintNdiscCache (Ptr<Node> node, Ptr<OutputStreamWrapper> str
         {
           *os << static_cast<int> (node->GetId ());
         }
-      *os << " at time " << Simulator::Now ().As (unit) << "\n";
+      *os << " at time " << Simulator::Now ().GetSeconds () << "\n";
 
       for (uint32_t i=0; i<ipv6->GetNInterfaces(); i++)
         {
@@ -156,7 +156,7 @@ Ipv6RoutingHelper::PrintNdiscCache (Ptr<Node> node, Ptr<OutputStreamWrapper> str
 }
 
 void
-Ipv6RoutingHelper::PrintNdiscCacheEvery (Time printInterval, Ptr<Node> node, Ptr<OutputStreamWrapper> stream, Time::Unit unit /* = Time::S */)
+Ipv6RoutingHelper::PrintNdiscCacheEvery (Time printInterval, Ptr<Node> node, Ptr<OutputStreamWrapper> stream)
 {
   Ptr<Ipv6L3Protocol> ipv6 = node->GetObject<Ipv6L3Protocol> ();
   if (ipv6)
@@ -173,7 +173,7 @@ Ipv6RoutingHelper::PrintNdiscCacheEvery (Time printInterval, Ptr<Node> node, Ptr
         {
           *os << static_cast<int> (node->GetId ());
         }
-      *os << " at time " << Simulator::Now ().As (unit) << "\n";
+      *os << " at time " << Simulator::Now ().GetSeconds () << "\n";
 
       for (uint32_t i=0; i<ipv6->GetNInterfaces(); i++)
         {
@@ -183,7 +183,7 @@ Ipv6RoutingHelper::PrintNdiscCacheEvery (Time printInterval, Ptr<Node> node, Ptr
               ndiscCache->PrintNdiscCache (stream);
             }
         }
-      Simulator::Schedule (printInterval, &Ipv6RoutingHelper::PrintNdiscCacheEvery, printInterval, node, stream, unit);
+      Simulator::Schedule (printInterval, &Ipv6RoutingHelper::PrintNdiscCacheEvery, printInterval, node, stream);
     }
 }
 

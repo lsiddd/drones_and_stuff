@@ -32,7 +32,7 @@ try:
 except ImportError:
     pass
 
-DISTANCE = 20 # (m)
+DISTANCE = 100 # (m)
 NUM_NODES_SIDE = 3
 
 def main(argv):
@@ -52,7 +52,7 @@ def main(argv):
 
     wifi = ns.wifi.WifiHelper()
     wifiMac = ns.wifi.WifiMacHelper()
-    wifiPhy = ns.wifi.YansWifiPhyHelper()
+    wifiPhy = ns.wifi.YansWifiPhyHelper.Default()
     wifiChannel = ns.wifi.YansWifiChannelHelper.Default()
     wifiPhy.SetChannel(wifiChannel.Create())
     ssid = ns.wifi.Ssid("wifi-default")

@@ -26,7 +26,6 @@
 namespace ns3 {
 
 class Event;
-class Time;
 
 /**
  * \ingroup wifi
@@ -54,23 +53,9 @@ public:
    *         false otherwise
    */
   virtual bool CaptureNewFrame (Ptr<Event> currentEvent, Ptr<Event> newEvent) const = 0;
-
-  /**
-   * This method returns true if the capture window duration has not elapsed yet,
-   *                     false otherwise.
-   *
-   * \param timePreambleDetected the time the preamble was detected
-   *
-   * \return true if the capture window duration has not elapsed yet,
-   *         false otherwise
-   */
-  virtual bool IsInCaptureWindow (Time timePreambleDetected) const;
-
-
-private:
-  Time m_captureWindow; //!< Capture window duration
 };
 
 } //namespace ns3
 
 #endif /* FRAME_CAPTURE_MODEL_H */
+

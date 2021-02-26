@@ -65,11 +65,6 @@ public:
    */
   void SetRemote (Address addr);
 
-  /**
-   * \return the total bytes sent by this app
-   */
-  uint64_t GetTotalTx () const;
-
 protected:
   virtual void DoDispose (void);
 
@@ -88,7 +83,6 @@ private:
   uint32_t m_size; //!< Size of the sent packet (including the SeqTsHeader)
 
   uint32_t m_sent; //!< Counter for sent packets
-  uint64_t m_totalTx; //!< Total bytes sent
   Ptr<Socket> m_socket; //!< Socket
   Address m_peerAddress; //!< Remote peer address
   uint16_t m_peerPort; //!< Remote peer port

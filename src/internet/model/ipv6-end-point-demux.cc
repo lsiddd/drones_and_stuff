@@ -31,12 +31,12 @@ Ipv6EndPointDemux::Ipv6EndPointDemux ()
     m_portFirst (49152),
     m_portLast (65535)
 {
-  NS_LOG_FUNCTION (this);
+  NS_LOG_FUNCTION_NOARGS ();
 }
 
 Ipv6EndPointDemux::~Ipv6EndPointDemux ()
 {
-  NS_LOG_FUNCTION (this);
+  NS_LOG_FUNCTION_NOARGS ();
   for (EndPointsI i = m_endPoints.begin (); i != m_endPoints.end (); i++)
     {
       Ipv6EndPoint *endPoint = *i;

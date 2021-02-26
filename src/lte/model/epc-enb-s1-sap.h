@@ -22,6 +22,7 @@
 #define EPC_ENB_S1_SAP_H
 
 #include <list>
+#include <stdint.h>
 #include <ns3/eps-bearer.h>
 #include <ns3/ipv4-address.h>
 
@@ -104,30 +105,17 @@ class EpcEnbS1SapUser
 {
 public:
   virtual ~EpcEnbS1SapUser ();
-
-  /**
-   * Parameters passed to InitialContextSetupRequest ()
-   */
-  struct InitialContextSetupRequestParameters
-  {
-    uint16_t rnti;   /**< the RNTI identifying the UE */
-  };
-
-  /**
-   * Initial context setup request
-   *
-   * \param params
-   */
-  virtual void InitialContextSetupRequest (InitialContextSetupRequestParameters params) = 0;
-
+  
   /**
    * Parameters passed to DataRadioBearerSetupRequest ()
+   * 
    */
   struct DataRadioBearerSetupRequestParameters
   {
     uint16_t rnti;   /**< the RNTI identifying the UE for which the
-                          DataRadioBearer is to be created */
-    EpsBearer bearer; /**< the characteristics of the bearer to be setup */
+			DataRadioBearer is to be created */ 
+    EpsBearer bearer; /**< the characteristics of the bearer to be set
+                         up */
     uint8_t bearerId; /**< the EPS Bearer Identifier */
     uint32_t    gtpTeid; /**< S1-bearer GTP tunnel endpoint identifier, see 36.423 9.2.1 */
     Ipv4Address transportLayerAddress; /**< IP Address of the SGW, see 36.423 9.2.1 */
@@ -240,7 +228,6 @@ public:
   MemberEpcEnbS1SapUser (C* owner);
 
   // inherited from EpcEnbS1SapUser
-  virtual void InitialContextSetupRequest (InitialContextSetupRequestParameters params);
   virtual void DataRadioBearerSetupRequest (DataRadioBearerSetupRequestParameters params);
   virtual void PathSwitchRequestAcknowledge (PathSwitchRequestAcknowledgeParameters params);
 
@@ -258,12 +245,6 @@ MemberEpcEnbS1SapUser<C>::MemberEpcEnbS1SapUser (C* owner)
 template <class C>
 MemberEpcEnbS1SapUser<C>::MemberEpcEnbS1SapUser ()
 {
-}
-
-template <class C>
-void MemberEpcEnbS1SapUser<C>::InitialContextSetupRequest (InitialContextSetupRequestParameters params)
-{
-  m_owner->DoInitialContextSetupRequest (params);
 }
 
 template <class C>

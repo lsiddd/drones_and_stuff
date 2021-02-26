@@ -76,7 +76,7 @@ void
 SeqTsHeader::Print (std::ostream &os) const
 {
   NS_LOG_FUNCTION (this << &os);
-  os << "(seq=" << m_seq << " time=" << TimeStep (m_ts).As (Time::S) << ")";
+  os << "(seq=" << m_seq << " time=" << TimeStep (m_ts).GetSeconds () << ")";
 }
 uint32_t
 SeqTsHeader::GetSerializedSize (void) const

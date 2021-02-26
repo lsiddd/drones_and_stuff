@@ -95,11 +95,7 @@ public:
    */
   Ptr<SpectrumPropagationLossModel> GetSpectrumPropagationLossModel (void);
 
-  /**
-   * Get the propagation loss model.
-   * \returns a pointer to the propagation loss model.
-   */
-  Ptr<PropagationLossModel> GetPropagationLossModel (void);
+
 
   /**
    * Used by attached PHY instances to transmit signals on the channel

@@ -108,7 +108,7 @@ TcpOptionSack::Deserialize (Buffer::Iterator start)
 
   uint8_t size = i.ReadU8 ();
   NS_LOG_LOGIC ("Size: " << static_cast<uint32_t> (size));
-  m_sackList.clear ();
+  m_sackList.empty ();
   uint8_t sackCount = (size - 2) / 8;
   while (sackCount)
     {

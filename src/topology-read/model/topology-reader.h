@@ -25,19 +25,12 @@
 #include <string>
 #include <map>
 #include <list>
+
 #include "ns3/object.h"
-#include "ns3/node.h"
+#include "ns3/node-container.h"
 
-
-/**
- * \file
- * \ingroup topology
- * ns3::TopologyReader declaration.
- */
 
 namespace ns3 {
-
-class NodeContainer;
 
 /**
  * \ingroup topology

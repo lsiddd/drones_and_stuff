@@ -28,7 +28,6 @@ namespace ns3 {
 
 /**
  * \ingroup wifi
- * \brief Headers for A-MSDU subframes
  */
 class AmsduSubframeHeader : public Header
 {
@@ -59,7 +58,7 @@ public:
   void SetSourceAddr (Mac48Address to);
   /**
    * Set length function
-   * \param length the length in bytes
+   * \param length the length
    */
   void SetLength (uint16_t length);
   /**
@@ -74,14 +73,14 @@ public:
   Mac48Address GetSourceAddr (void) const;
   /**
    * Get length function
-   * \returns the length in bytes
+   * \returns the length
    */
   uint16_t GetLength (void) const;
 
 private:
   Mac48Address m_da; ///< destination address
   Mac48Address m_sa; ///< source address
-  uint16_t m_length; ///< length in bytes
+  uint16_t m_length; ///< length
 };
 
 } //namespace ns3

@@ -20,7 +20,6 @@
 #define CREATOR_UTILS_H
 
 #include <unistd.h>
-#include <cstring>
 #include <string>
 #include <iostream>
 #include <iomanip>

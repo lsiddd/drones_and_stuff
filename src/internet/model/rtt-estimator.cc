@@ -211,7 +211,8 @@ RttMeanDeviation::FloatingPointUpdate (Time m)
 
   // RTTVAR <- (1 - beta) * RTTVAR + beta * |SRTT - R'|
   Time difference = Abs (err) - m_estimatedVariation;
-  m_estimatedVariation += difference * m_beta;
+  m_estimatedVariation += Time::FromDouble (difference.ToDouble (Time::S) * m_beta, Time::S);
+
   return;
 }
 

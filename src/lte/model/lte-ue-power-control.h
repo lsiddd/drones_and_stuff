@@ -87,7 +87,7 @@ public:
    */
   void SetTxPower (double value);
   /**
-   * \brief Configure reference signal power (dBm) function
+   * \brief Configure reference signal power function
    *
    * \param referenceSignalPower the reference signal power
    */
@@ -128,18 +128,9 @@ public:
   /**
    * \brief Set RSRP function
    *
-   * \param value the RSRP (dBm) value to set
+   * \param value the RSRP value to set
    */
   void SetRsrp (double value);
-  /**
-   * \brief Set RSRP function
-   *
-   * \param rsrpFilterCoefficient value. Determines the strength of
-   * smoothing effect induced by layer 3 filtering of RSRP
-   * used for uplink power control in all attached UE.
-   * If equals to 0, no layer 3 filtering is applicable.
-   */
-  void SetRsrpFilterCoefficient (uint8_t rsrpFilterCoefficient);
   /**
    * \brief Set RSRP function
    *
@@ -202,9 +193,9 @@ private:
   double m_curPucchTxPower; ///< current PUCCH transmit power
   double m_curSrsTxPower; ///< current SRS transmit power
 
-  double m_referenceSignalPower; ///< reference signal power in dBm
+  double m_referenceSignalPower; ///< reference signal power
   bool m_rsrpSet; ///< is RSRP set?
-  double m_rsrp; ///< RSRP value in dBm
+  double m_rsrp; ///< RSRP value
 
   std::vector<int16_t> m_PoNominalPusch; ///< PO nominal PUSCH
   std::vector<int16_t> m_PoUePusch; ///< PO US PUSCH
@@ -213,7 +204,7 @@ private:
 
   uint16_t m_M_Pusch; ///< size of DL RB list
   std::vector<double> m_alpha; ///< alpha values
-  double m_pathLoss; ///< path loss value in dB
+  double m_pathLoss; ///< path loss value
   double m_deltaTF; ///< delta TF
 
   std::vector<int8_t> m_deltaPusch; ///< delta PUSCH
@@ -226,12 +217,6 @@ private:
 
   uint16_t m_cellId; ///< cell ID
   uint16_t m_rnti; ///< RNTI
-  /**
-  * The `RsrpFilterCoefficient` attribute. Determines the strength of
-  * smoothing effect induced by layer 3 filtering of RSRP in all attached UE.
-  * If equals to 0, no layer 3 filtering is applicable.
-  */
-  uint8_t m_pcRsrpFilterCoefficient;
   /**
    * Trace information regarding Uplink TxPower
    * uint16_t cellId, uint16_t rnti, double txPower

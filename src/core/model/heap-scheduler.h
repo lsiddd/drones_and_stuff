@@ -39,9 +39,7 @@ namespace ns3 {
  *
  * This code started as a c++ translation of a Java-based code written in 2005
  * to implement a heap sort. So, this binary heap is really a pretty
- * straightforward implementation of the classic data structure,
- * implemented on a `std::vector`.  This implementation does not make use
- * of any of the heap functions from the STL.  Not much to say
+ * straightforward implementation of the classic data structure. Not much to say
  * about it.
  *
  * What is smart about this code ?
@@ -51,23 +49,6 @@ namespace ns3 {
  *    the index of the root is 1.
  *  - It uses a slightly non-standard while loop for top-down heapify
  *    to move one if statement out of the loop.
- *
- * \par Time Complexity
- *
- * Operation    | Amortized %Time | Reason
- * :----------- | :-------------- | :-----
- * Insert()     | Logarithmic     | Heapify
- * IsEmpty()    | Constant        | Explicit queue size
- * PeekNext()   | Constant        | Heap kept sorted
- * Remove()     | Logarithmic     | Search, heapify
- * RemoveNext() | Logarithmic     | Heapify
- *
- * \par Memory Complexity
- *
- * Category  | Memory                           | Reason
- * :-------- | :------------------------------- | :-----
- * Overhead  | 3 x `sizeof (*)`<br/>(24 bytes)  | `std::vector`
- * Per Event | 0                                | Events stored in `std::vector` directly
  */
 class HeapScheduler : public Scheduler
 {
@@ -98,14 +79,14 @@ private:
    * Get the parent index of a given entry.
    *
    * \param [in] id The child index.
-   * \return The index of the parent of \pname{id}.
+   * \return The index of the parent of \p id.
    */
   inline std::size_t Parent (std::size_t id) const;
   /**
    * Get the next sibling of a given entry.
    *
    * \param [in] id The starting index.
-   * \returns The next sibling of \pname{id}.
+   * \returns The next sibling of \p id.
    */
   std::size_t Sibling (std::size_t id) const;
   /**
@@ -137,7 +118,7 @@ private:
    * Test if an index is the root.
    *
    * \param [in] id The index to test.
-   * \returns \c true if the \pname{id} is the root.
+   * \returns \c true if the \p id is the root.
    */
   inline bool IsRoot (std::size_t id) const;
   /**
@@ -170,7 +151,7 @@ private:
    * \param [in] b The second item.
    */
   inline void Exch (std::size_t a, std::size_t b);
-  /** Percolate a newly inserted Last item to its proper position. */
+  /** Percolate a newly inserted Last item to its proper position. */ 
   void BottomUp (void);
   /**
    * Percolate a deletion bubble down the heap.

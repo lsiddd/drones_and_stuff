@@ -50,7 +50,7 @@ main (int argc, char *argv[])
   double interPacketInterval = 100;
 
   // Command line arguments
-  CommandLine cmd (__FILE__);
+  CommandLine cmd;
   cmd.AddValue ("numberOfNodes", "Number of eNodeBs + UE pairs", numberOfNodes);
   cmd.AddValue ("simTime", "Total duration of the simulation [s])", simTime);
   cmd.AddValue ("distance", "Distance between eNBs [m]", distance);
@@ -76,9 +76,8 @@ main (int argc, char *argv[])
   LogComponentEnable ("LteHelper", logLevel);
   LogComponentEnable ("EpcHelper", logLevel);
   LogComponentEnable ("EpcEnbApplication", logLevel);
-  LogComponentEnable ("EpcMmeApplication", logLevel);
-  LogComponentEnable ("EpcPgwApplication", logLevel);
-  LogComponentEnable ("EpcSgwApplication", logLevel);
+  LogComponentEnable ("EpcSgwPgwApplication", logLevel);
+  LogComponentEnable ("EpcMme", logLevel);
   LogComponentEnable ("LteEnbRrc", logLevel);
 
 
@@ -236,3 +235,4 @@ main (int argc, char *argv[])
   return 0;
 
 }
+

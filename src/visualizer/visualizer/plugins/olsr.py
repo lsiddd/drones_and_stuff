@@ -1,4 +1,3 @@
-from __future__ import print_function
 from gi.repository import Gtk
 from gi.repository import Gdk
 
@@ -121,7 +120,7 @@ def populate_node_menu(viz, node, menu):
     ns3_node = ns.network.NodeList.GetNode(node.node_index)
     olsr = ns3_node.GetObject(ns.olsr.olsr.RoutingProtocol.GetTypeId())
     if olsr is None:
-        print("No OLSR")
+        print "No OLSR"
         return
 
     menu_item = Gtk.MenuItem("Show OLSR Routing Table")

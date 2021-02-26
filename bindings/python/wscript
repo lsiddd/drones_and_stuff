@@ -14,15 +14,9 @@ from waflib.Errors import WafError
 # after = TaskGen.after
 
 # https://github.com/gjcarneiro/pybindgen
-# If specifying a released pybindgen version, specify the required PYBINDGEN
-# version as, e.g. '0.21.0'
-# If specifying a commit on the development tree, specify it like this based
-# on 'git describe --tags' command.  Example, if the latest release was 0.21.0,
-# and 'git decribe --tags' reports "0.21.0-6-g8e7c0a9", then write the
-# PYBINDGEN version string below as '0.21.0.post6+ng8e7c0a9'
-REQUIRED_PYBINDGEN_VERSION = '0.21.0.post15+nga587377'
-REQUIRED_PYGCCXML_VERSION = (2, 0, 1)
-REQUIRED_CASTXML_VERSION = '0.2'
+REQUIRED_PYBINDGEN_VERSION = '0.17.0.post58+ngcf00cc0'
+REQUIRED_PYGCCXML_VERSION = (1, 9, 0)
+REQUIRED_CASTXML_VERSION = '0.1'
 
 RUN_ME=-3
 
@@ -206,7 +200,7 @@ def configure(conf):
             Logs.warn("pybindgen (found %r), (need %r)" %
                       (pybindgen_version, REQUIRED_PYBINDGEN_VERSION))
             conf.report_optional_feature("python", "Python Bindings", False,
-                                         "PyBindGen found but version %s is not the required version %s" % (pybindgen_version, REQUIRED_PYBINDGEN_VERSION))
+                                         "PyBindGen version not correct and newer version could not be retrieved")
             return
 
 
@@ -360,8 +354,8 @@ def get_module_path(bld, module):
 class apiscan_task(Task.Task):
     """Uses castxml to scan the file 'everything.h' and extract API definitions.
     """
-    before = ['cxxprogram', 'cxxshlib', 'cxxstlib', 'command']
-    after = ['gen_ns3_module_header', 'ns3header']
+    after = 'gen_ns3_module_header ns3header'
+    before = 'cxx command'
     color = "BLUE"
     def __init__(self, curdirnode, env, bld, target, cflags, module):
         self.bld = bld
@@ -383,7 +377,7 @@ class apiscan_task(Task.Task):
             up = m.update
             up(self.__class__.__name__.encode())
             up(self.curdirnode.abspath().encode())
-            up(self.target.encode())
+            up(self.target)
             self.uid_ = m.digest()
             return self.uid_
 
@@ -466,7 +460,7 @@ def get_modules_and_headers(bld):
 
 class gen_ns3_compat_pymod_task(Task.Task):
     """Generates a 'ns3.py' compatibility module."""
-    before = ['cxxprogram', 'cxxshlib', 'cxxstlib']
+    before = 'cxx'
     color = 'BLUE'
 
     def run(self):

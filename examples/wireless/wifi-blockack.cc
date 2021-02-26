@@ -63,7 +63,7 @@ NS_LOG_COMPONENT_DEFINE ("Test-block-ack");
 
 int main (int argc, char * argv[])
 {
-  CommandLine cmd (__FILE__);
+  CommandLine cmd;
   cmd.Parse (argc, argv);
 
   LogComponentEnable ("QosTxop", LOG_LEVEL_DEBUG);
@@ -73,7 +73,7 @@ int main (int argc, char * argv[])
   Ptr<Node> ap = CreateObject<Node> ();
 
   YansWifiChannelHelper channel = YansWifiChannelHelper::Default ();
-  YansWifiPhyHelper phy;
+  YansWifiPhyHelper phy = YansWifiPhyHelper::Default ();
   phy.SetChannel (channel.Create ());
 
   WifiHelper wifi;

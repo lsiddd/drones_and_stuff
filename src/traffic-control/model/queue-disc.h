@@ -23,6 +23,7 @@
 #include "ns3/object.h"
 #include "ns3/traced-value.h"
 #include "ns3/traced-callback.h"
+#include "ns3/net-device.h"
 #include "ns3/queue-item.h"
 #include "ns3/queue-size.h"
 #include <vector>
@@ -338,39 +339,16 @@ public:
   const Stats& GetStats (void);
 
   /**
-   * \param ndqi the NetDeviceQueueInterface aggregated to the receiving object.
-   *
-   * Set the pointer to the NetDeviceQueueInterface object aggregated to the
-   * object receiving the packets dequeued from this queue disc.
+   * \brief Set the NetDevice on which this queue discipline is installed.
+   * \param device the NetDevice on which this queue discipline is installed.
    */
-  void SetNetDeviceQueueInterface (Ptr<NetDeviceQueueInterface> ndqi);
+  void SetNetDevice (Ptr<NetDevice> device);
 
   /**
-   * \return the NetDeviceQueueInterface aggregated to the receiving object.
-   *
-   * Get the pointer to the NetDeviceQueueInterface object aggregated to the
-   * object receiving the packets dequeued from this queue disc.
+   * \brief Get the NetDevice on which this queue discipline is installed
+   * \return the NetDevice on which this queue discipline is installed.
    */
-  Ptr<NetDeviceQueueInterface> GetNetDeviceQueueInterface (void) const;
-
-  /// Callback invoked to send a packet to the receiving object when Run is called
-  typedef std::function<void (Ptr<QueueDiscItem>)> SendCallback;
-
-  /**
-   * \param func the callback to send a packet to the receiving object.
-   *
-   * Set the callback used by the Transmit method (called eventually by the Run
-   * method) to send a packet to the receiving object.
-   */
-  void SetSendCallback (SendCallback func);
-
-  /**
-   * \return the callback to send a packet to the receiving object.
-   *
-   * Get the callback used by the Transmit method (called eventually by the Run
-   * method) to send a packet to the receiving object.
-   */
-  SendCallback GetSendCallback (void) const;
+  Ptr<NetDevice> GetNetDevice (void) const;
 
   /**
    * \brief Set the maximum number of dequeue operations following a packet enqueue
@@ -515,7 +493,6 @@ public:
   // Reasons for dropping packets
   static constexpr const char* INTERNAL_QUEUE_DROP = "Dropped by internal queue";    //!< Packet dropped by an internal queue
   static constexpr const char* CHILD_QUEUE_DISC_DROP = "(Dropped by child queue disc) "; //!< Packet dropped by a child queue disc
-  static constexpr const char* CHILD_QUEUE_DISC_MARK = "(Marked by child queue disc) "; //!< Packet marked by a child queue disc
 
 protected:
   /**
@@ -529,8 +506,6 @@ protected:
    * This method is not virtual to prevent subclasses from redefining it.
    * Subclasses must instead provide the implementation of the CheckConfig
    * and InitializeParams methods (which are called by this method).
-   * \sa QueueDisc::InitializeParams
-   * \sa QueueDisc::CheckConfig
    */
   void DoInitialize (void);
 
@@ -618,21 +593,13 @@ private:
   /**
    * Check whether the current configuration is correct. Default objects (such
    * as internal queues) might be created by this method to ensure the
-   * configuration is correct.  This method is automatically called at
-   * simulation initialization time, and it is called before
-   * the InitializeParams () method.  It is appropriate to promote parameter
-   * initialization to this method if it aids in checking for correct
-   * configuration.
-   * \sa QueueDisc::InitializeParams
+   * configuration is correct.
    * \return true if the configuration is correct, false otherwise
    */
   virtual bool CheckConfig (void) = 0;
 
   /**
    * Initialize parameters (if any) before the first packet is enqueued.
-   * This method is automatically called at simulation initialization time,
-   * after the CheckConfig() method has been called.
-   * \sa QueueDisc::CheckConfig
    */
   virtual void InitializeParams (void) = 0;
 
@@ -704,13 +671,12 @@ private:
 
   Stats m_stats;                    //!< The collected statistics
   uint32_t m_quota;                 //!< Maximum number of packets dequeued in a qdisc run
+  Ptr<NetDevice> m_device;          //!< The NetDevice on which this queue discipline is installed
   Ptr<NetDeviceQueueInterface> m_devQueueIface;   //!< NetDevice queue interface
-  SendCallback m_send;              //!< Callback used to send a packet to the receiving object
   bool m_running;                   //!< The queue disc is performing multiple dequeue operations
   Ptr<QueueDiscItem> m_requeued;    //!< The last packet that failed to be transmitted
   bool m_peeked;                    //!< A packet was dequeued because Peek was called
   std::string m_childQueueDiscDropMsg;  //!< Reason why a packet was dropped by a child queue disc
-  std::string m_childQueueDiscMarkMsg;  //!< Reason why a packet was marked by a child queue disc
   QueueDiscSizePolicy m_sizePolicy;     //!< The queue disc size policy
   bool m_prohibitChangeMode;            //!< True if changing mode is prohibited
 
@@ -733,8 +699,6 @@ private:
   typedef std::function<void (Ptr<const QueueDiscItem>)> InternalQueueDropFunctor;
   /// Type for the function objects notifying that a packet has been dropped by a child queue disc
   typedef std::function<void (Ptr<const QueueDiscItem>, const char*)> ChildQueueDiscDropFunctor;
-  /// Type for the function objects notifying that a packet has been marked by a child queue disc
-  typedef std::function<void (Ptr<const QueueDiscItem>, const char*)> ChildQueueDiscMarkFunctor;
 
   /// Function object called when an internal queue dropped a packet before enqueue
   InternalQueueDropFunctor m_internalQueueDbeFunctor;
@@ -744,8 +708,6 @@ private:
   ChildQueueDiscDropFunctor m_childQueueDiscDbeFunctor;
   /// Function object called when a child queue disc dropped a packet after dequeue
   ChildQueueDiscDropFunctor m_childQueueDiscDadFunctor;
-  /// Function object called when a child queue disc marked a packet
-  ChildQueueDiscMarkFunctor m_childQueueDiscMarkFunctor;
 };
 
 /**

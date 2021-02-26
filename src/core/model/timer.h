@@ -54,15 +54,15 @@ class TimerImpl;
 
 /**
  * \ingroup timer
- * \brief A simple virtual Timer class
+ * \brief A simple Timer class
  *
- * A (virtual time) timer is used to hold together a delay, a function to invoke
+ * A timer is used to hold together a delay, a function to invoke
  * when the delay expires, and a set of arguments to pass to the function
  * when the delay expires.
  *
  * A Timer can be suspended, resumed, cancelled and queried for the
  * time left, but it can't be extended (except by suspending and
- * resuming).
+ * resuming.)
  *
  * A timer can also be used to enforce a set of predefined event lifetime
  * management policies. These policies are specified at construction time
@@ -75,26 +75,18 @@ class Timer
 public:
   /**
    * The policy to use to manager the internal timer when an
-   * instance of the Timer class is destroyed or suspended.
-   *
-   * In the case of suspension, only `CANCEL_ON_DESTROY` and
-   * `REMOVE_ON_DESTROY` apply.
-   *
-   * These symbols have "Destroy" in their names
-   * for historical reasons.
+   * instance of the Timer class is destroyed.
    */
   enum DestroyPolicy
   {
     /**
      * This policy cancels the event from the destructor of the Timer
-     * or from Suspend().  This is typically faster than `REMOVE_ON_DESTROY`
-     * but uses more memory.
+     * to verify that the event has already expired.
      */
     CANCEL_ON_DESTROY = (1 << 3),
     /**
      * This policy removes the event from the simulation event list
-     * when the destructor of the Timer is invoked, or the Timer is
-     * suspended.  This is typically slower than Cancel, but frees memory.
+     * when the destructor of the Timer is invoked.
      */
     REMOVE_ON_DESTROY = (1 << 4),
     /**
@@ -123,7 +115,6 @@ public:
   ~Timer ();
 
   /**
-   * \tparam FN \deduced The type of the function.
    * \param [in] fn the function
    *
    * Store this function in this Timer for later use by Timer::Schedule.
@@ -132,8 +123,6 @@ public:
   void SetFunction (FN fn);
 
   /**
-   * \tparam MEM_PTR \deduced The type of the class member function.
-   * \tparam OBJ_PTR \deduced The type of the class instance pointer.
    * \param [in] memPtr the member function pointer
    * \param [in] objPtr the pointer to object
    *
@@ -145,13 +134,62 @@ public:
 
 
   /**
-   * \tparam Ts \deduced Argument types
-   * \param [in] args arguments
+   * \param [in] a1 the first argument
+   *
+   * Store this argument in this Timer for later use by Timer::Schedule.
+   */
+  template <typename T1>
+  void SetArguments (T1 a1);
+  /**
+   * \param [in] a1 the first argument
+   * \param [in] a2 the second argument
    *
    * Store these arguments in this Timer for later use by Timer::Schedule.
    */
-  template <typename... Ts>
-  void SetArguments (Ts... args);
+  template <typename T1, typename T2>
+  void SetArguments (T1 a1, T2 a2);
+  /**
+   * \param [in] a1 the first argument
+   * \param [in] a2 the second argument
+   * \param [in] a3 the third argument
+   *
+   * Store these arguments in this Timer for later use by Timer::Schedule.
+   */
+  template <typename T1, typename T2, typename T3>
+  void SetArguments (T1 a1, T2 a2, T3 a3);
+  /**
+   * \param [in] a1 the first argument
+   * \param [in] a2 the second argument
+   * \param [in] a3 the third argument
+   * \param [in] a4 the fourth argument
+   *
+   * Store these arguments in this Timer for later use by Timer::Schedule.
+   */
+  template <typename T1, typename T2, typename T3, typename T4>
+  void SetArguments (T1 a1, T2 a2, T3 a3, T4 a4);
+  /**
+   * \param [in] a1 the first argument
+   * \param [in] a2 the second argument
+   * \param [in] a3 the third argument
+   * \param [in] a4 the fourth argument
+   * \param [in] a5 the fifth argument
+   *
+   * Store these arguments in this Timer for later use by Timer::Schedule.
+   */
+  template <typename T1, typename T2, typename T3, typename T4, typename T5>
+  void SetArguments (T1 a1, T2 a2, T3 a3, T4 a4, T5 a5);
+  /**
+   * \param [in] a1 the first argument
+   * \param [in] a2 the second argument
+   * \param [in] a3 the third argument
+   * \param [in] a4 the fourth argument
+   * \param [in] a5 the fifth argument
+   * \param [in] a6 the sixth argument
+   *
+   * Store these arguments in this Timer for later use by Timer::Schedule.
+   */
+  template <typename T1, typename T2, typename T3, typename T4, typename T5, typename T6>
+  void SetArguments (T1 a1, T2 a2, T3 a3, T4 a4, T5 a5, T6 a6);
 
   /**
    * \param [in] delay The delay
@@ -212,15 +250,8 @@ public:
   void Schedule (Time delay);
 
   /**
-   * Pause the timer and save the amount of time left until it was
+   * Cancel the timer and save the amount of time left until it was
    * set to expire.
-   *
-   * Subsequently calling Resume() will restart the Timer with the
-   * remaining time.
-   *
-   * The DestroyPolicy set at construction determines
-   * whether the underlying Simulator::Event is cancelled or removed.
-   *
    * Calling Suspend on a non-running timer is an error.
    */
   void Suspend (void);
@@ -241,7 +272,7 @@ private:
   /**
    * Bitfield for Timer State, DestroyPolicy and InternalSuspended.
    *
-   * \internal
+   * \internal 
    * The DestroyPolicy, State and InternalSuspended state are stored
    * in this single bitfield.  The State uses the low-order bits,
    * so the other users of the bitfield have to be careful in defining
@@ -288,16 +319,75 @@ Timer::SetFunction (MEM_PTR memPtr, OBJ_PTR objPtr)
   m_impl = MakeTimerImpl (memPtr, objPtr);
 }
 
-template <typename... Ts>
+template <typename T1>
 void
-Timer::SetArguments (Ts... args)
+Timer::SetArguments (T1 a1)
 {
   if (m_impl == 0)
     {
       NS_FATAL_ERROR ("You cannot set the arguments of a Timer before setting its function.");
       return;
     }
-  m_impl->SetArgs (args...);
+  m_impl->SetArgs (a1);
+}
+template <typename T1, typename T2>
+void
+Timer::SetArguments (T1 a1, T2 a2)
+{
+  if (m_impl == 0)
+    {
+      NS_FATAL_ERROR ("You cannot set the arguments of a Timer before setting its function.");
+      return;
+    }
+  m_impl->SetArgs (a1, a2);
+}
+
+template <typename T1, typename T2, typename T3>
+void
+Timer::SetArguments (T1 a1, T2 a2, T3 a3)
+{
+  if (m_impl == 0)
+    {
+      NS_FATAL_ERROR ("You cannot set the arguments of a Timer before setting its function.");
+      return;
+    }
+  m_impl->SetArgs (a1, a2, a3);
+}
+
+template <typename T1, typename T2, typename T3, typename T4>
+void
+Timer::SetArguments (T1 a1, T2 a2, T3 a3, T4 a4)
+{
+  if (m_impl == 0)
+    {
+      NS_FATAL_ERROR ("You cannot set the arguments of a Timer before setting its function.");
+      return;
+    }
+  m_impl->SetArgs (a1, a2, a3, a4);
+}
+
+template <typename T1, typename T2, typename T3, typename T4, typename T5>
+void
+Timer::SetArguments (T1 a1, T2 a2, T3 a3, T4 a4, T5 a5)
+{
+  if (m_impl == 0)
+    {
+      NS_FATAL_ERROR ("You cannot set the arguments of a Timer before setting its function.");
+      return;
+    }
+  m_impl->SetArgs (a1, a2, a3, a4, a5);
+}
+
+template <typename T1, typename T2, typename T3, typename T4, typename T5, typename T6>
+void
+Timer::SetArguments (T1 a1, T2 a2, T3 a3, T4 a4, T5 a5, T6 a6)
+{
+  if (m_impl == 0)
+    {
+      NS_FATAL_ERROR ("You cannot set the arguments of a Timer before setting its function.");
+      return;
+    }
+  m_impl->SetArgs (a1, a2, a3, a4, a5, a6);
 }
 
 } // namespace ns3

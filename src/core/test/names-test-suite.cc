@@ -33,8 +33,8 @@
 
 namespace ns3 {
 
-namespace tests {
-
+  namespace tests {
+    
 
 /**
  * \ingroup names-tests
@@ -47,7 +47,7 @@ public:
    * Register this type.
    * \return The TypeId.
    */
-  static TypeId GetTypeId (void)
+  static TypeId GetTypeId (void) 
   {
     static TypeId tid = TypeId ("TestObject")
       .SetParent<Object> ()
@@ -57,8 +57,7 @@ public:
     return tid;
   }
   /** Constructor. */
-  TestObject ()
-  {}
+  TestObject () {}
 };
 
 /**
@@ -72,7 +71,7 @@ public:
    * Register this type.
    * \return The TypeId.
    */
-  static TypeId GetTypeId (void)
+  static TypeId GetTypeId (void) 
   {
     static TypeId tid = TypeId ("AlternateTestObject")
       .SetParent<Object> ()
@@ -82,15 +81,14 @@ public:
     return tid;
   }
   /** Constructor. */
-  AlternateTestObject ()
-  {}
+  AlternateTestObject () {}
 };
 
 /**
  * \ingroup names-tests
  * Test the Object Name Service can do its most basic job.
  *
- * Add associations between Objects using the lowest level add
+ * Add associations between Objects using the lowest level add 
  * function, which is:
  *
  *     Add (Ptr<Object> context, std::string name, Ptr<Object> object);
@@ -113,10 +111,12 @@ private:
 
 BasicAddTestCase::BasicAddTestCase ()
   : TestCase ("Check low level Names::Add and Names::FindName functionality")
-{}
+{
+}
 
 BasicAddTestCase::~BasicAddTestCase ()
-{}
+{
+}
 
 void
 BasicAddTestCase::DoTeardown (void)
@@ -160,7 +160,7 @@ BasicAddTestCase::DoRun (void)
  *
  *     Add (std::string context, std::string name, Ptr<Object> object);
  *
- * High level path-based functions will translate into this form, so this is
+ * High level path-based functions will translate into this form, so this is 
  * the second most basic Add functionality.
  */
 class StringContextAddTestCase : public TestCase
@@ -179,10 +179,12 @@ private:
 StringContextAddTestCase::StringContextAddTestCase ()
   : TestCase ("Check string context Names::Add and Names::FindName functionality")
 
-{}
+{
+}
 
 StringContextAddTestCase::~StringContextAddTestCase ()
-{}
+{
+}
 
 void
 StringContextAddTestCase::DoTeardown (void)
@@ -222,11 +224,11 @@ StringContextAddTestCase::DoRun (void)
 
 /**
  * \ingroup names-tests
- * Test the Object Name Service can correctly use a
+ * Test the Object Name Service can correctly use a 
  * fully qualified path to add associations.
  *
  *     Add (std::string name, Ptr<Object> object);
- *
+ * 
  */
 class FullyQualifiedAddTestCase : public TestCase
 {
@@ -244,10 +246,12 @@ private:
 FullyQualifiedAddTestCase::FullyQualifiedAddTestCase ()
   : TestCase ("Check fully qualified path Names::Add and Names::FindName functionality")
 
-{}
+{
+}
 
 FullyQualifiedAddTestCase::~FullyQualifiedAddTestCase ()
-{}
+{
+}
 
 void
 FullyQualifiedAddTestCase::DoTeardown (void)
@@ -295,7 +299,7 @@ FullyQualifiedAddTestCase::DoRun (void)
  * in all of their strings.
  *
  *     Add (std::string name, Ptr<Object> object);
- *
+ * 
  */
 class RelativeAddTestCase : public TestCase
 {
@@ -313,10 +317,12 @@ private:
 RelativeAddTestCase::RelativeAddTestCase ()
   : TestCase ("Check relative path Names::Add and Names::FindName functionality")
 
-{}
+{
+}
 
 RelativeAddTestCase::~RelativeAddTestCase ()
-{}
+{
+}
 
 void
 RelativeAddTestCase::DoTeardown (void)
@@ -378,10 +384,12 @@ private:
 
 BasicRenameTestCase::BasicRenameTestCase ()
   : TestCase ("Check low level Names::Rename functionality")
-{}
+{
+}
 
 BasicRenameTestCase::~BasicRenameTestCase ()
-{}
+{
+}
 
 void
 BasicRenameTestCase::DoTeardown (void)
@@ -419,11 +427,11 @@ BasicRenameTestCase::DoRun (void)
 
 /**
  * \ingroup names-tests
- * Test the Object Name Service can rename objects
+ * Test the Object Name Service can rename objects 
  * using a string context.
  *
  *     Rename (std::string context, std::string oldname, std::string newname);
- *
+ * 
  */
 class StringContextRenameTestCase : public TestCase
 {
@@ -440,10 +448,12 @@ private:
 
 StringContextRenameTestCase::StringContextRenameTestCase ()
   : TestCase ("Check string context-based Names::Rename functionality")
-{}
+{
+}
 
 StringContextRenameTestCase::~StringContextRenameTestCase ()
-{}
+{
+}
 
 void
 StringContextRenameTestCase::DoTeardown (void)
@@ -481,11 +491,11 @@ StringContextRenameTestCase::DoRun (void)
 
 /**
  * \ingroup names-tests
- * Test the Object Name Service can rename objects
+ * Test the Object Name Service can rename objects 
  * using a fully qualified path name.
  *
  *     Rename (std::string oldpath, std::string newname);
- *
+ * 
  */
 class FullyQualifiedRenameTestCase : public TestCase
 {
@@ -502,10 +512,12 @@ private:
 
 FullyQualifiedRenameTestCase::FullyQualifiedRenameTestCase ()
   : TestCase ("Check fully qualified path Names::Rename functionality")
-{}
+{
+}
 
 FullyQualifiedRenameTestCase::~FullyQualifiedRenameTestCase ()
-{}
+{
+}
 
 void
 FullyQualifiedRenameTestCase::DoTeardown (void)
@@ -543,11 +555,11 @@ FullyQualifiedRenameTestCase::DoRun (void)
 
 /**
  * \ingroup names-tests
- * Test the Object Name Service can rename objects
+ * Test the Object Name Service can rename objects 
  * using a relative path name.
  *
  *     Rename (std::string oldpath, std::string newname);
- *
+ * 
  */
 class RelativeRenameTestCase : public TestCase
 {
@@ -564,10 +576,12 @@ private:
 
 RelativeRenameTestCase::RelativeRenameTestCase ()
   : TestCase ("Check relative path Names::Rename functionality")
-{}
+{
+}
 
 RelativeRenameTestCase::~RelativeRenameTestCase ()
-{}
+{
+}
 
 void
 RelativeRenameTestCase::DoTeardown (void)
@@ -609,7 +623,7 @@ RelativeRenameTestCase::DoRun (void)
  * and return its fully qualified path name.
  *
  *     FindPath (Ptr<Object> object);
- *
+ * 
  */
 class FindPathTestCase : public TestCase
 {
@@ -626,10 +640,12 @@ private:
 
 FindPathTestCase::FindPathTestCase ()
   : TestCase ("Check Names::FindPath functionality")
-{}
+{
+}
 
 FindPathTestCase::~FindPathTestCase ()
-{}
+{
+}
 
 void
 FindPathTestCase::DoTeardown (void)
@@ -664,7 +680,7 @@ FindPathTestCase::DoRun (void)
  * Test the Object Name Service can find Objects.
  *
  *     Find (Ptr<Object> context, std::string name);
- *
+ * 
  */
 class BasicFindTestCase : public TestCase
 {
@@ -681,10 +697,12 @@ private:
 
 BasicFindTestCase::BasicFindTestCase ()
   : TestCase ("Check low level Names::Find functionality")
-{}
+{
+}
 
 BasicFindTestCase::~BasicFindTestCase ()
-{}
+{
+}
 
 void
 BasicFindTestCase::DoTeardown (void)
@@ -724,11 +742,11 @@ BasicFindTestCase::DoRun (void)
 
 /**
  * \ingroup names-tests
- * Test the Object Name Service can find Objects using
+ * Test the Object Name Service can find Objects using 
  * a string context.
  *
  *     Find (std::string context, std::string name);
- *
+ * 
  */
 class StringContextFindTestCase : public TestCase
 {
@@ -745,10 +763,12 @@ private:
 
 StringContextFindTestCase::StringContextFindTestCase ()
   : TestCase ("Check string context-based Names::Find functionality")
-{}
+{
+}
 
 StringContextFindTestCase::~StringContextFindTestCase ()
-{}
+{
+}
 
 void
 StringContextFindTestCase::DoTeardown (void)
@@ -788,11 +808,11 @@ StringContextFindTestCase::DoRun (void)
 
 /**
  * \ingroup names-tests
- * Test the Object Name Service can find Objects using
+ * Test the Object Name Service can find Objects using 
  * a fully qualified path name.
  *
  *     Find (std::string name);
- *
+ * 
  */
 class FullyQualifiedFindTestCase : public TestCase
 {
@@ -809,10 +829,12 @@ private:
 
 FullyQualifiedFindTestCase::FullyQualifiedFindTestCase ()
   : TestCase ("Check fully qualified path Names::Find functionality")
-{}
+{
+}
 
 FullyQualifiedFindTestCase::~FullyQualifiedFindTestCase ()
-{}
+{
+}
 
 void
 FullyQualifiedFindTestCase::DoTeardown (void)
@@ -852,11 +874,11 @@ FullyQualifiedFindTestCase::DoRun (void)
 
 /**
  * \ingroup names-tests
- * Test the Object Name Service can find Objects using
+ * Test the Object Name Service can find Objects using 
  * a relative path name.
  *
  *     Find (std::string name);
- *
+ * 
  */
 class RelativeFindTestCase : public TestCase
 {
@@ -873,10 +895,12 @@ private:
 
 RelativeFindTestCase::RelativeFindTestCase ()
   : TestCase ("Check relative path Names::Find functionality")
-{}
+{
+}
 
 RelativeFindTestCase::~RelativeFindTestCase ()
-{}
+{
+}
 
 void
 RelativeFindTestCase::DoTeardown (void)
@@ -916,7 +940,7 @@ RelativeFindTestCase::DoRun (void)
 
 /**
  * \ingroup names-tests
- * Test the Object Name Service can find Objects using
+ * Test the Object Name Service can find Objects using 
  * a second type.
  */
 class AlternateFindTestCase : public TestCase
@@ -934,10 +958,12 @@ private:
 
 AlternateFindTestCase::AlternateFindTestCase ()
   : TestCase ("Check GetObject operation in Names::Find")
-{}
+{
+}
 
 AlternateFindTestCase::~AlternateFindTestCase ()
-{}
+{
+}
 
 void
 AlternateFindTestCase::DoTeardown (void)
@@ -958,26 +984,26 @@ AlternateFindTestCase::DoRun (void)
   Ptr<AlternateTestObject> foundAlternateTestObject;
 
   foundTestObject = Names::Find<TestObject> ("Test Object");
-  NS_TEST_ASSERT_MSG_EQ (foundTestObject, testObject,
+  NS_TEST_ASSERT_MSG_EQ (foundTestObject, testObject, 
                          "Could not find a previously named TestObject via GetObject");
 
   foundAlternateTestObject = Names::Find<AlternateTestObject> ("Alternate Test Object");
-  NS_TEST_ASSERT_MSG_EQ (foundAlternateTestObject, alternateTestObject,
+  NS_TEST_ASSERT_MSG_EQ (foundAlternateTestObject, alternateTestObject, 
                          "Could not find a previously named AlternateTestObject via GetObject");
 
 
   foundAlternateTestObject = Names::Find<AlternateTestObject> ("Test Object");
-  NS_TEST_ASSERT_MSG_EQ (foundAlternateTestObject, 0,
+  NS_TEST_ASSERT_MSG_EQ (foundAlternateTestObject, 0, 
                          "Unexpectedly able to GetObject<AlternateTestObject> on a TestObject");
 
   foundTestObject = Names::Find<TestObject> ("Alternate Test Object");
-  NS_TEST_ASSERT_MSG_EQ (foundTestObject, 0,
+  NS_TEST_ASSERT_MSG_EQ (foundTestObject, 0, 
                          "Unexpectedly able to GetObject<TestObject> on an AlternateTestObject");
 }
 
 /**
  * \ingroup names-tests
- * Names Test Suite
+ * Names Test Suite 
  */
 class NamesTestSuite : public TestSuite
 {
@@ -1012,6 +1038,6 @@ NamesTestSuite::NamesTestSuite ()
 static NamesTestSuite g_namesTestSuite;
 
 
-}    // namespace tests
+  }  // namespace tests
 
 }  // namespace ns3

@@ -135,7 +135,7 @@ def main(argv):
     mac.SetType("ns3::AdhocWifiMac")
     wifi.SetRemoteStationManager("ns3::ConstantRateWifiManager",
                                   "DataMode", ns.core.StringValue("OfdmRate54Mbps"))
-    wifiPhy = ns.wifi.YansWifiPhyHelper()
+    wifiPhy = ns.wifi.YansWifiPhyHelper.Default()
     wifiChannel = ns.wifi.YansWifiChannelHelper.Default()
     wifiPhy.SetChannel(wifiChannel.Create())
     backboneDevices = wifi.Install(wifiPhy, mac, backbone)
@@ -268,7 +268,8 @@ def main(argv):
         staDevices = wifiInfra.Install(wifiPhy, macInfra, stas)
         # setup ap.
         macInfra.SetType("ns3::ApWifiMac",
-                         "Ssid", ns.wifi.SsidValue(ssid))
+                         "Ssid", ns.wifi.SsidValue(ssid),
+                         "BeaconInterval", ns.core.TimeValue(ns.core.Seconds(2.5)))
         apDevices = wifiInfra.Install(wifiPhy, macInfra, backbone.Get(i))
         # Collect all of these new devices
         infraDevices = ns.network.NetDeviceContainer(apDevices, staDevices)

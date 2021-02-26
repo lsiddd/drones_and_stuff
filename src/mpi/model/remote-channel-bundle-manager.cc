@@ -19,12 +19,6 @@
  *
  */
 
-/**
- * \file
- * \ingroup mpi
- * Implementation of class ns3::RemoteChannelBundleManager.
- */
-
 #include "remote-channel-bundle-manager.h"
 
 #include "remote-channel-bundle.h"

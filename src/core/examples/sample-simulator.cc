@@ -35,14 +35,13 @@
 using namespace ns3;
 
 namespace {
-
+  
 /** Simple model object to illustrate event handling. */
 class MyModel
 {
 public:
   /** Start model execution by scheduling a HandleEvent. */
   void Start (void);
-
 private:
   /**
    *  Simple event handler.
@@ -102,7 +101,7 @@ CancelledEvent (void)
 
 int main (int argc, char *argv[])
 {
-  CommandLine cmd (__FILE__);
+  CommandLine cmd;
   cmd.Parse (argc, argv);
 
   MyModel model;

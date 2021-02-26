@@ -129,10 +129,8 @@ main (int argc, char *argv[])
   // LogComponentEnable ("LteHelper", logLevel);
   // LogComponentEnable ("EpcHelper", logLevel);
   // LogComponentEnable ("EpcEnbApplication", logLevel);
-  // LogComponentEnable ("EpcMmeApplication", logLevel);
-  // LogComponentEnable ("EpcPgwApplication", logLevel);
-  // LogComponentEnable ("EpcSgwApplication", logLevel);
   // LogComponentEnable ("EpcX2", logLevel);
+  // LogComponentEnable ("EpcSgwPgwApplication", logLevel);
 
   // LogComponentEnable ("LteEnbRrc", logLevel);
   // LogComponentEnable ("LteEnbNetDevice", logLevel);
@@ -158,7 +156,7 @@ main (int argc, char *argv[])
   Config::SetDefault ("ns3::LteHelper::UseIdealRrc", BooleanValue (true));
 
   // Command line arguments
-  CommandLine cmd (__FILE__);
+  CommandLine cmd;
   cmd.AddValue ("simTime", "Total duration of the simulation (in seconds)", simTime);
   cmd.AddValue ("speed", "Speed of the UE (default = 20 m/s)", speed);
   cmd.AddValue ("enbTxPowerDbm", "TX power [dBm] used by HeNBs (default = 46.0)", enbTxPowerDbm);

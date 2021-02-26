@@ -120,14 +120,11 @@ SingleModelSpectrumChannel::StartTx (Ptr<SpectrumSignalParameters> txParams)
 
           if (senderMobility && receiverMobility)
             {
-              double txAntennaGain = 0;
-              double rxAntennaGain = 0;
-              double propagationGainDb = 0;
               double pathLossDb = 0;
               if (rxParams->txAntenna != 0)
                 {
                   Angles txAngles (receiverMobility->GetPosition (), senderMobility->GetPosition ());
-                  txAntennaGain = rxParams->txAntenna->GetGainDb (txAngles);
+                  double txAntennaGain = rxParams->txAntenna->GetGainDb (txAngles);
                   NS_LOG_LOGIC ("txAntennaGain = " << txAntennaGain << " dB");
                   pathLossDb -= txAntennaGain;
                 }
@@ -135,20 +132,17 @@ SingleModelSpectrumChannel::StartTx (Ptr<SpectrumSignalParameters> txParams)
               if (rxAntenna != 0)
                 {
                   Angles rxAngles (senderMobility->GetPosition (), receiverMobility->GetPosition ());
-                  rxAntennaGain = rxAntenna->GetGainDb (rxAngles);
+                  double rxAntennaGain = rxAntenna->GetGainDb (rxAngles);
                   NS_LOG_LOGIC ("rxAntennaGain = " << rxAntennaGain << " dB");
                   pathLossDb -= rxAntennaGain;
                 }
               if (m_propagationLoss)
                 {
-                  propagationGainDb = m_propagationLoss->CalcRxPower (0, senderMobility, receiverMobility);
+                  double propagationGainDb = m_propagationLoss->CalcRxPower (0, senderMobility, receiverMobility);
                   NS_LOG_LOGIC ("propagationGainDb = " << propagationGainDb << " dB");
                   pathLossDb -= propagationGainDb;
                 }                    
-              NS_LOG_LOGIC ("total pathLoss = " << pathLossDb << " dB");
-              // Gain trace
-              m_gainTrace (senderMobility, receiverMobility, txAntennaGain, rxAntennaGain, propagationGainDb, pathLossDb);
-              // Pathloss trace
+              NS_LOG_LOGIC ("total pathLoss = " << pathLossDb << " dB");    
               m_pathLossTrace (txParams->txPhy, *rxPhyIterator, pathLossDb);
               if ( pathLossDb > m_maxLossDb)
                 {

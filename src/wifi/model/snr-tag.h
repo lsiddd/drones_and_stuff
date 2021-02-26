@@ -42,7 +42,7 @@ public:
   TypeId GetInstanceTypeId (void) const;
 
   /**
-   * Create a SnrTag with the default SNR 0
+   * Create a SnrTag with the default snr 0
    */
   SnrTag ();
 
@@ -54,19 +54,19 @@ public:
   /**
    * Set the SNR to the given value.
    *
-   * \param snr the value of the SNR to set in linear scale
+   * \param snr the value of the snr to set
    */
   void Set (double snr);
   /**
    * Return the SNR value.
    *
-   * \return the SNR value in linear scale
+   * \return the SNR value
    */
   double Get (void) const;
 
 
 private:
-  double m_snr;  //!< SNR value in linear scale
+  double m_snr;  //!< SNR value
 };
 
 }

@@ -27,10 +27,13 @@ A few key points are worth noting at the onset:
 * |ns3| is not a backwards-compatible extension of `ns-2
   <http://www.isi.edu/nsnam/ns>`_; 
   it is a new simulator.  The two simulators are both written in C++ but 
-  |ns3| is a new simulator that does not support the |ns2| APIs.
+  |ns3| is a new simulator that does not support the |ns2| APIs.  Some 
+  models from |ns2| have already been ported from |ns2| to |ns3|. The 
+  project will continue to maintain |ns2| while |ns3| is being built,
+  and will study transition and integration mechanisms.
 
-About ns-3
-**********
+About |ns3|
+***********
 
 |ns3| has been developed to provide an open, extensible network simulation
 platform, for networking research and education.  In brief, |ns3| provides
@@ -55,17 +58,16 @@ a few distinguishing features of |ns3| in contrast to other tools.
   data analysis and visualization tools can be used with |ns3|.  However,
   users should expect to work at the command line and with C++ and/or
   Python software development tools. 
-* |ns3| is primarily used on Linux or macOS systems, although support exists
-  for BSD systems and also for Windows frameworks that can build Linux code,
-  such as Windows Subsystem for Linux, or Cygwin.  Native Windows 
-  Visual Studio is not presently supported although a developer is working 
-  on future support.  Windows users may also use a Linux virtual machine.
+* |ns3| is primarily used on Linux systems, although support exists
+  for FreeBSD, Cygwin (for Windows), and native Windows Visual Studio
+  support is in the process of being developed. 
 * |ns3| is not an officially supported software product of any company.
   Support for |ns3| is done on a best-effort basis on the 
-  ns-3-users forum (ns-3-users@googlegroups.com).
+  ns-3-users mailing list.
  
-For ns-2 Users
-**************
+ 
+For |ns2| Users
+***************
 
 For those familiar with |ns2| (a popular tool that preceded |ns3|), 
 the most visible outward change when moving to 
@@ -133,23 +135,20 @@ contribute to |ns3| like they have for |ns2|:
 
 * Open source licensing based on GNU GPLv2 compatibility
 * `wiki
-  <https://www.nsnam.org/wiki>`_
+  <http://www.nsnam.org/wiki>`_
 * `Contributed Code
-  <https://www.nsnam.org/wiki/Contributed_Code>`_ page, similar to |ns2|'s popular Contributed Code
+  <http://www.nsnam.org/wiki/Contributed_Code>`_ page, similar to |ns2|'s popular Contributed Code
   `page
   <http://nsnam.isi.edu/nsnam/index.php/Contributed_Code>`_ 
-* Use of GitLab.com including issue tracker
-  <https://www.gitlab.com/nsnam>`_
+* Open `bug tracker
+  <http://www.nsnam.org/bugzilla>`_
 
 We realize that if you are reading this document, contributing back to 
 the project is probably not your foremost concern at this point, but
 we want you to be aware that contributing is in the spirit of the project and
 that even the act of dropping us a note about your early experience 
 with |ns3| (e.g. "this tutorial section was not clear..."), 
-reports of stale documentation or comments in the code, etc. are much 
-appreciated.  The preferred way to submit patches is either to fork
-our project on GitLab.com and generate a Merge Request, or to open
-an issue on our issue tracker and append a patch.
+reports of stale documentation, etc. are much appreciated. 
 
 Tutorial Organization
 *********************

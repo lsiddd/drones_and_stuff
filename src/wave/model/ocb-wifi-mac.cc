@@ -156,7 +156,7 @@ OcbWifiMac::SetLinkDownCallback (Callback<void> linkDown)
 }
 
 void
-OcbWifiMac::Enqueue (Ptr<Packet> packet, Mac48Address to)
+OcbWifiMac::Enqueue (Ptr<const Packet> packet, Mac48Address to)
 {
   NS_LOG_FUNCTION (this << packet << to);
   if (m_stationManager->IsBrandNew (to))
@@ -238,13 +238,9 @@ OcbWifiMac::Enqueue (Ptr<Packet> packet, Mac48Address to)
  * here we only care about data packet and vsa management frame
  */
 void
-OcbWifiMac::Receive (Ptr<WifiMacQueueItem> mpdu)
+OcbWifiMac::Receive (Ptr<Packet> packet, const WifiMacHeader *hdr)
 {
-  NS_LOG_FUNCTION (this << *mpdu);
-  const WifiMacHeader* hdr = &mpdu->GetHeader ();
-  // Create a copy of the MPDU payload because non-const operations like RemovePacketTag
-  // and RemoveHeader may need to be performed.
-  Ptr<Packet> packet = mpdu->GetPacket ()->Copy ();
+  NS_LOG_FUNCTION (this << packet << hdr);
   NS_ASSERT (!hdr->IsCtl ());
   NS_ASSERT (hdr->GetAddr3 () == WILDCARD_BSSID);
 
@@ -273,7 +269,7 @@ OcbWifiMac::Receive (Ptr<WifiMacQueueItem> mpdu)
       if (hdr->IsQosData () && hdr->IsQosAmsdu ())
         {
           NS_LOG_DEBUG ("Received A-MSDU from" << from);
-          DeaggregateAmsduAndForward (mpdu);
+          DeaggregateAmsduAndForward (packet, hdr);
         }
       else
         {
@@ -324,7 +320,7 @@ OcbWifiMac::Receive (Ptr<WifiMacQueueItem> mpdu)
   // Invoke the receive handler of our parent class to deal with any
   // other frames. Specifically, this will handle Block Ack-related
   // Management Action frames.
-  RegularWifiMac::Receive (Create<WifiMacQueueItem> (packet, *hdr));
+  RegularWifiMac::Receive (packet, hdr);
 }
 
 void
@@ -371,10 +367,11 @@ OcbWifiMac::ConfigureEdca (uint32_t cwmin, uint32_t cwmax, uint32_t aifsn, enum 
 }
 
 void
-OcbWifiMac::ConfigureStandard (enum WifiStandard standard)
+OcbWifiMac::FinishConfigureStandard (enum WifiPhyStandard standard)
 {
   NS_LOG_FUNCTION (this << standard);
-  NS_ASSERT (standard == WIFI_STANDARD_80211p);
+  NS_ASSERT ((standard == WIFI_PHY_STANDARD_80211_10MHZ)
+             || (standard == WIFI_PHY_STANDARD_80211a));
 
   uint32_t cwmin = 15;
   uint32_t cwmax = 1023;

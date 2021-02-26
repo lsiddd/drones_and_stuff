@@ -23,17 +23,27 @@
 #include "ns3/nstime.h"
 
 namespace {
-
-/* *NS_CHECK_STYLE_OFF* */
-void bari (int) {}
-void bar2i (int, int) {}
-void bar3i (int, int, int) {}
-void bar4i (int, int, int, int) {}
-void bar5i (int, int, int, int, int) {}
-void barcir (const int &) {}
-void barir (int &) {}
-/* *NS_CHECK_STYLE_ON* */
-
+void bari (int)
+{
+}
+void bar2i (int, int)
+{
+}
+void bar3i (int, int, int)
+{
+}
+void bar4i (int, int, int, int)
+{
+}
+void bar5i (int, int, int, int, int)
+{
+}
+void barcir (const int &)
+{
+}
+void barir (int &)
+{
+}
 } // anonymous namespace
 
 using namespace ns3;
@@ -47,7 +57,8 @@ public:
 
 TimerStateTestCase::TimerStateTestCase ()
   : TestCase ("Check correct state transitions")
-{}
+{
+}
 void
 TimerStateTestCase::DoRun (void)
 {
@@ -88,24 +99,42 @@ public:
   TimerTemplateTestCase ();
   virtual void DoRun (void);
   virtual void DoTeardown (void);
-
-  /* *NS_CHECK_STYLE_OFF* */
-  void bazi (int) {}
-  void baz2i (int, int) {}
-  void baz3i (int, int, int) {}
-  void baz4i (int, int, int, int) {}
-  void baz5i (int, int, int, int, int) {}
-  void baz6i (int, int, int, int, int, int) {}
-  void bazcir (const int&) {}
-  void bazir (int&) {}
-  void bazip (int *) {}
-  void bazcip (const int *) {}
-  /* *NS_CHECK_STYLE_ON* */
+  void bazi (int)
+  {
+  }
+  void baz2i (int, int)
+  {
+  }
+  void baz3i (int, int, int)
+  {
+  }
+  void baz4i (int, int, int, int)
+  {
+  }
+  void baz5i (int, int, int, int, int)
+  {
+  }
+  void baz6i (int, int, int, int, int, int)
+  {
+  }
+  void bazcir (const int&)
+  {
+  }
+  void bazir (int&)
+  {
+  }
+  void bazip (int *)
+  {
+  }
+  void bazcip (const int *)
+  {
+  }
 };
 
 TimerTemplateTestCase::TimerTemplateTestCase ()
   : TestCase ("Check that template magic is working")
-{}
+{
+}
 
 void
 TimerTemplateTestCase::DoRun (void)

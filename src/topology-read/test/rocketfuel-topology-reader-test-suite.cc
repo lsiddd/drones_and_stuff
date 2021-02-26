@@ -24,7 +24,6 @@
 
 #include "ns3/test.h"
 #include "ns3/rocketfuel-topology-reader.h"
-#include "ns3/node-container.h"
 #include "ns3/log.h"
 #include "ns3/abort.h"
 #include "ns3/attribute.h"
@@ -35,12 +34,6 @@ using namespace ns3;
 /**
  * \ingroup topology
  * \defgroup topology-test Topology module tests
- */
-
-/**
- * \file
- * \ingroup topology-test
- * ns3::RockefuelTopologyReader test suite.
  */
 
 /**

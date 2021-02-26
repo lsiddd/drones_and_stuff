@@ -197,10 +197,9 @@ Ipv4Mask::GetPrefixLength (void) const
   return tmp; 
 }
 
-static constexpr uint32_t UNINITIALIZED = 0x66666666U;
 
 Ipv4Address::Ipv4Address ()
-  : m_address (UNINITIALIZED), m_initialized (false)
+  : m_address (0x66666666)
 {
   NS_LOG_FUNCTION (this);
 }
@@ -208,13 +207,11 @@ Ipv4Address::Ipv4Address (uint32_t address)
 {
   NS_LOG_FUNCTION (this << address);
   m_address = address;
-  m_initialized = true;
 }
 Ipv4Address::Ipv4Address (char const *address)
 {
   NS_LOG_FUNCTION (this << address);
   m_address = AsciiToIpv4Host (address);
-  m_initialized = true;
 }
 
 uint32_t
@@ -228,14 +225,12 @@ Ipv4Address::Set (uint32_t address)
 {
   NS_LOG_FUNCTION (this << address);
   m_address = address;
-  m_initialized = true;
 }
 void
 Ipv4Address::Set (char const *address)
 {
   NS_LOG_FUNCTION (this << address);
   m_address = AsciiToIpv4Host (address);
-  m_initialized = true;
 }
 
 Ipv4Address
@@ -267,13 +262,6 @@ Ipv4Address::IsSubnetDirectedBroadcast (Ipv4Mask const &mask) const
       return false;
     }
   return ( (Get () | mask.GetInverse ()) == Get () );
-}
-
-bool
-Ipv4Address::IsInitialized (void) const
-{
-  NS_LOG_FUNCTION (this);
-  return (m_initialized);
 }
 
 bool
@@ -338,8 +326,6 @@ Ipv4Address::Deserialize (const uint8_t buf[4])
   ipv4.m_address |= buf[2];
   ipv4.m_address <<= 8;
   ipv4.m_address |= buf[3];
-  ipv4.m_initialized = true;
-
   return ipv4;
 }
 
@@ -448,6 +434,15 @@ std::istream & operator >> (std::istream &is, Ipv4Mask &mask)
   is >> str;
   mask = Ipv4Mask (str.c_str ());
   return is;
+}
+
+bool operator == (Ipv4Mask const &a, Ipv4Mask const &b)
+{
+  return a.IsEqual (b);
+}
+bool operator != (Ipv4Mask const &a, Ipv4Mask const &b)
+{
+  return !a.IsEqual (b);
 }
 
 ATTRIBUTE_HELPER_CPP (Ipv4Address);

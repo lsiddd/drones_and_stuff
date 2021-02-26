@@ -41,7 +41,7 @@ main (int argc, char *argv[])
   double hUe = 1.0;
   bool enbIndoor = false;
   bool ueIndoor = false;
-  CommandLine cmd (__FILE__);
+  CommandLine cmd;
   
   cmd.AddValue("hEnb", "Height of the eNB", hEnb);
   cmd.AddValue("hUe", "Height of UE", hUe);
@@ -75,7 +75,7 @@ main (int argc, char *argv[])
   
   Ptr<MobilityBuildingInfo> buildingInfoEnb = CreateObject<MobilityBuildingInfo> ();
   mmEnb->AggregateObject (buildingInfoEnb); // operation usually done by BuildingsHelper::Install
-  buildingInfoEnb->MakeConsistent (mmEnb);
+  BuildingsHelper::MakeConsistent (mmEnb);
   
   Ptr<HybridBuildingsPropagationLossModel> propagationLossModel = CreateObject<HybridBuildingsPropagationLossModel> ();
   // cancel shadowing effect
@@ -92,7 +92,7 @@ main (int argc, char *argv[])
       mmUe->SetPosition (Vector (i, 0.0, hUe));
       Ptr<MobilityBuildingInfo> buildingInfoUe = CreateObject<MobilityBuildingInfo> ();
       mmUe->AggregateObject (buildingInfoUe); // operation usually done by BuildingsHelper::Install
-      buildingInfoUe->MakeConsistent (mmUe);
+      BuildingsHelper::MakeConsistent (mmUe);
       double loss = propagationLossModel->GetLoss (mmEnb, mmUe);
       outFile << i << "\t"
               << loss 

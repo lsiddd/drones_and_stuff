@@ -102,31 +102,32 @@ Murmur3 (64-bit version)            312094       100   4191464     134.301
    \endverbatim
  */
 
-namespace ns3 {
+namespace ns3
+{
 
 NS_LOG_COMPONENT_DEFINE ("Hasher");
 
-namespace Hash {
+namespace Hash
+{
 
 /**
  * \ingroup hash
  *  Namespace for hasher-example.
 */
-namespace Example {
-
+namespace Example
+{
+  
 /**
  * Keep track of collisions
  */
-class Collider
-{
+class Collider {
 
 public:
   std::string m_name;                   /**< Name of this hash. */
   Hasher      m_hash;                   /**< The hash. */
 
   /** The size of hash function being tested. */
-  enum Bits
-  {
+  enum Bits {
     Bits32,                             /**< Use 32-bit hash function. */
     Bits64                              /**< Use 64-bit hash function. */
   };
@@ -148,12 +149,12 @@ public:
    * Add a string to the Collider.
    *
    * \param [in] phrase The string to add.
-   * \return \c true If this was a new string.
+   * \return true If this was a new string.
    */
   bool Add (const std::string phrase)
   {
     uint64_t h = GetHash (phrase);
-
+    
     // Check for collisions
     if (m_dict.count (h) > 0)
       {
@@ -167,14 +168,14 @@ public:
         // new phrase generating a real collision
         // alphabetize
         if ( m_dict[h] < phrase)
-          {
+          {       
             m_coll.push_back (std::make_pair (h, phrase));
           }
         else
           {
             m_coll.push_back (std::make_pair (h, m_dict[h]));
             m_dict[h] = phrase;
-          }
+          }            
       }
     else
       {
@@ -193,11 +194,9 @@ public:
 
     switch (m_bits)
       {
-        /* *NS_CHECK_STYLE_OFF* */
       case Bits32:   name += " (32-bit version)";  break;
       case Bits64:   name += " (64-bit version)";  break;
       default:       name += " (unknown!?!)";
-        /* *NS_CHECK_STYLE_ON* */
       }
     return name;
   }
@@ -206,23 +205,26 @@ public:
   void Report () const
   {
     std::cout << std::endl;
-
+    
     std::cout << GetName () << ": " << m_coll.size () << " collisions:"
               << std::endl;
-    for (auto collision : m_coll)
+    for (collision_t::const_iterator it = m_coll.begin ();
+         it != m_coll.end ();
+         ++it)
       {
-        uint64_t h = collision.first;
-
-        std::cout << std::setfill ('0') << std::hex << std::setw (8) << h
-                  << std::dec << std::setfill (' ')  << "  "
-                  << std::setw (20) << std::left
+        uint64_t h = it->first;
+        
+        std::cout << std::setfill ('0') << std::hex << std::setw(8) << h
+                  << std::dec << std::setfill(' ')  << "  "
+                  << std::setw(20) << std::left
                   << m_dict.find (h)->second
-                  << collision.second
+                  << it->second
                   << std::right
                   << std::endl;
       }
   }  // Report ()
 
+  
 private:
 
   /**
@@ -232,24 +234,24 @@ private:
    * \return The hash value, using the number of bits set in the constructor.
    */
   uint64_t GetHash (const std::string phrase)
-  {
-    m_hash.clear ();
-    uint64_t h = 0;
+    {
+      m_hash.clear ();
+      uint64_t h = 0;
 
-    if (m_bits == Bits32)
-      {
-        h = m_hash.GetHash32 (phrase);
-      }
-    else
-      {
-        h = m_hash.GetHash64 (phrase);
-      }
-    return h;
-  }
+      if (m_bits == Bits32)
+        {
+          h = m_hash.GetHash32 (phrase);
+        }
+      else
+        {
+          h = m_hash.GetHash64 (phrase);
+        }
+      return h;
+    }
 
   /** Hash function. */
   enum Bits m_bits;
-
+  
   /** Hashed dictionary of first instance of each hash. */
   typedef std::map <uint64_t, std::string> hashdict_t;
 
@@ -260,16 +262,15 @@ private:
   typedef std::vector < std::pair<uint64_t, std::string> > collision_t;
 
   /** The list of collisions. */
-  collision_t m_coll;
+  collision_t m_coll;            
 
 };  // class Collider
 
-
+  
 /**
  * Word list and hashers to test.
  */
-class Dictionary
-{
+class Dictionary {
 public:
   /** Constructor. */
   Dictionary ()
@@ -297,20 +298,22 @@ public:
   {
     if (phrase.size () == 0)
       {
-        return;
+        return ;
       }
 
     int newPhrases = 0;
-    for (auto & collider : m_hashes)
-      {
-        newPhrases += collider.Add (phrase);
-      }
+    for (std::vector <Collider>::iterator it = m_hashes.begin ();
+           it != m_hashes.end ();
+           ++it)
+        {
+          newPhrases += it->Add (phrase);
+        }
 
-    if (newPhrases)
-      {
-        ++m_nphrases;
-        m_words.push_back (phrase);
-      }
+      if (newPhrases)
+        {
+          ++m_nphrases;
+          m_words.push_back (phrase);
+        }
   }  // Add ()
 
   /**
@@ -322,10 +325,10 @@ public:
    *  \f[
    *     E(collisions)  =  n - k + k (1 - 1/k)^n
    *  \f]
-   *
+   *               
    *  where <i>n</i> is the number of entries in the table, and
    *  <i>k</i> is the number of buckets.
-   *
+   * 
    *  This form is numerically unstable for low collision rates.
    *  Expanding for large \f$ k \f$ we get
    *
@@ -346,7 +349,7 @@ public:
    *                         \right]}
    *            \right\}
    * \f}
-   *
+   * 
    *   For simplicity, we'll use the first two terms
    *   of the second form.
    */
@@ -359,9 +362,9 @@ public:
     long double k64 = static_cast<long double> (0xFFFFFFFFFFFFFFFFULL);
 
     long double n = m_nphrases;
-    long double Ec32 = n * (n - 1) / ( 2 * k32) * (1 - (n - 2) / (3 * k32));
-    long double Ec64 = n * (n - 1) / ( 2 * k64) * (1 - (n - 2) / (3 * k64));
-
+    long double Ec32 = n * (n - 1) / ( 2 * k32) * (1 - (n - 2)/(3 * k32));
+    long double Ec64 = n * (n - 1) / ( 2 * k64) * (1 - (n - 2)/(3 * k64));
+      
     // Output collisions
     std::cout << "" << std::endl;
     std::cout << "Number of words or phrases: " << n << std::endl;
@@ -370,16 +373,18 @@ public:
     std::cout << "Expected number of collisions: (64-bit table) " << Ec64
               << std::endl;
   }  // ReportExpectedCollisions
-
-
+  
+    
   /** Print the collisions for each Collider. */
   void Report () const
   {
     ReportExpectedCollisions ();
-
-    for (auto collider : m_hashes)
+    
+    for (std::vector <Collider>::const_iterator it = m_hashes.begin ();
+         it != m_hashes.end ();
+         ++it)
       {
-        collider.Report ();
+        it->Report ();
       }
   }  // Report ()
 
@@ -388,32 +393,34 @@ public:
    *
    * \param [in] hindex Index of the hash Collider to use.
    */
-  void TimeOne (const Collider & collider)
+  void TimeOne (const int hindex)
   {
     // Hashing speed
     uint32_t reps = 100;
-    Hasher h = collider.m_hash;
+    Hasher h = m_hashes[hindex].m_hash;
     int start = clock ();
-    for (auto const & word : m_words)
+    for (std::vector<std::string>::const_iterator w = m_words.begin ();
+         w != m_words.end();
+         ++w)
       {
         for (uint32_t i = 0; i < reps; ++i)
           {
-            h.clear ().GetHash32 (word);
+            h.clear ().GetHash32 (*w);
           }
       }
     int stop = clock ();
     double delta = stop - start;
     double per = 1e9 * delta / (m_nphrases * reps * CLOCKS_PER_SEC);
-
+    
     std::cout << std::left
-              << std::setw (32) << collider.GetName ()
+              << std::setw (32) << m_hashes[hindex].GetName ()
               << std::right
               << std::setw (10) << m_nphrases
               << std::setw (10) << reps
               << std::setw (10) << stop - start
               << std::setw (12) << per
               << std::endl;
-
+    
   }  // TimeOne ()
 
   /** Report the execution time of each hash across the entire Dictionary. */
@@ -428,10 +435,10 @@ public:
               << std::setw (10) << "Ticks"
               << std::setw (12) << "ns/hash"
               << std::endl;
-
-    for (auto const & collider : m_hashes)
+    
+    for (unsigned int i = 0; i < m_hashes.size (); ++i)
       {
-        TimeOne (collider);
+        TimeOne (i);
       }
   }  // Time ()
 
@@ -450,12 +457,12 @@ class DictFiles
 {
 
 public:
-
+  
   /**
    * CommandLine callback function to add a file argument to the list.
    *
    * \param [in] file The word file to add.
-   * \return \c true If the file is new to the list.
+   * \return true Tf the file is new to the list.
    */
   bool Add (const std::string file)
   {
@@ -463,14 +470,8 @@ public:
       {
         m_files.push_back (file);
       }
-
+    
     return true;
-  }
-
-  /** \return The default dictionary path. */
-  static std::string GetDefault (void)
-  {
-    return "/usr/share/dict/words";
   }
 
   /**
@@ -482,37 +483,40 @@ public:
   {
     if (m_files.size () == 0)
       {
-        Add (GetDefault ());
+        Add ("/usr/share/dict/web2");
       }
 
     std::cout << "Hashing the dictionar"
               << (m_files.size () == 1 ? "y" : "ies")
               << std::endl;
 
-    for (auto dictFile : m_files)
+    for (std::vector <std::string>::const_iterator it = m_files.begin ();
+         it != m_files.end ();
+         ++it)
       {
+        std::string dictFile = *it;
         std::cout << "Dictionary file: " << dictFile << std::endl;
-
+  
         // Find collisions
-
+  
         // Open the file
         std::ifstream dictStream;
         dictStream.open (dictFile.c_str () );
-        if (!dictStream.is_open () )
+        if (! dictStream.is_open () )
           {
             std::cerr << "Failed to open dictionary file."
                       << "'" << dictFile << "'"
                       << std::endl;
             continue;
           }
-
+    
         while (dictStream.good () )
           {
             std::string phrase;
             getline (dictStream, phrase);
             dict.Add (phrase);
           }  // while
-
+        
         dictStream.close ();
 
       }  // for m_files
@@ -534,7 +538,7 @@ private:
 using namespace ns3;
 using namespace ns3::Hash::Example;
 
-int
+int 
 main (int argc, char *argv[])
 {
   std::cout << std::endl;
@@ -543,13 +547,11 @@ main (int argc, char *argv[])
   bool timing = false;
   DictFiles files;
 
-  CommandLine cmd (__FILE__);
+  CommandLine cmd;
   cmd.Usage ("Find hash collisions in the dictionary.");
   cmd.AddValue ("dict", "Dictionary file to hash",
-                MakeCallback (&DictFiles::Add,
-                              &files),
-                DictFiles::GetDefault ());
-
+                MakeCallback(&DictFiles::Add,
+                             &files));
   cmd.AddValue ("time", "Run timing test", timing);
   cmd.Parse (argc, argv);
 
@@ -567,11 +569,11 @@ main (int argc, char *argv[])
   dict.Add ( Collider ("Murmur3",
                        Hasher ( Create<Hash::Function::Murmur3> () ),
                        Collider::Bits64));
-
+  
   files.ReadInto (dict);
-
+  
   dict.Report ();
-
+  
   if (timing)
     {
       dict.Time ();

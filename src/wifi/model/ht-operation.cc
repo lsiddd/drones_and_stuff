@@ -64,15 +64,15 @@ HtOperation::ElementId () const
 }
 
 void
-HtOperation::SetHtSupported (uint8_t htSupported)
+HtOperation::SetHtSupported (uint8_t htsupported)
 {
-  m_htSupported = htSupported;
+  m_htSupported = htsupported;
 }
 
 uint8_t
 HtOperation::GetInformationFieldSize () const
 {
-  //we should not be here if HT is not supported
+  //we should not be here if ht is not supported
   NS_ASSERT (m_htSupported > 0);
   return 22;
 }
@@ -84,75 +84,75 @@ HtOperation::SetPrimaryChannel (uint8_t ctrl)
 }
 
 void
-HtOperation::SetSecondaryChannelOffset (uint8_t secondaryChannelOffset)
+HtOperation::SetSecondaryChannelOffset (uint8_t secondarychanneloffset)
 {
-  m_secondaryChannelOffset = secondaryChannelOffset;
+  m_secondaryChannelOffset = secondarychanneloffset;
 }
 
 void
-HtOperation::SetStaChannelWidth (uint8_t staChannelWidth)
+HtOperation::SetStaChannelWidth (uint8_t stachannelwidth)
 {
-  m_staChannelWidth = staChannelWidth;
+  m_staChannelWidth = stachannelwidth;
 }
 
 void
-HtOperation::SetRifsMode (uint8_t rifsMode)
+HtOperation::SetRifsMode (uint8_t rifsmode)
 {
-  m_rifsMode = rifsMode;
+  m_rifsMode = rifsmode;
 }
 
 void
-HtOperation::SetHtProtection (uint8_t htProtection)
+HtOperation::SetHtProtection (uint8_t htprotection)
 {
-  m_htProtection = htProtection;
+  m_htProtection = htprotection;
 }
 
 void
-HtOperation::SetNonGfHtStasPresent (uint8_t nonGfHtStasPresent)
+HtOperation::SetNonGfHtStasPresent (uint8_t nongfhtstaspresent)
 {
-  m_nonGfHtStasPresent = nonGfHtStasPresent;
+  m_nonGfHtStasPresent = nongfhtstaspresent;
 }
 
 void
-HtOperation::SetObssNonHtStasPresent (uint8_t obssNonHtStasPresent)
+HtOperation::SetObssNonHtStasPresent (uint8_t obssnonhtstaspresent)
 {
-  m_obssNonHtStasPresent = obssNonHtStasPresent;
+  m_obssNonHtStasPresent = obssnonhtstaspresent;
 }
 
 void
-HtOperation::SetDualBeacon (uint8_t dualBeacon)
+HtOperation::SetDualBeacon (uint8_t dualbeacon)
 {
-  m_dualBeacon = dualBeacon;
+  m_dualBeacon = dualbeacon;
 }
 
 void
-HtOperation::SetDualCtsProtection (uint8_t dualCtsProtection)
+HtOperation::SetDualCtsProtection (uint8_t dualctsprotection)
 {
-  m_dualCtsProtection = dualCtsProtection;
+  m_dualCtsProtection = dualctsprotection;
 }
 
 void
-HtOperation::SetStbcBeacon (uint8_t stbcBeacon)
+HtOperation::SetStbcBeacon (uint8_t stbcbeacon)
 {
-  m_stbcBeacon = stbcBeacon;
+  m_stbcBeacon = stbcbeacon;
 }
 
 void
-HtOperation::SetLSigTxopProtectionFullSupport (uint8_t lSigTxopProtectionFullSupport)
+HtOperation::SetLSigTxopProtectionFullSupport (uint8_t lsigtxopprotectionfullsupport)
 {
-  m_lSigTxopProtectionFullSupport = lSigTxopProtectionFullSupport;
+  m_lSigTxopProtectionFullSupport = lsigtxopprotectionfullsupport;
 }
 
 void
-HtOperation::SetPcoActive (uint8_t pcoActive)
+HtOperation::SetPcoActive (uint8_t pcoactive)
 {
-  m_pcoActive = pcoActive;
+  m_pcoActive = pcoactive;
 }
 
 void
-HtOperation::SetPhase (uint8_t pcoPhase)
+HtOperation::SetPhase (uint8_t pcophase)
 {
-  m_pcoPhase = pcoPhase;
+  m_pcoPhase = pcophase;
 }
 
 void
@@ -162,33 +162,33 @@ HtOperation::SetRxMcsBitmask (uint8_t index)
 }
 
 void
-HtOperation::SetRxHighestSupportedDataRate (uint16_t maxSupportedRate)
+HtOperation::SetRxHighestSupportedDataRate (uint16_t maxsupportedrate)
 {
-  m_rxHighestSupportedDataRate = maxSupportedRate;
+  m_rxHighestSupportedDataRate = maxsupportedrate;
 }
 
 void
-HtOperation::SetTxMcsSetDefined (uint8_t txMcsSetDefined)
+HtOperation::SetTxMcsSetDefined (uint8_t txmcssetdefined)
 {
-  m_txMcsSetDefined = txMcsSetDefined;
+  m_txMcsSetDefined = txmcssetdefined;
 }
 
 void
-HtOperation::SetTxRxMcsSetUnequal (uint8_t txRxMcsSetUnequal)
+HtOperation::SetTxRxMcsSetUnequal (uint8_t txrxmcssetunequal)
 {
-  m_txRxMcsSetUnequal = txRxMcsSetUnequal;
+  m_txRxMcsSetUnequal = txrxmcssetunequal;
 }
 
 void
-HtOperation::SetTxMaxNSpatialStreams (uint8_t maxTxSpatialStreams)
+HtOperation::SetTxMaxNSpatialStreams (uint8_t maxtxspatialstreams)
 {
-  m_txMaxNSpatialStreams = maxTxSpatialStreams - 1; //0 for 1 SS, 1 for 2 SSs, etc
+  m_txMaxNSpatialStreams = maxtxspatialstreams - 1; //0 for 1 SS, 1 for 2 SSs, etc
 }
 
 void
-HtOperation::SetTxUnequalModulation (uint8_t txUnequalModulation)
+HtOperation::SetTxUnequalModulation (uint8_t txunequalmodulation)
 {
-  m_txUnequalModulation = txUnequalModulation;
+  m_txUnequalModulation = txunequalmodulation;
 }
 
 uint8_t
@@ -489,6 +489,14 @@ HtOperation::DeserializeInformationField (Buffer::Iterator start,
   return length;
 }
 
+/**
+ * output stream output operator
+ *
+ * \param os output stream
+ * \param htOperation the HT operation
+ *
+ * \returns output stream
+ */
 std::ostream &
 operator << (std::ostream &os, const HtOperation &htOperation)
 {

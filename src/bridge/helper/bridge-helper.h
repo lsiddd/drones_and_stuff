@@ -25,12 +25,6 @@
 #include "ns3/object-factory.h"
 #include <string>
 
-/**
- * \file
- * \ingroup bridge
- * ns3::BridgeHelper declaration.
- */
-
 namespace ns3 {
 
 class Node;

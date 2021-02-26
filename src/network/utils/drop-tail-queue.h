@@ -52,8 +52,8 @@ public:
   virtual Ptr<const Item> Peek (void) const;
 
 private:
-  using Queue<Item>::begin;
-  using Queue<Item>::end;
+  using Queue<Item>::Head;
+  using Queue<Item>::Tail;
   using Queue<Item>::DoEnqueue;
   using Queue<Item>::DoDequeue;
   using Queue<Item>::DoRemove;
@@ -75,12 +75,6 @@ DropTailQueue<Item>::GetTypeId (void)
     .SetParent<Queue<Item> > ()
     .SetGroupName ("Network")
     .template AddConstructor<DropTailQueue<Item> > ()
-    .AddAttribute ("MaxSize",
-                   "The max queue size",
-                   QueueSizeValue (QueueSize ("100p")),
-                   MakeQueueSizeAccessor (&QueueBase::SetMaxSize,
-                                          &QueueBase::GetMaxSize),
-                   MakeQueueSizeChecker ())
   ;
   return tid;
 }
@@ -105,7 +99,7 @@ DropTailQueue<Item>::Enqueue (Ptr<Item> item)
 {
   NS_LOG_FUNCTION (this << item);
 
-  return DoEnqueue (end (), item);
+  return DoEnqueue (Tail (), item);
 }
 
 template <typename Item>
@@ -114,7 +108,7 @@ DropTailQueue<Item>::Dequeue (void)
 {
   NS_LOG_FUNCTION (this);
 
-  Ptr<Item> item = DoDequeue (begin ());
+  Ptr<Item> item = DoDequeue (Head ());
 
   NS_LOG_LOGIC ("Popped " << item);
 
@@ -127,7 +121,7 @@ DropTailQueue<Item>::Remove (void)
 {
   NS_LOG_FUNCTION (this);
 
-  Ptr<Item> item = DoRemove (begin ());
+  Ptr<Item> item = DoRemove (Head ());
 
   NS_LOG_LOGIC ("Removed " << item);
 
@@ -140,18 +134,8 @@ DropTailQueue<Item>::Peek (void) const
 {
   NS_LOG_FUNCTION (this);
 
-  return DoPeek (begin ());
+  return DoPeek (Head ());
 }
-
-// The following explicit template instantiation declarations prevent all the
-// translation units including this header file to implicitly instantiate the
-// DropTailQueue<Packet> class and the DropTailQueue<QueueDiscItem> class. The
-// unique instances of these classes are explicitly created through the macros
-// NS_OBJECT_TEMPLATE_CLASS_DEFINE (DropTailQueue,Packet) and
-// NS_OBJECT_TEMPLATE_CLASS_DEFINE (DropTailQueue,QueueDiscItem), which are included
-// in drop-tail-queue.cc
-extern template class DropTailQueue<Packet>;
-extern template class DropTailQueue<QueueDiscItem>;
 
 } // namespace ns3
 

@@ -267,6 +267,6 @@ BuildingsPathlossTestCase::CreateMobilityModel (uint16_t index)
     }
   Ptr<MobilityBuildingInfo> buildingInfo = CreateObject<MobilityBuildingInfo> ();
   mm->AggregateObject (buildingInfo); // operation usually done by BuildingsHelper::Install
-  buildingInfo->MakeConsistent (mm);
+  BuildingsHelper::MakeConsistent (mm); 
   return mm;
 }

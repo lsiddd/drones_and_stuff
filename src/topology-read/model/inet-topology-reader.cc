@@ -22,17 +22,11 @@
 #include <fstream>
 #include <cstdlib>
 #include <sstream>
-#include "ns3/node-container.h"
+
 #include "ns3/log.h"
 
 #include "inet-topology-reader.h"
 
-
-/**
- * \file
- * \ingroup topology
- * ns3::InetTopologyReader implementation.
- */
 
 namespace ns3 {
 

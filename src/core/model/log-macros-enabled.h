@@ -27,53 +27,8 @@
  * NS_LOG and related logging macro definitions.
  */
 
-
-// These two implementation macros
-//   NS_LOG_APPEND_TIME_PREFIX_IMPL
-//   NS_LOG_APPEND_NODE_PREFIX_IMPL
-// need to be defined in all configurations (debug, release, optimized)
-// for use by NS_FATAL_...
-
-/**
- * \ingroup logging
- * Implementation details for NS_LOG_APPEND_TIME_PREFIX.
- * \internal
- * Logging implementation macro; should not be called directly.
- * We define this separately so we can reuse the definition
- * in NS_FATAL.
- */
-#define NS_LOG_APPEND_TIME_PREFIX_IMPL                      \
-  do {                                                      \
-    ns3::TimePrinter printer = ns3::LogGetTimePrinter ();   \
-    if (printer != 0)                                       \
-      {                                                     \
-        (*printer)(std::clog);                              \
-        std::clog << " ";                                   \
-      }                                                     \
-  } while (false)
-
-/**
- * \ingroup logging
- * Implementation details for NS_LOG_APPEND_NODE_PREFIX.
- * \internal
- * Logging implementation macro; should not be called directly.
- * We define this separately so we can reuse the definition
- * in NS_FATAL.
- */
-#define NS_LOG_APPEND_NODE_PREFIX_IMPL                      \
-  do {                                                      \
-    ns3::NodePrinter printer = ns3::LogGetNodePrinter ();   \
-    if (printer != 0)                                       \
-      {                                                     \
-        (*printer)(std::clog);                              \
-        std::clog << " ";                                   \
-      }                                                     \
-  } while (false)
-
-
-
-
 #ifdef NS3_LOG_ENABLE
+
 
 /**
  * \ingroup logging
@@ -81,10 +36,15 @@
  * \internal
  * Logging implementation macro; should not be called directly.
  */
-#define NS_LOG_APPEND_TIME_PREFIX                           \
-  if (g_log.IsEnabled (ns3::LOG_PREFIX_TIME))               \
-    {                                                       \
-      NS_LOG_APPEND_TIME_PREFIX_IMPL;                       \
+#define NS_LOG_APPEND_TIME_PREFIX                               \
+  if (g_log.IsEnabled (ns3::LOG_PREFIX_TIME))                   \
+    {                                                           \
+      ns3::LogTimePrinter printer = ns3::LogGetTimePrinter ();  \
+      if (printer != 0)                                         \
+        {                                                       \
+          (*printer)(std::clog);                                \
+          std::clog << " ";                                     \
+        }                                                       \
     }
 
 /**
@@ -93,10 +53,15 @@
  * \internal
  * Logging implementation macro; should not be called directly.
  */
-#define NS_LOG_APPEND_NODE_PREFIX                          \
-  if (g_log.IsEnabled (ns3::LOG_PREFIX_NODE))              \
-    {                                                      \
-      NS_LOG_APPEND_NODE_PREFIX_IMPL;                      \
+#define NS_LOG_APPEND_NODE_PREFIX                               \
+  if (g_log.IsEnabled (ns3::LOG_PREFIX_NODE))                   \
+    {                                                           \
+      ns3::LogNodePrinter printer = ns3::LogGetNodePrinter ();  \
+      if (printer != 0)                                         \
+        {                                                       \
+          (*printer)(std::clog);                                \
+          std::clog << " ";                                     \
+        }                                                       \
     }
 
 /**
@@ -105,12 +70,12 @@
  * \internal
  * Logging implementation macro; should not be called directly.
  */
-#define NS_LOG_APPEND_FUNC_PREFIX                          \
-  if (g_log.IsEnabled (ns3::LOG_PREFIX_FUNC))              \
-    {                                                      \
-      std::clog << g_log.Name () << ":"                    \
-                << __FUNCTION__ << "(): ";                 \
-    }                                                      \
+#define NS_LOG_APPEND_FUNC_PREFIX                               \
+  if (g_log.IsEnabled (ns3::LOG_PREFIX_FUNC))                   \
+    {                                                           \
+      std::clog << g_log.Name () << ":" <<                      \
+      __FUNCTION__ << "(): ";                                   \
+    }                                                           \
 
 /**
  * \ingroup logging
@@ -186,7 +151,8 @@
  */
 #define NS_LOG(level, msg)                                      \
   NS_LOG_CONDITION                                              \
-  do {                                                          \
+  do                                                            \
+    {                                                           \
       if (g_log.IsEnabled (level))                              \
         {                                                       \
           NS_LOG_APPEND_TIME_PREFIX;                            \
@@ -196,7 +162,8 @@
           NS_LOG_APPEND_LEVEL_PREFIX (level);                   \
           std::clog << msg << std::endl;                        \
         }                                                       \
-    } while (false)
+    }                                                           \
+  while (false)
 
 /**
  * \ingroup logging
@@ -208,7 +175,8 @@
  */
 #define NS_LOG_FUNCTION_NOARGS()                                \
   NS_LOG_CONDITION                                              \
-  do {                                                          \
+  do                                                            \
+    {                                                           \
       if (g_log.IsEnabled (ns3::LOG_FUNCTION))                  \
         {                                                       \
           NS_LOG_APPEND_TIME_PREFIX;                            \
@@ -217,7 +185,8 @@
           std::clog << g_log.Name () << ":"                     \
                     << __FUNCTION__ << "()" << std::endl;       \
         }                                                       \
-    } while (false)
+    }                                                           \
+  while (false)
 
 
 /**
@@ -267,10 +236,12 @@
  * \param [in] msg The message to log
  */
 #define NS_LOG_UNCOND(msg)              \
-  NS_LOG_CONDITION                      \
-  do {                                  \
+  NS_LOG_CONDITION                                              \
+  do                                    \
+    {                                   \
       std::clog << msg << std::endl;    \
-    } while (false)
+    }                                   \
+  while (false)
 
 
 #endif /* NS3_LOG_ENABLE */

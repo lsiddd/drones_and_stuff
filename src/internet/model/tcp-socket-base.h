@@ -49,7 +49,6 @@ class TcpTxBuffer;
 class TcpOption;
 class Ipv4Interface;
 class Ipv6Interface;
-class TcpRateOps;
 
 /**
  * \ingroup tcp
@@ -111,9 +110,9 @@ public:
  * - CA_DISORDER
  * - CA_RECOVERY
  * - CA_LOSS
- * - CA_CWR
  *
- * For more information, see the TcpCongState_t documentation.
+ * Another one (CA_CWR) is present but not used. For more information, see
+ * the TcpCongState_t documentation.
  *
  * Congestion control interface
  * ---------------------------
@@ -318,11 +317,6 @@ public:
   uint32_t GetRetxThresh (void) const { return m_retxThresh; }
 
   /**
-   * \brief Callback pointer for pacing rate trace chaining
-   */
-  TracedCallback<DataRate, DataRate>  m_pacingRateTrace;
-
-  /**
    * \brief Callback pointer for cWnd trace chaining
    */
   TracedCallback<uint32_t, uint32_t> m_cWndTrace;
@@ -366,13 +360,6 @@ public:
    * \brief Callback pointer for RTT trace chaining
    */
   TracedCallback<Time, Time> m_lastRttTrace;
-
-  /**
-   * \brief Callback function to hook to TcpSocketState pacing rate
-   * \param oldValue old pacing rate value
-   * \param newValue new pacing rate value
-   */
-  void UpdatePacingRateTrace (DataRate oldValue, DataRate newValue);
 
   /**
    * \brief Callback function to hook to TcpSocketState congestion window
@@ -454,10 +441,9 @@ public:
   void SetRecoveryAlgorithm (Ptr<TcpRecoveryOps> recovery);
 
   /**
-   * \brief Mark ECT(0) codepoint
+   * \brief Mark ECT(0)
    *
-   * \param tos the TOS byte to modify
-   * \return TOS with ECT(0) codepoint set
+   * \return TOS with ECT(0)
    */
   inline uint8_t MarkEcnEct0 (uint8_t tos) const
     {
@@ -465,10 +451,9 @@ public:
     }
 
   /**
-   * \brief Mark ECT(1) codepoint
+   * \brief Mark ECT(1)
    *
-   * \param tos the TOS byte to modify
-   * \return TOS with ECT(1) codepoint set
+   * \return TOS with ECT(1)
    */
   inline uint8_t MarkEcnEct1 (uint8_t tos) const
     {
@@ -476,10 +461,9 @@ public:
     }
 
   /**
-   * \brief Mark CE codepoint
+   * \brief Mark CE
    *
-   * \param tos the TOS byte to modify
-   * \return TOS with CE codepoint set
+   * \return TOS with CE
    */
   inline uint8_t MarkEcnCe (uint8_t tos) const
     {
@@ -489,7 +473,6 @@ public:
   /**
    * \brief Clears ECN bits from TOS
    *
-   * \param tos the TOS byte to modify
    * \return TOS without ECN bits
    */
   inline uint8_t ClearEcnBits (uint8_t tos) const
@@ -498,78 +481,60 @@ public:
     }
 
   /**
-   * \brief Checks if TOS has no ECN codepoints
+   * \brief ECN Modes
+   */
+  typedef enum
+    {
+      NoEcn = 0,   //!< ECN is not enabled.
+      ClassicEcn   //!< ECN functionality as described in RFC 3168.
+    } EcnMode_t;
+
+  /**
+   * \brief Checks if TOS has no ECN bits
    *
-   * \param tos the TOS byte to check
-   * \return true if TOS does not have any ECN codepoints set; otherwise false
+   * \return true if TOS does not have any ECN bits set; otherwise false
    */
   inline bool CheckNoEcn (uint8_t tos) const
     {
-      return ((tos & 0x03) == 0x00);
+      return ((tos & 0xfc) == 0x00);
     }
 
   /**
-   * \brief Checks for ECT(0) codepoint
+   * \brief Checks for ECT(0) bits
    *
-   * \param tos the TOS byte to check
-   * \return true if TOS has ECT(0) codepoint set; otherwise false
+   * \return true if TOS has ECT(0) bit set; otherwise false
    */
   inline bool CheckEcnEct0 (uint8_t tos) const
     {
-      return ((tos & 0x03) == 0x02);
+      return ((tos & 0xfc) == 0x02);
     }
 
   /**
-   * \brief Checks for ECT(1) codepoint
+   * \brief Checks for ECT(1) bits
    *
-   * \param tos the TOS byte to check
-   * \return true if TOS has ECT(1) codepoint set; otherwise false
+   * \return true if TOS has ECT(1) bit set; otherwise false
    */
   inline bool CheckEcnEct1 (uint8_t tos) const
     {
-      return ((tos & 0x03) == 0x01);
+      return ((tos & 0xfc) == 0x01);
     }
 
   /**
-   * \brief Checks for CE codepoint
+   * \brief Checks for CE bits
    *
-   * \return true if TOS has CE codepoint set; otherwise false
+   * \return true if TOS has CE bit set; otherwise false
    */
   inline bool CheckEcnCe (uint8_t tos) const
     {
-      return ((tos & 0x03) == 0x03);
+      return ((tos & 0xfc) == 0x03);
     }
 
   /**
-   * \brief mark ECN code point
+   * \brief Set ECN mode to use on the socket
    *
-   * \param tos the TOS byte to modify
-   * \param codePoint the codepoint to use
-   * \return TOS with specified ECN code point
+   * \param ecnMode Mode of ECN. Currently NoEcn and ClassicEcn is supported.
    */
-  inline uint8_t MarkEcnCodePoint (const uint8_t tos, const TcpSocketState::EcnCodePoint_t codePoint) const
-    {
-      return ((tos & 0xfc) | codePoint);
-    }
-
-  /**
-   * \brief Set ECN mode of use on the socket
-   *
-   * \param useEcn Mode of ECN to use.
-   */
-  void SetUseEcn (TcpSocketState::UseEcn_t useEcn);
-
-  /**
-   * \brief Enable or disable pacing
-   * \param pacing Boolean to enable or disable pacing
-   */
-  void SetPacingStatus (bool pacing);
-
-  /**
-   * \brief Enable or disable pacing of the initial window
-   * \param pacing Boolean to enable or disable pacing of the initial window
-   */
-  void SetPaceInitialWindow (bool paceWindow);
+  void SetEcn (EcnMode_t ecnMode);
 
   // Necessary implementations of null functions from ns3::Socket
   virtual enum SocketErrno GetErrno (void) const;    // returns m_errno
@@ -1000,11 +965,9 @@ protected:
    * \param scoreboardUpdated if true indicates that the scoreboard has been
    * \param oldHeadSequence value of HeadSequence before ack
    * updated with SACK information
-   * \param currentDelivered The number of bytes (S)ACKed
-   * \return the number of bytes (newly) acked, or 0 if it was a dupack
    */
   virtual void ProcessAck (const SequenceNumber32 &ackNumber, bool scoreboardUpdated,
-                           uint32_t currentDelivered, const SequenceNumber32 &oldHeadSequence);
+                           const SequenceNumber32 &oldHeadSequence);
 
   /**
    * \brief Recv of a data, put into buffer, call L7 to get it if necessary
@@ -1039,24 +1002,13 @@ protected:
 
   /**
    * \brief Dupack management
-   *
-   * \param currentDelivered Current (S)ACKed bytes
    */
-  void DupAck (uint32_t currentDelivered);
-
-  /**
-   * \brief Enter CA_CWR state upon receipt of an ECN Echo
-   *
-   * \param currentDelivered Currently (S)ACKed bytes
-   */
-  void EnterCwr (uint32_t currentDelivered);
+  void DupAck ();
 
   /**
    * \brief Enter the CA_RECOVERY, and retransmit the head
-   *
-   * \param currentDelivered Currently (S)ACKed bytes
    */
-  void EnterRecovery (uint32_t currentDelivered);
+  void EnterRecovery ();
 
   /**
    * \brief An RTO event happened
@@ -1099,9 +1051,10 @@ protected:
    * Timestamp and Window scale are managed in other pieces of code.
    *
    * \param tcpHeader Header of the segment
-   * \param [out] bytesSacked Number of bytes SACKed, or 0
+   * \param scoreboardUpdated indicates if the scoreboard was updated due to a
+   * SACK option
    */
-  void ReadOptions (const TcpHeader &tcpHeader, uint32_t *bytesSacked);
+  void ReadOptions (const TcpHeader &tcpHeader, bool &scoreboardUpdated);
 
   /**
    * \brief Return true if the specified option is enabled
@@ -1153,9 +1106,9 @@ protected:
    * \brief Read the SACK option
    *
    * \param option SACK option from the header
-   * \returns the number of bytes sacked by this option
+   * \returns true in case of an update to the SACKed blocks
    */
-  uint32_t ProcessOptionSack(const Ptr<const TcpOption> option);
+  bool ProcessOptionSack (const Ptr<const TcpOption> option);
 
   /**
    * \brief Add the SACK PERMITTED option to the header
@@ -1210,37 +1163,10 @@ protected:
   void NotifyPacingPerformed (void);
 
   /**
-   * \brief Return true if packets in the current window should be paced
-   * \return true if pacing is currently enabled
-   */
-  bool IsPacingEnabled (void) const;
-
-  /**
-   * \brief Dynamically update the pacing rate
-   *
-   * \param tcb internal congestion state
-   */
-  void UpdatePacingRate (void);
-
-  /**
    * \brief Add Tags for the Socket
    * \param p Packet
    */
   void AddSocketTags (const Ptr<Packet> &p) const;
-
-  /**
-   * Get the current value of the receiver's offered window (RCV.WND)
-   * \note This method exists to expose the value to the TcpTxBuffer
-   * \return value of receiver's offered window
-   */
-  uint32_t GetRWnd (void) const;
-
-  /**
-   * Get the current value of the receiver's highest (in-sequence) sequence number acked.
-   * \note This method exists to expose the value to the TcpTxBuffer
-   * \return value of receiver's highest sequence number acked.
-   */
-  SequenceNumber32 GetHighRxAck (void) const;
 
 protected:
   // Counters and events
@@ -1285,7 +1211,8 @@ protected:
 
   Ptr<RttEstimator> m_rtt; //!< Round trip time estimator
 
-  // Tx buffer management
+  // Rx and Tx buffer management
+  Ptr<TcpRxBuffer> m_rxBuffer; //!< Rx buffer (reordering buffer)
   Ptr<TcpTxBuffer> m_txBuffer; //!< Tx buffer
 
   // State-related attributes
@@ -1319,9 +1246,6 @@ protected:
 
   // Fast Retransmit and Recovery
   SequenceNumber32       m_recover    {0};   //!< Previous highest Tx seqnum for fast recovery (set it to initial seq number)
-  bool                   m_recoverActive {false}; //!< Whether "m_recover" has been set/activated
-                                                  //!< It is used to avoid comparing with the old m_recover value
-                                                  //!< which was set for handling previous congestion event.
   uint32_t               m_retxThresh {3};   //!< Fast Retransmit threshold
   bool                   m_limitedTx  {true}; //!< perform limited transmit
 
@@ -1329,7 +1253,6 @@ protected:
   Ptr<TcpSocketState>    m_tcb;               //!< Congestion control information
   Ptr<TcpCongestionOps>  m_congestionControl; //!< Congestion control
   Ptr<TcpRecoveryOps>    m_recoveryOps;       //!< Recovery Algorithm
-  Ptr<TcpRateOps>        m_rateOps;           //!< Rate operations
 
   // Guesses over the other connection end
   bool m_isFirstPartialAck {true}; //!< First partial ACK during RECOVERY
@@ -1342,9 +1265,10 @@ protected:
                  Ptr<const TcpSocketBase> > m_rxTrace; //!< Trace of received packets
 
   // Pacing related variable
-  Timer m_pacingTimer {Timer::CANCEL_ON_DESTROY}; //!< Pacing Event
+  Timer m_pacingTimer {Timer::REMOVE_ON_DESTROY}; //!< Pacing Event
 
   // Parameters related to Explicit Congestion Notification
+  EcnMode_t                     m_ecnMode    {EcnMode_t::NoEcn};      //!< Socket ECN capability
   TracedValue<SequenceNumber32> m_ecnEchoSeq {0};      //!< Sequence number of the last received ECN Echo
   TracedValue<SequenceNumber32> m_ecnCESeq   {0};      //!< Sequence number of the last received Congestion Experienced
   TracedValue<SequenceNumber32> m_ecnCWRSeq  {0};      //!< Sequence number of the last sent CWR

@@ -39,13 +39,6 @@
 #include "ns3/csma-module.h"
 #include "ns3/internet-module.h"
 
-/**
- * \file
- * \ingroup bridge
- * Bridge example connecting four nodes,
- * with the bridge acting as a simple switch.
- */
-
 using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE ("CsmaBridgeExample");
@@ -65,7 +58,7 @@ main (int argc, char *argv[])
   // Allow the user to override any of the defaults and the above Bind() at
   // run-time, via command-line arguments
   //
-  CommandLine cmd (__FILE__);
+  CommandLine cmd;
   cmd.Parse (argc, argv);
 
   //

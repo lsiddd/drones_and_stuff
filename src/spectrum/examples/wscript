@@ -20,7 +20,3 @@ def build(bld):
     obj = bld.create_ns3_program('tv-trans-regional-example',
                                  ['spectrum', 'mobility', 'core'])
     obj.source = 'tv-trans-regional-example.cc'
-
-    obj = bld.create_ns3_program('three-gpp-channel-example',
-                                 ['spectrum', 'mobility', 'core', 'lte'])
-    obj.source = 'three-gpp-channel-example.cc'

@@ -61,8 +61,8 @@ public:
   virtual ~MeshWifiInterfaceMac ();
 
   // Inherited from WifiMac
-  virtual void  Enqueue (Ptr<Packet> packet, Mac48Address to, Mac48Address from);
-  virtual void  Enqueue (Ptr<Packet> packet, Mac48Address to);
+  virtual void  Enqueue (Ptr<const Packet> packet, Mac48Address to, Mac48Address from);
+  virtual void  Enqueue (Ptr<const Packet> packet, Mac48Address to);
   virtual bool  SupportsSendFrom () const;
   virtual void  SetLinkUpCallback (Callback<void> linkUp);
   ///\name Each mesh point interface must know the mesh point address
@@ -156,11 +156,17 @@ public:
    */
   void SetBeaconGeneration (bool enable);
   /**
-   * Finish configuration based on the WifiStandard being provided
+   * Get phy standard in use
    *
-   * \param standard the WifiStandard being configured
+   * \returns the wifi phy standard
    */
-  virtual void ConfigureStandard (enum WifiStandard standard);
+  WifiPhyStandard GetPhyStandard () const;
+  /**
+   * Finish configuration based on the WifiPhyStandard being provided
+   *
+   * \param standard the WifiPhyStandard being configured
+   */
+  virtual void FinishConfigureStandard (enum WifiPhyStandard standard);
   /**
    * Assign a fixed random variable stream number to the random variables
    * used by this model.  Return the number of streams (possibly zero) that
@@ -174,9 +180,10 @@ private:
   /**
    * Frame receive handler
    *
-   * \param mpdu the received MPDU
+   * \param packet the received packet
+   * \param hdr the wifi MAC header
    */
-  void Receive (Ptr<WifiMacQueueItem> mpdu);
+  void Receive (Ptr<Packet> packet, WifiMacHeader const *hdr);
   /**
    * Send frame. Frame is supposed to be tagged by routing information.
    *
@@ -184,7 +191,7 @@ private:
    * \param from the from address
    * \param to the to address
    */
-  void ForwardDown (Ptr<Packet> packet, Mac48Address from, Mac48Address to);
+  void ForwardDown (Ptr<const Packet> packet, Mac48Address from, Mac48Address to);
   /// Send beacon
   void SendBeacon ();
   /// Schedule next beacon
@@ -242,8 +249,8 @@ private:
   };
   Statistics m_stats; ///< statistics
 
-  /// Current standard: needed to configure metric
-  WifiStandard m_standard;
+  /// Current PHY standard: needed to configure metric
+  WifiPhyStandard m_standard;
 
   /// Add randomness to beacon generation
   Ptr<UniformRandomVariable> m_coefficient;

@@ -36,8 +36,8 @@
 
 namespace ns3 {
 
-namespace tests {
-
+  namespace tests {
+    
 
 /**
  * \ingroup global-value-tests
@@ -49,8 +49,7 @@ public:
   /** Constructor. */
   GlobalValueTestCase ();
   /** Destructor. */
-  virtual ~GlobalValueTestCase ()
-  {}
+  virtual ~GlobalValueTestCase () {}
 
 private:
   virtual void DoRun (void);
@@ -58,13 +57,14 @@ private:
 
 GlobalValueTestCase::GlobalValueTestCase ()
   : TestCase ("Check GlobalValue mechanism")
-{}
+{
+}
 
 void
 GlobalValueTestCase::DoRun (void)
 {
   //
-  // Typically these are static globals but we can make one on the stack to
+  // Typically these are static globals but we can make one on the stack to 
   // keep it hidden from the documentation.
   //
   GlobalValue uint = GlobalValue ("TestUint", "help text",
@@ -116,7 +116,7 @@ GlobalValueTestSuite::GlobalValueTestSuite ()
 static GlobalValueTestSuite g_globalValueTestSuite;
 
 
-}    // namespace tests
+  }  // namespace tests
 
 }  // namespace ns3
-
+    

@@ -103,7 +103,7 @@ WifiAcMappingTest::DoRun (void)
 {
   WifiHelper wifi;
   WifiMacHelper wifiMac;
-  YansWifiPhyHelper wifiPhy;
+  YansWifiPhyHelper wifiPhy = YansWifiPhyHelper::Default ();
   YansWifiChannelHelper wifiChannel = YansWifiChannelHelper::Default ();
   wifiPhy.SetChannel (wifiChannel.Create ());
 
@@ -250,7 +250,7 @@ public:
 };
 
 WifiAcMappingTestSuite::WifiAcMappingTestSuite ()
-  : TestSuite ("wifi-ac-mapping", SYSTEM)
+  : TestSuite ("ns3-wifi-ac-mapping", SYSTEM)
 {
   AddTestCase (new WifiAcMappingTest (0xb8, 2), TestCase::QUICK); // EF in AC_VI
   AddTestCase (new WifiAcMappingTest (0x28, 1), TestCase::QUICK); // AF11 in AC_BK

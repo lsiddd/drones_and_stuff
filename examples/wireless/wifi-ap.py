@@ -113,7 +113,7 @@ def main(argv):
     packetSocket.Install(stas)
     packetSocket.Install(ap)
 
-    wifiPhy = ns.wifi.YansWifiPhyHelper()
+    wifiPhy = ns.wifi.YansWifiPhyHelper.Default()
     wifiChannel = ns.wifi.YansWifiChannelHelper.Default()
     wifiPhy.SetChannel(wifiChannel.Create())
 
@@ -127,7 +127,8 @@ def main(argv):
     staDevs = wifi.Install(wifiPhy, wifiMac, stas)
     # setup ap.
     wifiMac.SetType("ns3::ApWifiMac",
-                    "Ssid", ns.wifi.SsidValue(ssid))
+                    "Ssid", ns.wifi.SsidValue(ssid),
+                    "BeaconInterval", ns.core.TimeValue(ns.core.Seconds(2.5)))
     wifi.Install(wifiPhy, wifiMac, ap)
 
     # mobility.

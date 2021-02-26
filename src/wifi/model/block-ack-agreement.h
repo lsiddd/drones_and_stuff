@@ -39,21 +39,21 @@ public:
   /**
    * Constructor for BlockAckAgreement with given peer and TID.
    *
-   * \param peer the peer station
-   * \param tid the TID
+   * \param peer
+   * \param tid
    */
   BlockAckAgreement (Mac48Address peer, uint8_t tid);
   ~BlockAckAgreement ();
   /**
    * Set buffer size.
    *
-   * \param bufferSize the buffer size (in number of MPDUs)
+   * \param bufferSize
    */
   void SetBufferSize (uint16_t bufferSize);
   /**
    * Set timeout.
    *
-   * \param timeout the timeout value
+   * \param timeout
    */
   void SetTimeout (uint16_t timeout);
   /**
@@ -69,11 +69,11 @@ public:
    */
   void SetStartingSequenceControl (uint16_t seq);
   /**
-   * Set block ack policy to immediate Ack.
+   * Set Block ACK policy to immediate ACK.
    */
   void SetImmediateBlockAck (void);
   /**
-   * Set block ack policy to delayed Ack.
+   * Set Block ACK policy to delayed ACK.
    */
   void SetDelayedBlockAck (void);
   /**
@@ -83,6 +83,12 @@ public:
    */
   void SetAmsduSupport (bool supported);
   /**
+   * Set ending sequence number.
+   *
+   * \param seq the ending sequence number
+   */
+  void SetWinEnd (uint16_t seq);
+  /**
    * Return the Traffic ID (TID).
    *
    * \return TID
@@ -91,23 +97,23 @@ public:
   /**
    * Return the peer address.
    *
-   * \return the peer MAC address
+   * \return Mac48Address
    */
   Mac48Address GetPeer (void) const;
   /**
    * Return the buffer size.
    *
-   * \return the buffer size (in number of MPDUs)
+   * \return buffer size
    */
   uint16_t GetBufferSize (void) const;
   /**
    * Return the timeout.
    *
-   * \return the timeout
+   * \return timeout
    */
   uint16_t GetTimeout (void) const;
   /**
-   * Return the starting sequence number.
+   * Return the starting squence number.
    *
    * \return starting sequence number
    */
@@ -119,15 +125,15 @@ public:
    */
   uint16_t GetStartingSequenceControl (void) const;
   /**
-   * Return the last sequence number covered by the ack window
+   * Return the ending sequence number
    *
    * \return ending sequence number
    */
   uint16_t GetWinEnd (void) const;
   /**
-   * Check whether the current ack policy is immediate BlockAck.
+   * Check whether the current ACK policy is immediate block ACK.
    *
-   * \return true if the current ack policy is immediate BlockAck,
+   * \return true if the current ACK policy is immediate block ACK,
    *         false otherwise
    */
   bool IsImmediateBlockAck (void) const;
@@ -160,7 +166,7 @@ protected:
   uint8_t m_tid;             //!< Traffic ID
   uint16_t m_bufferSize;     //!< Buffer size
   uint16_t m_timeout;        //!< Timeout
-  uint16_t m_startingSeq;    //!< Starting sequence control
+  uint16_t m_startingSeq;    //!< Starting squence control
   uint16_t m_winEnd;         //!< Ending sequence number
   uint8_t m_htSupported;     //!< Flag whether HT is supported
   EventId m_inactivityEvent; //!< inactivity event

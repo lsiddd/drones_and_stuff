@@ -33,11 +33,13 @@
  * Build profile no-op macro.
  * \param [in] code The code to skip.
  */
-#define NS_BUILD_PROFILE_NOOP(code)            \
-  do if (false)                                \
-    {                                          \
-      code;                                    \
-    } while (false)
+#define NS_BUILD_PROFILE_NOOP(code)             \
+  do                                            \
+      if (false)                                \
+        {                                       \
+          code ;                                \
+        }                                       \
+  while (false)
 
 /**
  * \ingroup debugging
@@ -47,8 +49,9 @@
 #define NS_BUILD_PROFILE_OP(code) \
   do                                            \
     {                                           \
-      code;                                     \
-    }  while (false)
+      code ;                                    \
+    }                                           \
+  while (false)
 
 
 #ifdef NS3_BUILD_PROFILE_DEBUG

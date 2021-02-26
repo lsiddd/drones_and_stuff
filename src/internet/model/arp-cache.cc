@@ -105,7 +105,7 @@ ArpCache::DoDispose (void)
   m_interface = 0;
   if (!m_waitReplyTimer.IsRunning ())
     {
-      m_waitReplyTimer.Cancel ();
+      Simulator::Remove (m_waitReplyTimer);
     }
   Object::DoDispose ();
 }
@@ -455,6 +455,12 @@ ArpCache::Entry::GetMacAddress (void) const
 {
   NS_LOG_FUNCTION (this);
   return m_macAddress;
+}
+void 
+ArpCache::Entry::SetMacAddresss (Address macAddress)
+{
+  NS_LOG_FUNCTION (this);
+  m_macAddress = macAddress;
 }
 void 
 ArpCache::Entry::SetMacAddress (Address macAddress)

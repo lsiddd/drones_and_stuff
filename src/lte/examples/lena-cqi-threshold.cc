@@ -63,7 +63,7 @@ ChangePosition (Ptr<Node> node)
 
 int main (int argc, char *argv[])
 {	
-  CommandLine cmd (__FILE__);
+  CommandLine cmd;
   cmd.Parse (argc, argv);
 	
   // to save a template default attribute file run it like this:

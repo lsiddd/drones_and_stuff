@@ -49,9 +49,10 @@ AmpduTag::AmpduTag ()
 }
 
 void
-AmpduTag::SetRemainingNbOfMpdus (uint8_t nbOfMpdus)
+AmpduTag::SetRemainingNbOfMpdus (uint8_t nbofmpdus)
 {
-  m_nbOfMpdus = nbOfMpdus;
+  NS_ASSERT (nbofmpdus <= 64);
+  m_nbOfMpdus = nbofmpdus;
 }
 
 void
@@ -64,7 +65,7 @@ AmpduTag::SetRemainingAmpduDuration (Time duration)
 uint32_t
 AmpduTag::GetSerializedSize (void) const
 {
-  return (1 + sizeof (Time));
+  return (2 + sizeof (Time));
 }
 
 void
@@ -80,7 +81,7 @@ AmpduTag::Deserialize (TagBuffer i)
 {
   m_nbOfMpdus = i.ReadU8 ();
   int64_t duration;
-  i.Read ((uint8_t *)&duration, sizeof(int64_t));
+  i.Read ((uint8_t *)&duration, 8);
   m_duration = Time (duration);
 }
 

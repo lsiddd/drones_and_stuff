@@ -753,7 +753,7 @@ ThreeGppHttpObjectTestCase::ClientStateTransitionCallback (const std::string &ol
 void
 ThreeGppHttpObjectTestCase::ProgressCallback ()
 {
-  NS_LOG_INFO ("Simulator time now: " << Simulator::Now ().As (Time::S) << ".");
+  NS_LOG_INFO ("Simulator time now: " << Simulator::Now ().GetSeconds () << "s");
   Simulator::Schedule (Seconds (1.0), &ThreeGppHttpObjectTestCase::ProgressCallback, this);
 }
 
@@ -761,7 +761,7 @@ void
 ThreeGppHttpObjectTestCase::ClientRxDelayCallback (const Time &delay,
                                                    const Address &from)
 {
-  NS_LOG_FUNCTION (this << delay.As (Time::S) << from);
+  NS_LOG_FUNCTION (this << delay.GetSeconds () << from);
   m_delayCalculator->Update (delay.GetSeconds ());
 }
 
@@ -769,7 +769,7 @@ void
 ThreeGppHttpObjectTestCase::ClientRxRttCallback (const Time &rtt,
                                                  const Address &from)
 {
-  NS_LOG_FUNCTION (this << rtt.As (Time::S) << from);
+  NS_LOG_FUNCTION (this << rtt.GetSeconds () << from);
   m_rttCalculator->Update (rtt.GetSeconds ());
 }
 
@@ -867,7 +867,7 @@ private:
   {
     std::ostringstream name;
     name << "Run #" << rngRun;
-    name << " delay=" << channelDelay.As (Time::MS);
+    name << " delay=" << channelDelay.GetMilliSeconds () << "ms";
     name << " ber=" << bitErrorRate;
     name << " mtu=" << mtuSize;
 

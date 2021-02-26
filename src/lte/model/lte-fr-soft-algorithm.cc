@@ -475,7 +475,7 @@ LteFrSoftAlgorithm::DoGetTpc (uint16_t rnti)
   return 1;
 }
 
-uint16_t
+uint8_t
 LteFrSoftAlgorithm::DoGetMinContinuousUlBandwidth ()
 {
   NS_LOG_FUNCTION (this);

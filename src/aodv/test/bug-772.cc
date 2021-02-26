@@ -126,8 +126,7 @@ Bug772ChainTest::CreateDevices ()
   // 1. Setup WiFi
   WifiMacHelper wifiMac;
   wifiMac.SetType ("ns3::AdhocWifiMac");
-  YansWifiPhyHelper wifiPhy;
-  wifiPhy.DisablePreambleDetectionModel ();
+  YansWifiPhyHelper wifiPhy = YansWifiPhyHelper::Default ();
   // This test suite output was originally based on YansErrorRateModel
   wifiPhy.SetErrorRateModel ("ns3::YansErrorRateModel");
   YansWifiChannelHelper wifiChannel = YansWifiChannelHelper::Default ();

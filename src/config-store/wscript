@@ -1,8 +1,6 @@
 ## -*- Mode: python; py-indent-offset: 4; indent-tabs-mode: nil; coding: utf-8; -*-
 
 import wutils
-import sys
-import subprocess
 from waflib import Options
 
 # Bug 2936 gcc version issue for GTK+ and -Wparentheses
@@ -21,14 +19,14 @@ def configure(conf):
                                      conf.env['ENABLE_GTK'],
                                      "--disable-gtk option given")
     else:
-        have_gtk = conf.check_cfg(package='gtk+-3.0 >= 3.20',
+        have_gtk = conf.check_cfg(package='gtk+-3.0', atleast_version='3.0',
                                   args=['--cflags', '--libs'], uselib_store='GTK',
                                   mandatory=False)
 
         conf.env['ENABLE_GTK'] = have_gtk
         conf.report_optional_feature("GtkConfigStore", "GtkConfigStore",
                                      conf.env['ENABLE_GTK'],
-                                     "library 'gtk+-3 >= 3.2' not found")
+                                     "library 'gtk+-3.0 >= 3.0' not found")
 
         # Bug 2936 -Wparentheses issue for gcc >= 8
         if conf.env['ENABLE_GTK']: 
@@ -39,7 +37,7 @@ def configure(conf):
             if conf.env['CXX_NAME'] in ['clang', 'gcc']:
                     conf.env.append_value ('CXXFLAGS', '-Wno-error=deprecated-declarations')
 
-    have_libxml2 = conf.check_cfg(package='libxml-2.0 >= 2.7',
+    have_libxml2 = conf.check_cfg(package='libxml-2.0', atleast_version='2.7',
                                   args=['--cflags', '--libs'], uselib_store='LIBXML2',
                                   mandatory=False)
 
@@ -82,15 +80,6 @@ def build(bld):
     if bld.env['ENABLE_LIBXML2']:
         module.source.append('model/xml-config.cc')
         module.use.append('LIBXML2')
-        # Bug 2637:  use xcrun utility to find where macOS puts headers
-        if sys.platform == 'darwin':
-            find_sdk_path = '/usr/bin/xcrun --show-sdk-path'.split()
-            try:
-                p = subprocess.Popen(find_sdk_path, stdout=subprocess.PIPE)
-                xcrun_output = p.stdout.read().strip().decode("utf-8")
-                module.includes = str(xcrun_output + u'/usr/include/libxml2')
-            except OSError:
-                pass
 
     if bld.env['ENABLE_EXAMPLES']:
         bld.recurse('examples')

@@ -12,11 +12,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */
-
-/**
- * \file
- * \ingroup mpi
+ *
  *
  * TestDistributed creates a dumbbell topology and logically splits it in
  * half.  The left half is placed on logical processor 0 and the right half
@@ -45,8 +41,6 @@
  * right leaf nodes output logging information when they receive the packet.
  */
 
-#include "mpi-test-fixtures.h"
-
 #include "ns3/core-module.h"
 #include "ns3/network-module.h"
 #include "ns3/mpi-interface.h"
@@ -57,9 +51,10 @@
 #include "ns3/ipv4-address-helper.h"
 #include "ns3/on-off-helper.h"
 #include "ns3/packet-sink-helper.h"
-#include <mpi.h>
 
-#include <iomanip>
+#ifdef NS3_MPI
+#include <mpi.h>
+#endif
 
 using namespace ns3;
 
@@ -68,19 +63,17 @@ NS_LOG_COMPONENT_DEFINE ("SimpleDistributed");
 int
 main (int argc, char *argv[])
 {
+#ifdef NS3_MPI
+
   bool nix = true;
   bool nullmsg = false;
   bool tracing = false;
-  bool testing = false;
-  bool verbose = false;
 
   // Parse command line
-  CommandLine cmd (__FILE__);
+  CommandLine cmd;
   cmd.AddValue ("nix", "Enable the use of nix-vector or global routing", nix);
   cmd.AddValue ("nullmsg", "Enable the use of null-message synchronization", nullmsg);
   cmd.AddValue ("tracing", "Enable pcap tracing", tracing);
-  cmd.AddValue ("verbose", "verbose output", verbose);
-  cmd.AddValue ("test", "Enable regression test output", testing);
   cmd.Parse (argc, argv);
 
   // Distributed simulation setup; by default use granted time window algorithm.
@@ -98,12 +91,7 @@ main (int argc, char *argv[])
   // Enable parallel simulator with the command line arguments
   MpiInterface::Enable (&argc, &argv);
 
-  SinkTracer::Init ();
-
-  if (verbose)
-    {
-      LogComponentEnable ("PacketSink", (LogLevel)(LOG_LEVEL_INFO | LOG_PREFIX_NODE | LOG_PREFIX_TIME));
-    }
+  LogComponentEnable ("PacketSink", LOG_LEVEL_INFO);
 
   uint32_t systemId = MpiInterface::GetSystemId ();
   uint32_t systemCount = MpiInterface::GetSize ();
@@ -134,7 +122,7 @@ main (int argc, char *argv[])
   routerNodes.Add (routerNode1);
   routerNodes.Add (routerNode2);
 
-  // Create leaf nodes on right with system id 1
+  // Create leaf nodes on left with system id 1
   NodeContainer rightLeafNodes;
   rightLeafNodes.Create (4, 1);
 
@@ -242,7 +230,6 @@ main (int argc, char *argv[])
     }
 
   // Create a packet sink on the right leafs to receive packets from left leafs
-
   uint16_t port = 50000;
   if (systemId == 1)
     {
@@ -252,10 +239,6 @@ main (int argc, char *argv[])
       for (uint32_t i = 0; i < 4; ++i)
         {
           sinkApp.Add (sinkHelper.Install (rightLeafNodes.Get (i)));
-          if (testing)
-            {
-              sinkApp.Get (i)->TraceConnectWithoutContext ("RxWithAddresses", MakeCallback (&SinkTracer::SinkTrace));
-            }
         }
       sinkApp.Start (Seconds (1.0));
       sinkApp.Stop (Seconds (5));
@@ -285,13 +268,10 @@ main (int argc, char *argv[])
   Simulator::Stop (Seconds (5));
   Simulator::Run ();
   Simulator::Destroy ();
-
-  if (testing)
-    {
-      SinkTracer::Verify (4);
-    }
-  
   // Exit the MPI execution environment
   MpiInterface::Disable ();
   return 0;
+#else
+  NS_FATAL_ERROR ("Can't use distributed simulator without MPI compiled in");
+#endif
 }

@@ -108,11 +108,18 @@ void
 ComponentCarrierEnb::DoInitialize (void)
 {
   NS_LOG_FUNCTION (this);
+  m_isConstructed = true;
   m_phy->Initialize ();
   m_mac->Initialize ();
   m_ffrAlgorithm->Initialize ();
   m_scheduler->Initialize();
 
+}
+
+uint16_t
+ComponentCarrierEnb::GetCellId ()
+{
+  return m_cellId;
 }
 
 Ptr<LteEnbPhy>
@@ -122,6 +129,12 @@ ComponentCarrierEnb::GetPhy ()
   return m_phy;
 }
 
+void
+ComponentCarrierEnb::SetCellId (uint16_t cellId)
+{
+  NS_LOG_FUNCTION (this << cellId);
+  m_cellId = cellId;
+}
 
 void 
 ComponentCarrierEnb::SetPhy (Ptr<LteEnbPhy> s)
@@ -169,7 +182,7 @@ ComponentCarrierEnb::SetFfMacScheduler (Ptr<FfMacScheduler> s)
 {
   NS_LOG_FUNCTION (this);
   m_scheduler = s;
-}
+} 
 
 } // namespace ns3
 

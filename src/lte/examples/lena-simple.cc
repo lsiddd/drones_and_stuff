@@ -1,6 +1,6 @@
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
- * Copyright (c) 2011-2018 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+ * Copyright (c) 2011 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -18,6 +18,7 @@
  * Author: Manuel Requena <manuel.requena@cttc.es>
  */
 
+
 #include "ns3/core-module.h"
 #include "ns3/network-module.h"
 #include "ns3/mobility-module.h"
@@ -29,25 +30,25 @@
 using namespace ns3;
 
 int main (int argc, char *argv[])
-{
-  Time simTime = MilliSeconds (1050);
+{	
+  //whether to use carrier aggregation
   bool useCa = false;
 
-  CommandLine cmd (__FILE__);
-  cmd.AddValue ("simTime", "Total duration of the simulation", simTime);
-  cmd.AddValue ("useCa", "Whether to use carrier aggregation.", useCa);
+  CommandLine cmd;
+  cmd.AddValue("useCa", "Whether to use carrier aggregation.", useCa);
   cmd.Parse (argc, argv);
-
+	
   // to save a template default attribute file run it like this:
-  // ./waf --command-template="%s --ns3::ConfigStore::Filename=input-defaults.txt --ns3::ConfigStore::Mode=Save --ns3::ConfigStore::FileFormat=RawText" --run src/lte/examples/lena-simple
+  // ./waf --command-template="%s --ns3::ConfigStore::Filename=input-defaults.txt --ns3::ConfigStore::Mode=Save --ns3::ConfigStore::FileFormat=RawText" --run src/lte/examples/lena-first-sim
   //
   // to load a previously created default attribute file
-  // ./waf --command-template="%s --ns3::ConfigStore::Filename=input-defaults.txt --ns3::ConfigStore::Mode=Load --ns3::ConfigStore::FileFormat=RawText" --run src/lte/examples/lena-simple
+  // ./waf --command-template="%s --ns3::ConfigStore::Filename=input-defaults.txt --ns3::ConfigStore::Mode=Load --ns3::ConfigStore::FileFormat=RawText" --run src/lte/examples/lena-first-sim
 
   ConfigStore inputConfig;
   inputConfig.ConfigureDefaults ();
 
   // Parse again so you can override default values from the command line
+  cmd.AddValue("useCa", "Whether to use carrier aggregation.", useCa);
   cmd.Parse (argc, argv);
 
   if (useCa)
@@ -95,7 +96,8 @@ int main (int argc, char *argv[])
   lteHelper->ActivateDataRadioBearer (ueDevs, bearer);
   lteHelper->EnableTraces ();
 
-  Simulator::Stop (simTime);
+  Simulator::Stop (Seconds (1.05));
+
   Simulator::Run ();
 
   // GtkConfigStore config;

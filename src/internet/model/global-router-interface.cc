@@ -850,9 +850,7 @@ GlobalRouter::ProcessSingleBroadcastLink (Ptr<NetDevice> nd, GlobalRoutingLSA *p
           Ipv4Address networkHere = addrLocal.CombineMask (maskLocal);
           Ipv4Address networkThere = desigRtr.CombineMask (maskLocal);
           NS_ABORT_MSG_UNLESS (networkHere == networkThere,
-                               "GlobalRouter::ProcessSingleBroadcastLink(): Network number confusion (" <<
-                               addrLocal << "/" << maskLocal.GetPrefixLength () << ", " <<
-                               desigRtr << "/" << maskLocal.GetPrefixLength () << ")");
+                               "GlobalRouter::ProcessSingleBroadcastLink(): Network number confusion");
         }
       if (desigRtr == addrLocal)
         {
@@ -912,7 +910,7 @@ GlobalRouter::ProcessBridgedBroadcastLink (Ptr<NetDevice> nd, GlobalRoutingLSA *
       NS_LOG_WARN ("Warning, interface has multiple IP addresses; using only the primary one");
     }
   Ipv4Address addrLocal = ipv4Local->GetAddress (interfaceLocal, 0).GetLocal ();
-  Ipv4Mask maskLocal = ipv4Local->GetAddress (interfaceLocal, 0).GetMask ();
+  Ipv4Mask maskLocal = ipv4Local->GetAddress (interfaceLocal, 0).GetMask ();;
   NS_LOG_LOGIC ("Working with local address " << addrLocal);
   uint16_t metricLocal = ipv4Local->GetMetric (interfaceLocal);
 
@@ -961,9 +959,7 @@ GlobalRouter::ProcessBridgedBroadcastLink (Ptr<NetDevice> nd, GlobalRoutingLSA *
               Ipv4Address networkHere = addrLocal.CombineMask (maskLocal);
               Ipv4Address networkThere = desigRtrTemp.CombineMask (maskLocal);
               NS_ABORT_MSG_UNLESS (networkHere == networkThere, 
-                                   "GlobalRouter::ProcessSingleBroadcastLink(): Network number confusion (" <<
-                                   addrLocal << "/" << maskLocal.GetPrefixLength () << ", " <<
-                                   desigRtrTemp << "/" << maskLocal.GetPrefixLength () << ")");
+                                   "GlobalRouter::ProcessSingleBroadcastLink(): Network number confusion");
             }
           if (desigRtrTemp < desigRtr)
             {

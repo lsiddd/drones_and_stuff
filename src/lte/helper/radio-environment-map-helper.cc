@@ -149,14 +149,14 @@ RadioEnvironmentMapHelper::GetTypeId (void)
 }
 
 
-uint16_t
+uint8_t 
 RadioEnvironmentMapHelper::GetBandwidth () const
 {
   return m_bandwidth;
 }
 
 void 
-RadioEnvironmentMapHelper::SetBandwidth (uint16_t bw)
+RadioEnvironmentMapHelper::SetBandwidth (uint8_t bw)
 {
   switch (bw)
     { 
@@ -170,7 +170,7 @@ RadioEnvironmentMapHelper::SetBandwidth (uint16_t bw)
       break;
 
     default:
-      NS_FATAL_ERROR ("invalid bandwidth value " << bw);
+      NS_FATAL_ERROR ("invalid bandwidth value " << (uint16_t) bw);
       break;
     }
 }
@@ -292,8 +292,7 @@ RadioEnvironmentMapHelper::RunOneIteration (double xMin, double xMax, double yMi
         {
           NS_ASSERT (remIt != m_rem.end ());
           remIt->bmm->SetPosition (Vector (x, y, m_z));
-          Ptr <MobilityBuildingInfo> buildingInfo = (remIt->bmm)->GetObject <MobilityBuildingInfo> ();
-          buildingInfo->MakeConsistent (remIt->bmm);
+          BuildingsHelper::MakeConsistent (remIt->bmm);
           ++remIt;
         }      
     }

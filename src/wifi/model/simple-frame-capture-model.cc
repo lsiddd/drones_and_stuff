@@ -41,7 +41,7 @@ SimpleFrameCaptureModel::GetTypeId (void)
     .AddAttribute ("Margin",
                    "Reception is switched if the newly arrived frame has a power higher than "
                    "this value above the frame currently being received (expressed in dB).",
-                   DoubleValue (5),
+                   DoubleValue (10),
                    MakeDoubleAccessor (&SimpleFrameCaptureModel::GetMargin,
                                        &SimpleFrameCaptureModel::SetMargin),
                    MakeDoubleChecker<double> ())
@@ -76,8 +76,9 @@ bool
 SimpleFrameCaptureModel::CaptureNewFrame (Ptr<Event> currentEvent, Ptr<Event> newEvent) const
 {
   NS_LOG_FUNCTION (this);
-  if ((WToDbm (currentEvent->GetRxPowerW ()) + GetMargin ()) < WToDbm (newEvent->GetRxPowerW ())
-      && (IsInCaptureWindow (currentEvent->GetStartTime ())))
+  if (newEvent->GetTxVector ().GetPreambleType () != WIFI_PREAMBLE_NONE
+      && (WToDbm (currentEvent->GetRxPowerW ()) + GetMargin ()) < WToDbm (newEvent->GetRxPowerW ())
+      && ((currentEvent->GetStartTime () + WifiPhy::CalculatePlcpPreambleAndHeaderDuration (currentEvent->GetTxVector ())) > Simulator::Now ()))
     {
       return true;
     }

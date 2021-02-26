@@ -30,8 +30,8 @@
 
 namespace ns3 {
 
-namespace tests {
-
+  namespace tests {
+    
 
 /**
  * \ingroup timer-tests
@@ -53,9 +53,10 @@ public:
   int  m_expiredArgument; //!< Argument supplied to expired Watchdog
 };
 
-WatchdogTestCase::WatchdogTestCase ()
+WatchdogTestCase::WatchdogTestCase()
   : TestCase ("Check that we can keepalive a watchdog")
-{}
+{
+}
 
 void
 WatchdogTestCase::Expire (int arg)
@@ -71,7 +72,7 @@ WatchdogTestCase::DoRun (void)
   m_expired = false;
   m_expiredArgument = 0;
   m_expiredTime = Seconds (0);
-
+  
   Watchdog watchdog;
   watchdog.SetFunction (&WatchdogTestCase::Expire, this);
   watchdog.SetArguments (1);
@@ -95,7 +96,7 @@ class WatchdogTestSuite : public TestSuite
 {
 public:
   /** Constructor. */
-  WatchdogTestSuite ()
+  WatchdogTestSuite()
     : TestSuite ("watchdog")
   {
     AddTestCase (new WatchdogTestCase ());
@@ -109,6 +110,6 @@ public:
 static WatchdogTestSuite g_watchdogTestSuite;
 
 
-}    // namespace tests
+  }  // namespace tests
 
 }  // namespace ns3

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 # encoding: utf-8
 # Christoph Koke, 2013
 
@@ -15,10 +15,8 @@ Usage:
 """
 
 import sys, os, json, shlex, pipes
-from waflib import Logs, TaskGen, Task
+from waflib import Logs, TaskGen
 from waflib.Tools import c, cxx
-
-Task.TaskBase.keep_last_cmd = True
 
 if sys.hexversion >= 0x3030000:
 	quote = shlex.quote

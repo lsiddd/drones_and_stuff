@@ -38,11 +38,6 @@ class Packet;
  * This is used with socket option such as IP_PKTINFO, IP_RECVTTL, 
  * IP_RECVTOS. See linux manpage ip(7).
  *
- * See also SocketIpTosTag and SocketIpTtlTag
- *
- * The Tag does not carry the Local address (as it is not currently
- * used to force a source address).
- *
  * This tag in the send direction is presently not enabled but we
  * would accept a patch along those lines in the future.
  */
@@ -64,6 +59,22 @@ public:
    * \returns the address
    */
   Ipv4Address GetAddress (void) const;
+  /**
+   * \brief Set the tag's \a local address
+   *
+   * This corresponds to "ipi_spec_dst" in struct in_pktinfo.
+   * Implemented, but not used in the stack yet
+   * \param addr the address
+   */
+  void SetLocalAddress (Ipv4Address addr);
+  /**
+   * \brief Get the tag's \a local address
+   *
+   * This corresponds to "ipi_spec_dst" in struct in_pktinfo.
+   * Implemented, but not used in the stack yet
+   * \returns the address
+   */
+  Ipv4Address GetLocalAddress (void) const;
 
   /**
    * \brief Set the tag's receiving interface
@@ -113,6 +124,7 @@ private:
   // };
 
   Ipv4Address m_addr;     //!< Header destination address
+  Ipv4Address m_spec_dst; //!< Local address
   uint32_t m_ifindex;     //!< interface index
 
   // Used for IP_RECVTTL, though not implemented yet.

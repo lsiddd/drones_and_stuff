@@ -22,7 +22,6 @@
  */
 #include "tcp-recovery-ops.h"
 #include "tcp-socket-state.h"
-
 #include "ns3/log.h"
 
 namespace ns3 {
@@ -56,11 +55,6 @@ TcpRecoveryOps::~TcpRecoveryOps ()
   NS_LOG_FUNCTION (this);
 }
 
-void
-TcpRecoveryOps::UpdateBytesSent (uint32_t bytesSent)
-{
-  NS_LOG_FUNCTION (this << bytesSent);
-}
 
 // Classic recovery
 
@@ -95,20 +89,22 @@ TcpClassicRecovery::~TcpClassicRecovery (void)
 
 void
 TcpClassicRecovery::EnterRecovery (Ptr<TcpSocketState> tcb, uint32_t dupAckCount,
-                                   uint32_t unAckDataCount, uint32_t deliveredBytes)
+                                uint32_t unAckDataCount, uint32_t lastSackedBytes)
 {
-  NS_LOG_FUNCTION (this << tcb << dupAckCount << unAckDataCount);
+  NS_LOG_FUNCTION (this << tcb << dupAckCount << unAckDataCount << lastSackedBytes);
   NS_UNUSED (unAckDataCount);
-  NS_UNUSED (deliveredBytes);
+  NS_UNUSED (lastSackedBytes);
   tcb->m_cWnd = tcb->m_ssThresh;
   tcb->m_cWndInfl = tcb->m_ssThresh + (dupAckCount * tcb->m_segmentSize);
 }
 
 void
-TcpClassicRecovery::DoRecovery (Ptr<TcpSocketState> tcb, uint32_t deliveredBytes)
+TcpClassicRecovery::DoRecovery (Ptr<TcpSocketState> tcb, uint32_t lastAckedBytes,
+                             uint32_t lastSackedBytes)
 {
-  NS_LOG_FUNCTION (this << tcb << deliveredBytes);
-  NS_UNUSED (deliveredBytes);
+  NS_LOG_FUNCTION (this << tcb << lastAckedBytes << lastSackedBytes);
+  NS_UNUSED (lastAckedBytes);
+  NS_UNUSED (lastSackedBytes);
   tcb->m_cWndInfl += tcb->m_segmentSize;
 }
 
@@ -118,9 +114,9 @@ TcpClassicRecovery::ExitRecovery (Ptr<TcpSocketState> tcb)
   NS_LOG_FUNCTION (this << tcb);
   // Follow NewReno procedures to exit FR if SACK is disabled
   // (RFC2582 sec.3 bullet #5 paragraph 2, option 2)
-  // In this implementation, actual m_cWnd value is reset to ssThresh
-  // immediately before calling ExitRecovery(), so we just need to
-  // reset the inflated cWnd trace variable
+  // For SACK connections, we maintain the cwnd = ssthresh. In fact,
+  // this ACK was received in RECOVERY phase, not in OPEN. So we
+  // are not allowed to increase the window
   tcb->m_cWndInfl = tcb->m_ssThresh.Get ();
 }
 

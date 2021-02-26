@@ -676,12 +676,11 @@ WaveNetDevice::IsAvailableChannel (uint32_t channelNumber) const
 }
 
 void
-WaveNetDevice::ForwardUp (Ptr<const Packet> packet, Mac48Address from, Mac48Address to)
+WaveNetDevice::ForwardUp (Ptr<Packet> packet, Mac48Address from, Mac48Address to)
 {
   NS_LOG_FUNCTION (this << packet << from << to);
-  Ptr<Packet> copy = packet->Copy ();
   LlcSnapHeader llc;
-  copy->RemoveHeader (llc);
+  packet->RemoveHeader (llc);
   enum NetDevice::PacketType type;
   if (to.IsBroadcast ())
     {
@@ -705,8 +704,8 @@ WaveNetDevice::ForwardUp (Ptr<const Packet> packet, Mac48Address from, Mac48Addr
       // currently we cannot know from which MAC entity the packet is received,
       // so we use the MAC entity for CCH as it receives this packet.
       Ptr<OcbWifiMac> mac = GetMac (CCH);
-      mac->NotifyRx (copy);
-      m_forwardUp (this, copy, llc.GetType (), from);
+      mac->NotifyRx (packet);
+      m_forwardUp (this, packet, llc.GetType (), from);
     }
 
   if (!m_promiscRx.IsNull ())
@@ -714,8 +713,8 @@ WaveNetDevice::ForwardUp (Ptr<const Packet> packet, Mac48Address from, Mac48Addr
       // currently we cannot know from which MAC entity the packet is received,
       // so we use the MAC entity for CCH as it receives this packet.
       Ptr<OcbWifiMac> mac = GetMac (CCH);
-      mac->NotifyPromiscRx (copy);
-      m_promiscRx (this, copy, llc.GetType (), from, to, type);
+      mac->NotifyPromiscRx (packet);
+      m_promiscRx (this, packet, llc.GetType (), from, to, type);
     }
 }
 

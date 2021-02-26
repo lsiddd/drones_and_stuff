@@ -33,7 +33,7 @@ typedef __int128_t int128_t;
 /**
  * \file
  * \ingroup highprec
- * Declaration of the ns3::int64x64_t type using a native int128_t type.
+ * Declaration of the ns3::int64x64_t type using a native int128_t type..
  */
 
 namespace ns3 {
@@ -45,7 +45,7 @@ namespace ns3 {
 class int64x64_t
 {
   /// uint128_t high bit (sign bit).
-  static const uint128_t   HP128_MASK_HI_BIT = (((int128_t)1) << 127);
+  static const uint128_t   HP128_MASK_HI_BIT = (((int128_t)1)<<127);
   /// Mask for fraction part.
   static const uint64_t    HP_MASK_LO = 0xffffffffffffffffULL;
   /// Mask for sign + integer part.
@@ -73,8 +73,7 @@ public:
    * specifically the double implementation.  To handle this,
    * we expose the underlying implementation type here.
    */
-  enum impl_type
-  {
+  enum impl_type {
     int128_impl,  //!< Native \c int128_t implementation.
     cairo_impl,   //!< Cairo wideint implementation.
     ld_impl,      //!< `long double` implementation.
@@ -85,8 +84,7 @@ public:
 
   /// Default constructor.
   inline int64x64_t ()
-    : _v (0)
-  {}
+    : _v (0)  {}
   /**
    * \name Construct from a floating point value.
    *
@@ -119,8 +117,8 @@ public:
     const uint64_t lo = flo;
     if (flo >= HP_MAX_64)
       {
-        // conversion to uint64 rolled over
-        ++hi;
+	// conversion to uint64 rolled over
+	++hi;
       }
     _v = hi << 64;
     _v |= lo;
@@ -140,12 +138,12 @@ public:
     _v <<= 64;
   }
   inline int64x64_t (const long int v)
-    : _v (v)
+    : _v (v) 
   {
     _v <<= 64;
   }
   inline int64x64_t (const long long int v)
-    : _v (v)
+    : _v (v) 
   {
     _v <<= 64;
   }
@@ -155,17 +153,17 @@ public:
     _v <<= 64;
   }
   inline int64x64_t (const unsigned long int v)
-    : _v (v)
+    : _v (v) 
   {
     _v <<= 64;
   }
   inline int64x64_t (const unsigned long long int v)
-    : _v (v)
+    : _v (v) 
   {
     _v <<= 64;
   }
   /**@}*/
-
+  
   /**
    * Construct from explicit high and low values.
    *
@@ -184,8 +182,7 @@ public:
    * \param [in] o Value to copy.
    */
   inline int64x64_t (const int64x64_t & o)
-    : _v (o._v)
-  {}
+    : _v (o._v) {}
   /**
    * Assignment.
    *
@@ -236,37 +233,6 @@ public:
   }
 
   /**
-   * Truncate to an integer.
-   * Truncation is always toward zero, 
-   * \return The value truncated toward zero.
-   */
-  int64_t GetInt (void) const
-  {
-    const bool negative = _v < 0;
-    const uint128_t value = negative ? -_v : _v;
-    int64_t retval = value >> 64;
-    retval = negative ? - retval : retval;
-    return retval;
-  }
-
-  /**
-   * Round to the nearest int.
-   * Similar to std::round this rounds halfway cases away from zero,
-   * regardless of the current (floating) rounding mode.
-   * \return The value rounded to the nearest int.
-   */
-  int64_t Round (void) const
-  {
-    const bool negative = _v < 0;
-    int64x64_t value = (negative ? -(*this) : *this);
-    const int64x64_t half (0, 1LL << 63);
-    value += half;
-    int64_t retval = value.GetHigh ();
-    retval = negative ? - retval : retval;
-    return retval;
-  }
-
-  /**
    * Multiply this value by a Q0.128 value, presumably representing an inverse,
    * completing a division operation.
    *
@@ -293,47 +259,24 @@ public:
 
 private:
 
-  /**
-   * \name Arithmetic Operators
-   * Arithmetic operators for int64x64_t.
-   */
-  /**
-   * @{
-   *  Arithmetic operator.
-   *  \param [in] lhs Left hand argument
-   *  \param [in] rhs Right hand argument
-   *  \return The result of the operator.
-   */
   friend bool         operator == (const int64x64_t & lhs, const int64x64_t & rhs);
 
   friend bool         operator <  (const int64x64_t & lhs, const int64x64_t & rhs);
   friend bool         operator >  (const int64x64_t & lhs, const int64x64_t & rhs);
-
+  
   friend int64x64_t & operator += (      int64x64_t & lhs, const int64x64_t & rhs);
   friend int64x64_t & operator -= (      int64x64_t & lhs, const int64x64_t & rhs);
   friend int64x64_t & operator *= (      int64x64_t & lhs, const int64x64_t & rhs);
   friend int64x64_t & operator /= (      int64x64_t & lhs, const int64x64_t & rhs);
-  /**@}*/
 
-  /**
-   * \name Unary Operators
-   * Unary operators for int64x64_t.
-   */
-  /**
-   * @{
-   *  Unary operator.
-   *  \param [in] lhs Left hand argument
-   *  \return The result of the operator.
-   */
   friend int64x64_t   operator -  (const int64x64_t & lhs);
   friend int64x64_t   operator !  (const int64x64_t & lhs);
-  /**@}*/
 
   /**
    * Implement `*=`.
    *
    * \param [in] o The other factor.
-   */
+   */   
   void Mul (const int64x64_t & o);
   /**
    * Implement `/=`.
@@ -391,8 +334,7 @@ private:
    * \param [in] v Integer value to represent.
    */
   inline int64x64_t (const int128_t v)
-    : _v (v)
-  {}
+    : _v (v) {}
 
   int128_t _v;  //!< The Q64.64 value.
 
@@ -402,9 +344,6 @@ private:
 /**
  * \ingroup highprec
  * Equality operator.
- * \param [in] lhs Left hand argument
- * \param [in] rhs Right hand argument
- * \return The result of the operator.
  */
 inline bool operator == (const int64x64_t & lhs, const int64x64_t & rhs)
 {
@@ -413,9 +352,6 @@ inline bool operator == (const int64x64_t & lhs, const int64x64_t & rhs)
 /**
  * \ingroup highprec
  * Less than operator.
- * \param [in] lhs Left hand argument
- * \param [in] rhs Right hand argument
- * \return The result of the operator.
  */
 inline bool operator < (const int64x64_t & lhs, const int64x64_t & rhs)
 {
@@ -424,9 +360,6 @@ inline bool operator < (const int64x64_t & lhs, const int64x64_t & rhs)
 /**
  * \ingroup highprec
  * Greater operator.
- * \param [in] lhs Left hand argument
- * \param [in] rhs Right hand argument
- * \return The result of the operator.
  */
 inline bool operator > (const int64x64_t & lhs, const int64x64_t & rhs)
 {
@@ -436,9 +369,6 @@ inline bool operator > (const int64x64_t & lhs, const int64x64_t & rhs)
 /**
  * \ingroup highprec
  * Compound addition operator.
- * \param [in] lhs Left hand argument
- * \param [in] rhs Right hand argument
- * \return The result of the operator.
  */
 inline int64x64_t & operator += (int64x64_t & lhs, const int64x64_t & rhs)
 {
@@ -448,9 +378,6 @@ inline int64x64_t & operator += (int64x64_t & lhs, const int64x64_t & rhs)
 /**
  * \ingroup highprec
  * Compound subtraction operator.
- * \param [in] lhs Left hand argument
- * \param [in] rhs Right hand argument
- * \return The result of the operator.
  */
 inline int64x64_t & operator -= (int64x64_t & lhs, const int64x64_t & rhs)
 {
@@ -460,9 +387,6 @@ inline int64x64_t & operator -= (int64x64_t & lhs, const int64x64_t & rhs)
 /**
  * \ingroup highprec
  * Compound multiplication operator.
- * \param [in] lhs Left hand argument
- * \param [in] rhs Right hand argument
- * \return The result of the operator.
  */
 inline int64x64_t & operator *= (int64x64_t & lhs, const int64x64_t & rhs)
 {
@@ -472,9 +396,6 @@ inline int64x64_t & operator *= (int64x64_t & lhs, const int64x64_t & rhs)
 /**
  * \ingroup highprec
  * Compound division operator.
- * \param [in] lhs Left hand argument
- * \param [in] rhs Right hand argument
- * \return The result of the operator.
  */
 inline int64x64_t & operator /= (int64x64_t & lhs, const int64x64_t & rhs)
 {
@@ -485,8 +406,6 @@ inline int64x64_t & operator /= (int64x64_t & lhs, const int64x64_t & rhs)
 /**
  * \ingroup highprec
  * Unary plus operator.
- * \param [in] lhs Left hand argument
- * \return The result of the operator.
  */
 inline int64x64_t operator + (const int64x64_t & lhs)
 {
@@ -495,8 +414,6 @@ inline int64x64_t operator + (const int64x64_t & lhs)
 /**
  * \ingroup highprec
  * Unary negation operator (change sign operator).
- * \param [in] lhs Left hand argument
- * \return The result of the operator.
  */
 inline int64x64_t operator - (const int64x64_t & lhs)
 {
@@ -505,8 +422,6 @@ inline int64x64_t operator - (const int64x64_t & lhs)
 /**
  * \ingroup highprec
  * Logical not operator.
- * \param [in] lhs Left hand argument
- * \return The result of the operator.
  */
 inline int64x64_t operator ! (const int64x64_t & lhs)
 {

@@ -62,7 +62,7 @@ TypeId TbfQueueDisc::GetTypeId (void)
                    MakeUintegerChecker<uint32_t> ())
     .AddAttribute ("Mtu",
                    "Size of the second bucket in bytes. If null, it is initialized"
-                   " to the MTU of the receiving NetDevice (if any)",
+                   " to the MTU of the attached NetDevice (if any)",
                    UintegerValue (0),
                    MakeUintegerAccessor (&TbfQueueDisc::SetMtu),
                    MakeUintegerChecker<uint32_t> ())
@@ -310,19 +310,9 @@ TbfQueueDisc::CheckConfig (void)
       return false;
     }
 
-  // This type of variable initialization would normally be done in
-  // InitializeParams (), but we want to use the value to subsequently
-  // check configuration of peak rate, so we move it forward here.
-  if (m_mtu == 0)
+  if (m_mtu == 0 && GetNetDevice ())
     {
-      Ptr<NetDeviceQueueInterface> ndqi = GetNetDeviceQueueInterface ();
-      Ptr<NetDevice> dev;
-      // if the NetDeviceQueueInterface object is aggregated to a
-      // NetDevice, get the MTU of such NetDevice
-      if (ndqi && (dev = ndqi->GetObject<NetDevice> ()))
-        {
-          m_mtu = dev->GetMtu ();
-        }
+      m_mtu = GetNetDevice ()->GetMtu ();
     }
 
   if (m_mtu == 0 && m_peakRate > DataRate ("0bps"))

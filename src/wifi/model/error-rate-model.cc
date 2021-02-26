@@ -19,8 +19,7 @@
  */
 
 #include "error-rate-model.h"
-#include "dsss-error-rate-model.h"
-#include "wifi-tx-vector.h"
+#include "ns3/wifi-tx-vector.h"
 
 namespace ns3 {
 
@@ -42,7 +41,7 @@ ErrorRateModel::CalculateSnr (WifiTxVector txVector, double ber) const
   double low, high, precision;
   low = 1e-25;
   high = 1e25;
-  precision = 2e-12;
+  precision = 1e-12;
   while (high - low > precision)
     {
       NS_ASSERT (high >= low);
@@ -57,32 +56,6 @@ ErrorRateModel::CalculateSnr (WifiTxVector txVector, double ber) const
         }
     }
   return low;
-}
-
-double
-ErrorRateModel::GetChunkSuccessRate (WifiMode mode, WifiTxVector txVector, double snr, uint64_t nbits) const
-{
-  if (mode.GetModulationClass () == WIFI_MOD_CLASS_DSSS || mode.GetModulationClass () == WIFI_MOD_CLASS_HR_DSSS)
-    {
-      switch (mode.GetDataRate (22, 0, 1))
-        {
-          case 1000000:
-            return DsssErrorRateModel::GetDsssDbpskSuccessRate (snr, nbits);
-          case 2000000:
-            return DsssErrorRateModel::GetDsssDqpskSuccessRate (snr, nbits);
-          case 5500000:
-            return DsssErrorRateModel::GetDsssDqpskCck5_5SuccessRate (snr, nbits);
-          case 11000000:
-            return DsssErrorRateModel::GetDsssDqpskCck11SuccessRate (snr, nbits);
-          default:
-            NS_ASSERT ("undefined DSSS/HR-DSSS datarate");
-        }
-    }
-  else
-    {
-      return DoGetChunkSuccessRate (mode, txVector, snr, nbits);
-    }
-  return 0;
 }
 
 } //namespace ns3

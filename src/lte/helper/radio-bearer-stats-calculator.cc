@@ -34,7 +34,7 @@ NS_OBJECT_ENSURE_REGISTERED ( RadioBearerStatsCalculator);
 
 RadioBearerStatsCalculator::RadioBearerStatsCalculator ()
   : m_firstWrite (true),
-    m_pendingOutput (false),
+    m_pendingOutput (false), 
     m_protocolType ("RLC")
 {
   NS_LOG_FUNCTION (this);
@@ -59,16 +59,16 @@ RadioBearerStatsCalculator::GetTypeId (void)
   static TypeId tid =
     TypeId ("ns3::RadioBearerStatsCalculator")
     .SetParent<LteStatsCalculator> ().AddConstructor<RadioBearerStatsCalculator> ()
-    .SetGroupName ("Lte")
-    .AddAttribute ("StartTime", "Start time of the on going epoch.",
+    .SetGroupName("Lte")
+    .AddAttribute ("StartTime", "Start time of the on going epoch.", 
                    TimeValue (Seconds (0.)),
                    MakeTimeAccessor (&RadioBearerStatsCalculator::SetStartTime,
-                                     &RadioBearerStatsCalculator::GetStartTime),
+                                     &RadioBearerStatsCalculator::GetStartTime), 
                    MakeTimeChecker ())
-    .AddAttribute ("EpochDuration", "Epoch duration.",
-                   TimeValue (Seconds (0.25)),
+    .AddAttribute ("EpochDuration", "Epoch duration.", 
+                   TimeValue (Seconds (0.25)), 
                    MakeTimeAccessor (&RadioBearerStatsCalculator::GetEpoch,
-                                     &RadioBearerStatsCalculator::SetEpoch),
+                                     &RadioBearerStatsCalculator::SetEpoch), 
                    MakeTimeChecker ())
     .AddAttribute ("DlRlcOutputFilename",
                    "Name of the file where the downlink results will be saved.",
@@ -104,30 +104,30 @@ RadioBearerStatsCalculator::DoDispose ()
     }
 }
 
-void
+void 
 RadioBearerStatsCalculator::SetStartTime (Time t)
 {
   m_startTime = t;
   RescheduleEndEpoch ();
 }
 
-Time
+Time 
 RadioBearerStatsCalculator::GetStartTime () const
 {
   return m_startTime;
 }
 
-void
+void 
 RadioBearerStatsCalculator::SetEpoch (Time e)
 {
   m_epochDuration = e;
   RescheduleEndEpoch ();
 }
 
-Time
+Time 
 RadioBearerStatsCalculator::GetEpoch () const
 {
-  return m_epochDuration;
+  return m_epochDuration;  
 }
 
 void
@@ -295,13 +295,15 @@ RadioBearerStatsCalculator::WriteUlResults (std::ofstream& outFile)
     {
       ImsiLcidPair_t p = *it;
       FlowIdMap::const_iterator flowIdIt = m_flowId.find (p);
-      NS_ASSERT_MSG (flowIdIt != m_flowId.end (),
-                     "FlowId (imsi " << p.m_imsi << " lcid " << (uint32_t) p.m_lcId << ") is missing");
+      // \TODO Temporary workaround until traces are connected correctly in LteEnbRrc and LteUeRrc
+      if (flowIdIt == m_flowId.end ()) continue;
+//       NS_ASSERT_MSG (flowIdIt != m_flowId.end (),
+//                      "FlowId (imsi " << p.m_imsi << " lcid " << (uint32_t) p.m_lcId << ") is missing");
       LteFlowId_t flowId = flowIdIt->second;
       NS_ASSERT_MSG (flowId.m_lcId == p.m_lcId, "lcid mismatch");
 
-      outFile << m_startTime.GetSeconds () << "\t";
-      outFile << endTime.GetSeconds () << "\t";
+      outFile << m_startTime.GetNanoSeconds () / 1.0e9 << "\t";
+      outFile << endTime.GetNanoSeconds () / 1.0e9 << "\t";
       outFile << GetUlCellId (p.m_imsi, p.m_lcId) << "\t";
       outFile << p.m_imsi << "\t";
       outFile << flowId.m_rnti << "\t";
@@ -354,13 +356,15 @@ RadioBearerStatsCalculator::WriteDlResults (std::ofstream& outFile)
     {
       ImsiLcidPair_t p = *pair;
       FlowIdMap::const_iterator flowIdIt = m_flowId.find (p);
-      NS_ASSERT_MSG (flowIdIt != m_flowId.end (),
-                     "FlowId (imsi " << p.m_imsi << " lcid " << (uint32_t) p.m_lcId << ") is missing");
+      // \TODO Temporary workaround until traces are connected correctly in LteEnbRrc and LteUeRrc
+      if (flowIdIt == m_flowId.end ()) continue;
+//       NS_ASSERT_MSG (flowIdIt != m_flowId.end (),
+//                      "FlowId (imsi " << p.m_imsi << " lcid " << (uint32_t) p.m_lcId << ") is missing");
       LteFlowId_t flowId = flowIdIt->second;
       NS_ASSERT_MSG (flowId.m_lcId == p.m_lcId, "lcid mismatch");
 
-      outFile << m_startTime.GetSeconds () << "\t";
-      outFile << endTime.GetSeconds () << "\t";
+      outFile << m_startTime.GetNanoSeconds () / 1.0e9 << "\t";
+      outFile << endTime.GetNanoSeconds () / 1.0e9 << "\t";
       outFile << GetDlCellId (p.m_imsi, p.m_lcId) << "\t";
       outFile << p.m_imsi << "\t";
       outFile << flowId.m_rnti << "\t";

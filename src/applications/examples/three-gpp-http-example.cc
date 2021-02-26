@@ -98,7 +98,7 @@ int
 main (int argc, char *argv[])
 {
   double simTimeSec = 300;
-  CommandLine cmd (__FILE__);
+  CommandLine cmd;
   cmd.AddValue ("SimulationTime", "Length of simulation in seconds.", simTimeSec);
   cmd.Parse (argc, argv);
 

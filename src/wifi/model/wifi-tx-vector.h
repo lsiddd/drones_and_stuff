@@ -22,26 +22,17 @@
 #ifndef WIFI_TX_VECTOR_H
 #define WIFI_TX_VECTOR_H
 
-#include <list>
 #include "wifi-mode.h"
 #include "wifi-preamble.h"
-#include "he-ru.h"
 
 namespace ns3 {
 
-/// HE MU specific user transmission parameters.
-struct HeMuUserInfo
-{
-  HeRu::RuSpec ru; ///< RU specification
-  WifiMode mcs;    ///< MCS
-  uint8_t nss;     ///< number of spatial streams
-};
 
 /**
  * This class mimics the TXVECTOR which is to be
  * passed to the PHY in order to define the parameters which are to be
- * used for a transmission. See IEEE 802.11-2016 16.2.5 "Transmit PHY",
- * and also 8.3.4.1 "PHY SAP peer-to-peer service primitive
+ * used for a transmission. See IEEE 802.11-2007 15.2.6 "Transmit PLCP",
+ * and also 15.4.4.2 "PMD_SAP peer-to-peer service primitive
  * parameters".
  *
  * If this class is constructed with the constructor that takes no
@@ -59,7 +50,7 @@ struct HeMuUserInfo
  * appropriately.
  *
  * \note the above reference is valid for the DSSS PHY only (clause
- * 16). TXVECTOR is defined also for the other PHYs, however they
+ * 15). TXVECTOR is defined also for the other PHYs, however they
  * don't include the TXPWRLVL explicitly in the TXVECTOR. This is
  * somewhat strange, since all PHYs actually have a
  * PMD_TXPWRLVL.request primitive. We decide to include the power
@@ -70,11 +61,7 @@ struct HeMuUserInfo
 class WifiTxVector
 {
 public:
-  /// map of HE MU specific user info paramters indexed by STA-ID
-  typedef std::map <uint16_t /* staId */, HeMuUserInfo /* HE MU specific user info */> HeMuUserInfoMap;
-
   WifiTxVector ();
-  ~WifiTxVector ();
   /**
    * Create a TXVECTOR with the given parameters.
    *
@@ -88,8 +75,6 @@ public:
    * \param channelWidth the channel width in MHz
    * \param aggregation enable or disable MPDU aggregation
    * \param stbc enable or disable STBC
-   * \param ldpc enable or disable LDPC (BCC is used otherwise)
-   * \param bssColor the BSS color
    */
   WifiTxVector (WifiMode mode,
                 uint8_t powerLevel,
@@ -100,43 +85,17 @@ public:
                 uint8_t ness,
                 uint16_t channelWidth,
                 bool aggregation,
-                bool stbc = false,
-                bool ldpc = false,
-                uint8_t bssColor = 0);
+                bool stbc);
   /**
-   * Copy constructor
-   * \param txVector the TXVECTOR to copy
-   */
-  WifiTxVector (const WifiTxVector& txVector);
-
-  /**
-   * \returns whether mode has been initialized
-   */
-  bool GetModeInitialized (void) const;
-  /**
-   * If this TX vector is associated with an SU PPDU, return the selected
-   * payload transmission mode. If this TX vector is associated with an
-   * MU PPDU, return the transmission mode (MCS) selected for the transmission
-   * to the station identified by the given STA-ID.
-   *
-   * \param staId the station ID for HE MU
    * \returns the selected payload transmission mode
    */
-  WifiMode GetMode (uint16_t staId = SU_STA_ID) const;
+  WifiMode GetMode (void) const;
   /**
   * Sets the selected payload transmission mode
   *
-  * \param mode the payload WifiMode
+  * \param mode
   */
   void SetMode (WifiMode mode);
-  /**
-  * Sets the selected payload transmission mode for a given STA ID (for HE MU only)
-  *
-  * \param mode
-   * \param staId the station ID for HE MU
-  */
-  void SetMode (WifiMode mode, uint16_t staId);
-
   /**
    * \returns the transmission power level
    */
@@ -144,7 +103,7 @@ public:
   /**
    * Sets the selected transmission power level
    *
-   * \param powerlevel the transmission power level
+   * \param powerlevel
    */
   void SetTxPowerLevel (uint8_t powerlevel);
   /**
@@ -154,7 +113,7 @@ public:
   /**
    * Sets the preamble type
    *
-   * \param preamble the preamble type
+   * \param preamble
    */
   void SetPreambleType (WifiPreamble preamble);
   /**
@@ -164,7 +123,7 @@ public:
   /**
    * Sets the selected channelWidth (in MHz)
    *
-   * \param channelWidth the channel width (in MHz)
+   * \param channelWidth
    */
   void SetChannelWidth (uint16_t channelWidth);
   /**
@@ -184,44 +143,27 @@ public:
   /**
    * Sets the number of TX antennas
    *
-   * \param nTx the number of TX antennas
+   * \param nTx
    */
   void SetNTx (uint8_t nTx);
   /**
-   * If this TX vector is associated with an SU PPDU, return the number of
-   * spatial streams. If this TX vector is associated with an MU PPDU,
-   * return the number of spatial streams for the transmission to the station
-   * identified by the given STA-ID.
-   *
-   * \param staId the station ID for HE MU
-   * \returns the number of spatial streams
+   * \returns the number of Nss
    */
-  uint8_t GetNss (uint16_t staId = SU_STA_ID) const;
+  uint8_t GetNss (void) const;
   /**
-   * \returns the maximum number of Nss (namely if HE MU)
-   */
-  uint8_t GetNssMax (void) const;
-  /**
-   * Sets the number of Nss
+   * Sets the number of Nss refer to IEEE 802.11n Table 20-28 for explanation and range
    *
-   * \param nss the number of spatial streams
+   * \param nss
    */
   void SetNss (uint8_t nss);
   /**
-   * Sets the number of Nss for HE MU
-   *
-   * \param nss the number of spatial streams
-   * \param staId the station ID for HE MU
-   */
-  void SetNss (uint8_t nss, uint16_t staId);
-  /**
-   * \returns the number of extended spatial streams
+   * \returns the number of Ness
    */
   uint8_t GetNess (void) const;
   /**
-   * Sets the Ness number
+   * Sets the Ness number refer to IEEE 802.11n Table 20-6 for explanation
    *
-   * \param ness the number of extended spatial streams
+   * \param ness
    */
   void SetNess (uint8_t ness);
   /**
@@ -250,75 +192,13 @@ public:
    */
   void SetStbc (bool stbc);
   /**
-   * Check if LDPC FEC coding is used or not
-   *
-   * \returns true if LDPC is used,
-   *          false if BCC is used
-   */
-  bool IsLdpc (void) const;
-  /**
-   * Sets if LDPC FEC coding is being used
-   *
-   * \param ldpc enable or disable LDPC
-   */
-  void SetLdpc (bool ldpc);
-  /**
-   * Set the BSS color
-   * \param color the BSS color
-   */
-  void SetBssColor (uint8_t color);
-  /**
-   * Get the BSS color
-   * \return the BSS color
-   */
-  uint8_t GetBssColor (void) const;
-  /**
    * The standard disallows certain combinations of WifiMode, number of
    * spatial streams, and channel widths.  This method can be used to
    * check whether this WifiTxVector contains an invalid combination.
    *
    * \return true if the WifiTxVector parameters are allowed by the standard
    */
-  bool IsValid (void) const;
-   /**
-    * Get the RU specification for the STA-ID.
-    * This is applicable only for HE MU.
-    *
-    * \param staId the station ID
-    * \return the RU specification for the STA-ID
-    */
-   HeRu::RuSpec GetRu (uint16_t staId) const;
-   /**
-    * Set the RU specification for the STA-ID.
-    * This is applicable only for HE MU.
-    *
-    * \param ru the RU specification
-    * \param staId the station ID
-    */
-   void SetRu (HeRu::RuSpec ru, uint16_t staId);
-   /**
-    * Get the HE MU user-specific transmission information for the given STA-ID.
-    * This is applicable only for HE MU.
-    *
-    * \param staId the station ID
-    * \return the HE MU user-specific transmission information for the given STA-ID
-    */
-   HeMuUserInfo GetHeMuUserInfo (uint16_t staId) const;
-   /**
-    * Set the HE MU user-specific transmission information for the given STA-ID.
-    * This is applicable only for HE MU.
-    *
-    * \param staId the station ID
-    * \param userInfo the HE MU user-specific transmission information
-    */
-   void SetHeMuUserInfo (uint16_t staId, HeMuUserInfo userInfo);
-   /**
-    * Get the map HE MU user-specific transmission information indexed by STA-ID.
-    * This is applicable only for HE MU.
-    *
-    * \return the map of HE MU user-specific information indexed by STA-ID
-    */
-   const HeMuUserInfoMap& GetHeMuUserInfoMap (void) const;
+   bool IsValid (void) const;
 
 
 private:
@@ -336,25 +216,18 @@ private:
   uint8_t  m_ness;               /**< number of spatial streams in beamforming */
   bool     m_aggregation;        /**< Flag whether the PSDU contains A-MPDU. */
   bool     m_stbc;               /**< STBC used or not */
-  bool     m_ldpc;               /**< LDPC FEC coding if true, BCC otherwise*/
-  uint8_t  m_bssColor;           /**< BSS color */
 
   bool     m_modeInitialized;         /**< Internal initialization flag */
-
-  //MU information
-  HeMuUserInfoMap m_muUserInfos; /**< HE MU specific per-user information
-                                      indexed by station ID (STA-ID) corresponding
-                                      to the 11 LSBs of the AID of the recipient STA
-                                      This list shall be used only for HE MU */
+  bool     m_txPowerLevelInitialized; /**< Internal initialization flag */
 };
 
 /**
  * Serialize WifiTxVector to the given ostream.
  *
- * \param os the output stream
- * \param v the WifiTxVector to stringify
+ * \param os
+ * \param v
  *
- * \return ouput stream
+ * \return ostream
  */
 std::ostream & operator << (std::ostream & os,const WifiTxVector &v);
 

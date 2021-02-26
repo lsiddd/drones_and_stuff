@@ -55,14 +55,19 @@ public:
   /**
    * MAC SAP
    *
-   * \param txOpParams the LteMacSapUser::TxOpportunityParameters
+   * \param bytes number of bytes
+   * \param layer 
+   * \param harqId HARQ ID
+   * \param componentCarrierId component carrier ID
+   * \param rnti the RNTI
+   * \param lcid the LCID
    */
-  virtual void DoNotifyTxOpportunity (LteMacSapUser::TxOpportunityParameters txOpParams);
+  virtual void DoNotifyTxOpportunity (uint32_t bytes, uint8_t layer, uint8_t harqId, uint8_t componentCarrierId, uint16_t rnti, uint8_t lcid);
     /**
    * Notify HARQ delivery failure
    */
   virtual void DoNotifyHarqDeliveryFailure ();
-  virtual void DoReceivePdu (LteMacSapUser::ReceivePduParameters rxPduParams);
+  virtual void DoReceivePdu (Ptr<Packet> p, uint16_t rnti, uint8_t lcid);
 
 private:
   /**
@@ -107,36 +112,14 @@ private:
   void DoReportBufferStatus ();
 
 private:
-  /**
-   * \brief Store an incoming (from layer above us) PDU, waiting to transmit it
-   */
-  struct TxPdu
-  {
-    /**
-     * \brief TxPdu default constructor
-     * \param pdu the PDU
-     * \param time the arrival time
-     */
-    TxPdu (const Ptr<Packet> &pdu, const Time &time) :
-      m_pdu (pdu),
-      m_waitingSince (time)
-    { }
+    std::vector < Ptr<Packet> > m_txonBuffer; ///< Transmission buffer
 
-    TxPdu () = delete;
-
-    Ptr<Packet> m_pdu;           ///< PDU
-    Time        m_waitingSince;  ///< Layer arrival time
-  };
-
-  std::vector < TxPdu > m_txonBuffer; ///< Transmission buffer
-
-  /// RetxPdu structure
-  struct RetxPdu
-  {
-    Ptr<Packet> m_pdu; ///< PDU
-    uint16_t    m_retxCount; ///< retransmit count
-    Time        m_waitingSince; ///!< Layer arrival time
-  };
+    /// RetxPdu structure
+    struct RetxPdu
+    {
+      Ptr<Packet> m_pdu; ///< PDU
+      uint16_t    m_retxCount; ///< retransmit count
+    };
 
   std::vector <RetxPdu> m_txedBuffer;  ///< Buffer for transmitted and retransmitted PDUs 
                                        ///< that have not been acked but are not considered 

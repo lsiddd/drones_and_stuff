@@ -51,13 +51,13 @@ WifiRadioEnergyModel::GetTypeId (void)
                                        &WifiRadioEnergyModel::GetCcaBusyCurrentA),
                    MakeDoubleChecker<double> ())
     .AddAttribute ("TxCurrentA",
-                   "The radio TX current in Ampere.",
+                   "The radio Tx current in Ampere.",
                    DoubleValue (0.380),    // transmit at 0dBm = 380mA
                    MakeDoubleAccessor (&WifiRadioEnergyModel::SetTxCurrentA,
                                        &WifiRadioEnergyModel::GetTxCurrentA),
                    MakeDoubleChecker<double> ())
     .AddAttribute ("RxCurrentA",
-                   "The radio RX current in Ampere.",
+                   "The radio Rx current in Ampere.",
                    DoubleValue (0.313),    // receive mode = 313mA
                    MakeDoubleAccessor (&WifiRadioEnergyModel::SetRxCurrentA,
                                        &WifiRadioEnergyModel::GetRxCurrentA),
@@ -74,7 +74,7 @@ WifiRadioEnergyModel::GetTypeId (void)
                    MakeDoubleAccessor (&WifiRadioEnergyModel::SetSleepCurrentA,
                                        &WifiRadioEnergyModel::GetSleepCurrentA),
                    MakeDoubleChecker<double> ())
-    .AddAttribute ("TxCurrentModel", "A pointer to the attached TX current model.",
+    .AddAttribute ("TxCurrentModel", "A pointer to the attached tx current model.",
                    PointerValue (),
                    MakePointerAccessor (&WifiRadioEnergyModel::m_txCurrentModel),
                    MakePointerChecker<WifiTxCurrentModel> ())
@@ -97,7 +97,7 @@ WifiRadioEnergyModel::WifiRadioEnergyModel ()
   // set callback for WifiPhy listener
   m_listener = new WifiRadioEnergyModelPhyListener;
   m_listener->SetChangeStateCallback (MakeCallback (&DeviceEnergyModel::ChangeState, this));
-  // set callback for updating the TX current
+  // set callback for updating the tx current
   m_listener->SetUpdateTxCurrentCallback (MakeCallback (&WifiRadioEnergyModel::SetTxCurrentFromModel, this));
 }
 
@@ -125,11 +125,37 @@ WifiRadioEnergyModel::GetTotalEnergyConsumption (void) const
   NS_LOG_FUNCTION (this);
 
   Time duration = Simulator::Now () - m_lastUpdateTime;
-  NS_ASSERT (duration.IsPositive ()); // check if duration is valid
+  NS_ASSERT (duration.GetNanoSeconds () >= 0); // check if duration is valid
 
   // energy to decrease = current * voltage * time
+  double energyToDecrease = 0.0;
   double supplyVoltage = m_source->GetSupplyVoltage ();
-  double energyToDecrease = duration.GetSeconds () * GetStateA (m_currentState) * supplyVoltage;
+  switch (m_currentState)
+    {
+    case WifiPhyState::IDLE:
+      energyToDecrease = duration.GetSeconds () * m_idleCurrentA * supplyVoltage;
+      break;
+    case WifiPhyState::CCA_BUSY:
+      energyToDecrease = duration.GetSeconds () * m_ccaBusyCurrentA * supplyVoltage;
+      break;
+    case WifiPhyState::TX:
+      energyToDecrease = duration.GetSeconds () * m_txCurrentA * supplyVoltage;
+      break;
+    case WifiPhyState::RX:
+      energyToDecrease = duration.GetSeconds () * m_rxCurrentA * supplyVoltage;
+      break;
+    case WifiPhyState::SWITCHING:
+      energyToDecrease = duration.GetSeconds () * m_switchingCurrentA * supplyVoltage;
+      break;
+    case WifiPhyState::SLEEP:
+      energyToDecrease = duration.GetSeconds () * m_sleepCurrentA * supplyVoltage;
+      break;
+    case WifiPhyState::OFF:
+      energyToDecrease = 0;
+      break;
+    default:
+      NS_FATAL_ERROR ("WifiRadioEnergyModel:Undefined radio state: " << m_currentState);
+    }
 
   // notify energy source
   m_source->UpdateEnergySource ();
@@ -270,14 +296,33 @@ WifiRadioEnergyModel::SetTxCurrentFromModel (double txPowerDbm)
 Time
 WifiRadioEnergyModel::GetMaximumTimeInState (int state) const
 {
-  if (state == WifiPhyState::OFF)
-    {
-      NS_FATAL_ERROR ("Requested maximum remaining time for OFF state");
-    }
+  Time remainingTime;
   double remainingEnergy = m_source->GetRemainingEnergy ();
   double supplyVoltage = m_source->GetSupplyVoltage ();
-  double current = GetStateA (state);
-  return Seconds (remainingEnergy / (current * supplyVoltage));
+  switch (state)
+    {
+    case WifiPhyState::IDLE:
+      remainingTime = NanoSeconds (static_cast<uint64_t> (1e9 * (remainingEnergy / (m_idleCurrentA * supplyVoltage))));
+      break;
+    case WifiPhyState::CCA_BUSY:
+      remainingTime = NanoSeconds (static_cast<uint64_t> (1e9 * (remainingEnergy / (m_ccaBusyCurrentA * supplyVoltage))));
+      break;
+    case WifiPhyState::TX:
+      remainingTime = NanoSeconds (static_cast<uint64_t> (1e9 * (remainingEnergy / (m_txCurrentA * supplyVoltage))));
+      break;
+    case WifiPhyState::RX:
+      remainingTime = NanoSeconds (static_cast<uint64_t> (1e9 * (remainingEnergy / (m_rxCurrentA * supplyVoltage))));
+      break;
+    case WifiPhyState::SWITCHING:
+      remainingTime = NanoSeconds (static_cast<uint64_t> (1e9 * (remainingEnergy / (m_switchingCurrentA * supplyVoltage))));
+      break;
+    case WifiPhyState::SLEEP:
+      remainingTime = NanoSeconds (static_cast<uint64_t> (1e9 * (remainingEnergy / (m_sleepCurrentA * supplyVoltage))));
+      break;
+    default:
+      NS_FATAL_ERROR ("WifiRadioEnergyModel: undefined radio state " << state);
+    }
+  return remainingTime;
 }
 
 void
@@ -305,8 +350,34 @@ WifiRadioEnergyModel::ChangeState (int newState)
   NS_ASSERT (duration.IsPositive ()); // check if duration is valid
 
   // energy to decrease = current * voltage * time
+  double energyToDecrease = 0.0;
   double supplyVoltage = m_source->GetSupplyVoltage ();
-  double energyToDecrease = duration.GetSeconds () * GetStateA (m_currentState) * supplyVoltage;
+  switch (m_currentState)
+    {
+    case WifiPhyState::IDLE:
+      energyToDecrease = (duration.GetNanoSeconds () * m_idleCurrentA * supplyVoltage) / 1e9;
+      break;
+    case WifiPhyState::CCA_BUSY:
+      energyToDecrease = (duration.GetNanoSeconds () * m_ccaBusyCurrentA * supplyVoltage) / 1e9;
+      break;
+    case WifiPhyState::TX:
+      energyToDecrease = (duration.GetNanoSeconds () * m_txCurrentA * supplyVoltage) / 1e9;
+      break;
+    case WifiPhyState::RX:
+      energyToDecrease = (duration.GetNanoSeconds () * m_rxCurrentA * supplyVoltage) / 1e9;
+      break;
+    case WifiPhyState::SWITCHING:
+      energyToDecrease = (duration.GetNanoSeconds () * m_switchingCurrentA * supplyVoltage) / 1e9;
+      break;
+    case WifiPhyState::SLEEP:
+      energyToDecrease = (duration.GetNanoSeconds () * m_sleepCurrentA * supplyVoltage) / 1e9;
+      break;
+    case WifiPhyState::OFF:
+      energyToDecrease = 0.0;
+      break;
+    default:
+      NS_FATAL_ERROR ("WifiRadioEnergyModel: undefined radio state " << m_currentState);
+    }
 
   // update total energy consumption
   m_totalEnergyConsumption += energyToDecrease;
@@ -395,9 +466,9 @@ WifiRadioEnergyModel::DoDispose (void)
 }
 
 double
-WifiRadioEnergyModel::GetStateA (int state) const
+WifiRadioEnergyModel::DoGetCurrentA (void) const
 {
-  switch (state)
+  switch (m_currentState)
     {
     case WifiPhyState::IDLE:
       return m_idleCurrentA;
@@ -413,14 +484,9 @@ WifiRadioEnergyModel::GetStateA (int state) const
       return m_sleepCurrentA;
     case WifiPhyState::OFF:
       return 0.0;
+    default:
+      NS_FATAL_ERROR ("WifiRadioEnergyModel: undefined radio state " << m_currentState);
     }
-  NS_FATAL_ERROR ("WifiRadioEnergyModel: undefined radio state " << state);
-}
-
-double
-WifiRadioEnergyModel::DoGetCurrentA (void) const
-{
-  return GetStateA (m_currentState);
 }
 
 void

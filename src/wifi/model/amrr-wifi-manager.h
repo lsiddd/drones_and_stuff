@@ -37,9 +37,9 @@ struct AmrrWifiRemoteStation;
  * A Practical Approach</i>, by M. Lacage, M.H. Manshaei, and
  * T. Turletti.
  *
- * This RAA does not support HT modes and will error
+ * This RAA does not support HT, VHT nor HE modes and will error
  * exit if the user tries to configure this RAA with a Wi-Fi MAC
- * that supports 802.11n or higher.
+ * that has VhtSupported, HtSupported or HeSupported set.
  */
 class AmrrWifiManager : public WifiRemoteStationManager
 {
@@ -53,10 +53,14 @@ public:
   AmrrWifiManager ();
   virtual ~AmrrWifiManager ();
 
+  // Inherited from WifiRemoteStationManager
+  void SetHtSupported (bool enable);
+  void SetVhtSupported (bool enable);
+  void SetHeSupported (bool enable);
+
 
 private:
-  // Overridden from base class.
-  void DoInitialize (void);
+  //overridden from base class
   WifiRemoteStation * DoCreateStation (void) const;
   void DoReportRxOk (WifiRemoteStation *station,
                      double rxSnr, WifiMode txMode);
@@ -64,42 +68,43 @@ private:
   void DoReportDataFailed (WifiRemoteStation *station);
   void DoReportRtsOk (WifiRemoteStation *station,
                       double ctsSnr, WifiMode ctsMode, double rtsSnr);
-  void DoReportDataOk (WifiRemoteStation *station, double ackSnr, WifiMode ackMode,
-                       double dataSnr, uint16_t dataChannelWidth, uint8_t dataNss);
+  void DoReportDataOk (WifiRemoteStation *station,
+                       double ackSnr, WifiMode ackMode, double dataSnr);
   void DoReportFinalRtsFailed (WifiRemoteStation *station);
   void DoReportFinalDataFailed (WifiRemoteStation *station);
   WifiTxVector DoGetDataTxVector (WifiRemoteStation *station);
   WifiTxVector DoGetRtsTxVector (WifiRemoteStation *station);
+  bool IsLowLatency (void) const;
 
   /**
    * Update the mode used to send to the given station.
    *
-   * \param station the remote station state
+   * \param station
    */
   void UpdateMode (AmrrWifiRemoteStation *station);
   /**
    * Reset transmission statistics of the given station.
    *
-   * \param station the remote station state
+   * \param station
    */
   void ResetCnt (AmrrWifiRemoteStation *station);
   /**
    * Increase the transmission rate to the given station.
    *
-   * \param station the remote station state
+   * \param station
    */
   void IncreaseRate (AmrrWifiRemoteStation *station);
   /**
    * Decrease the transmission rate to the given station.
    *
-   * \param station the remote station state
+   * \param station
    */
   void DecreaseRate (AmrrWifiRemoteStation *station);
   /**
    * Check if the current rate for the given station is the
    * minimum rate.
    *
-   * \param station the remote station state
+   * \param station
    *
    * \return true if the current rate is the minimum rate,
    *         false otherwise
@@ -109,7 +114,7 @@ private:
    * Check if the current rate for the given station is the
    * maximum rate.
    *
-   * \param station the remote station state
+   * \param station
    *
    * \return true if the current rate is the maximum rate,
    *         false otherwise
@@ -119,7 +124,7 @@ private:
    * Check if the number of retransmission and transmission error
    * is less than the number of successful transmission (times ratio).
    *
-   * \param station the remote station state
+   * \param station
    *
    * \return true if the number of retransmission and transmission error
    *              is less than the number of successful transmission
@@ -130,7 +135,7 @@ private:
    * Check if the number of retransmission and transmission error
    * is greater than the number of successful transmission (times ratio).
    *
-   * \param station the remote station state
+   * \param station
    *
    * \return true if the number of retransmission and transmission error
    *              is less than the number of successful transmission
@@ -141,18 +146,18 @@ private:
    * Check if the number of retransmission, transmission error,
    * and successful transmission are greater than 10.
    *
-   * \param station the remote station state
+   * \param station
    * \return true if the number of retransmission, transmission error,
    *         and successful transmission are greater than 10,
    *         false otherwise
    */
   bool IsEnough (AmrrWifiRemoteStation *station) const;
 
-  Time m_updatePeriod;            ///< update period
-  double m_failureRatio;          ///< failure ratio
-  double m_successRatio;          ///< success ratio
+  Time m_updatePeriod; ///< update period
+  double m_failureRatio; ///< failure ratio
+  double m_successRatio; ///< success ratio
   uint32_t m_maxSuccessThreshold; ///< maximum success threshold
-  uint32_t m_minSuccessThreshold; ///< minimum success threshold
+  uint32_t m_minSuccessThreshold; ///< mnimum success threshold
 
   TracedValue<uint64_t> m_currentRate; //!< Trace rate changes
 };

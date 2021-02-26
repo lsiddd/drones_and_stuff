@@ -28,7 +28,6 @@ NS_LOG_COMPONENT_DEFINE ("Queue");
 
 NS_OBJECT_ENSURE_REGISTERED (QueueBase);
 NS_OBJECT_TEMPLATE_CLASS_DEFINE (Queue,Packet);
-NS_OBJECT_TEMPLATE_CLASS_DEFINE (Queue,QueueDiscItem);
 
 TypeId
 QueueBase::GetTypeId (void)
@@ -36,6 +35,12 @@ QueueBase::GetTypeId (void)
   static TypeId tid = TypeId ("ns3::QueueBase")
     .SetParent<Object> ()
     .SetGroupName ("Network")
+    .AddAttribute ("MaxSize",
+                   "The max queue size",
+                   QueueSizeValue (QueueSize ("100p")),
+                   MakeQueueSizeAccessor (&QueueBase::SetMaxSize,
+                                          &QueueBase::GetMaxSize),
+                   MakeQueueSizeChecker ())
     .AddTraceSource ("PacketsInQueue",
                      "Number of packets currently stored in the queue",
                      MakeTraceSourceAccessor (&QueueBase::m_nPackets),
@@ -61,7 +66,6 @@ QueueBase::QueueBase () :
   m_nTotalDroppedPacketsAfterDequeue (0)
 {
   NS_LOG_FUNCTION (this);
-  m_maxSize = QueueSize (QueueSizeUnit::PACKETS, std::numeric_limits<uint32_t>::max ());
 }
 
 QueueBase::~QueueBase ()

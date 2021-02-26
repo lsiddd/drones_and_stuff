@@ -16,12 +16,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * Author: Steven Smith <smith84@llnl.gov>
- */
-
-/**
- * \file
- * \ingroup mpi
- * Implementation of class ns3::MpiInterface.
+ *
  */
 
 #include "mpi-interface.h"
@@ -78,7 +73,7 @@ MpiInterface::IsEnabled ()
 }
 
 void
-MpiInterface::SetParallelSimulatorImpl (void)
+MpiInterface::Enable (int* pargc, char*** pargv)
 {
   StringValue simulationTypeValue;
   bool useDefault = true;
@@ -109,22 +104,8 @@ MpiInterface::SetParallelSimulatorImpl (void)
                          StringValue ("ns3::DistributedSimulatorImpl"));
       NS_LOG_WARN ("SimulatorImplementationType was set to non-parallel simulator; setting type to ns3::DistributedSimulatorImp");
     }
-}
-
-void
-MpiInterface::Enable (int* pargc, char*** pargv)
-{
-
-  SetParallelSimulatorImpl ();
 
   g_parallelCommunicationInterface->Enable (pargc, pargv);
-}
-
-void
-MpiInterface::Enable (MPI_Comm communicator)
-{
-  SetParallelSimulatorImpl ();
-  g_parallelCommunicationInterface->Enable (communicator);
 }
 
 void
@@ -132,13 +113,6 @@ MpiInterface::SendPacket (Ptr<Packet> p, const Time& rxTime, uint32_t node, uint
 {
   NS_ASSERT (g_parallelCommunicationInterface);
   g_parallelCommunicationInterface->SendPacket (p, rxTime, node, dev);
-}
-
-MPI_Comm 
-MpiInterface::GetCommunicator()
-{
-  NS_ASSERT (g_parallelCommunicationInterface);
-  return g_parallelCommunicationInterface->GetCommunicator ();
 }
 
 

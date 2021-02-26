@@ -18,7 +18,6 @@
  * Author: Sébastien Deronne <sebastien.deronne@gmail.com>
  */
 
-#include "ns3/net-device.h"
 #include "wifi-mac-helper.h"
 #include "ns3/wifi-mac.h"
 #include "ns3/boolean.h"
@@ -65,10 +64,9 @@ WifiMacHelper::SetType (std::string type,
 }
 
 Ptr<WifiMac>
-WifiMacHelper::Create (Ptr<NetDevice> device) const
+WifiMacHelper::Create (void) const
 {
   Ptr<WifiMac> mac = m_mac.Create<WifiMac> ();
-  mac->SetDevice (device);
   return mac;
 }
 

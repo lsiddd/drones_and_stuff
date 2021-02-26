@@ -71,9 +71,8 @@ DefaultSimulatorImpl::DefaultSimulatorImpl ()
   m_currentTs = 0;
   m_currentContext = Simulator::NO_CONTEXT;
   m_unscheduledEvents = 0;
-  m_eventCount = 0;
   m_eventsWithContextEmpty = true;
-  m_main = SystemThread::Self ();
+  m_main = SystemThread::Self();
 }
 
 DefaultSimulatorImpl::~DefaultSimulatorImpl ()
@@ -99,7 +98,7 @@ void
 DefaultSimulatorImpl::Destroy ()
 {
   NS_LOG_FUNCTION (this);
-  while (!m_destroyEvents.empty ())
+  while (!m_destroyEvents.empty ()) 
     {
       Ptr<EventImpl> ev = m_destroyEvents.front ().PeekEventImpl ();
       m_destroyEvents.pop_front ();
@@ -129,7 +128,7 @@ DefaultSimulatorImpl::SetScheduler (ObjectFactory schedulerFactory)
 }
 
 // System ID for non-distributed simulation is always zero
-uint32_t
+uint32_t 
 DefaultSimulatorImpl::GetSystemId (void) const
 {
   return 0;
@@ -142,7 +141,6 @@ DefaultSimulatorImpl::ProcessOneEvent (void)
 
   NS_ASSERT (next.key.m_ts >= m_currentTs);
   m_unscheduledEvents--;
-  m_eventCount++;
 
   NS_LOG_LOGIC ("handle " << next.key.m_ts);
   m_currentTs = next.key.m_ts;
@@ -154,7 +152,7 @@ DefaultSimulatorImpl::ProcessOneEvent (void)
   ProcessEventsWithContext ();
 }
 
-bool
+bool 
 DefaultSimulatorImpl::IsFinished (void) const
 {
   return m_events->IsEmpty () || m_stop;
@@ -172,21 +170,21 @@ DefaultSimulatorImpl::ProcessEventsWithContext (void)
   EventsWithContext eventsWithContext;
   {
     CriticalSection cs (m_eventsWithContextMutex);
-    m_eventsWithContext.swap (eventsWithContext);
+    m_eventsWithContext.swap(eventsWithContext);
     m_eventsWithContextEmpty = true;
   }
   while (!eventsWithContext.empty ())
     {
-      EventWithContext event = eventsWithContext.front ();
-      eventsWithContext.pop_front ();
-      Scheduler::Event ev;
-      ev.impl = event.event;
-      ev.key.m_ts = m_currentTs + event.timestamp;
-      ev.key.m_context = event.context;
-      ev.key.m_uid = m_uid;
-      m_uid++;
-      m_unscheduledEvents++;
-      m_events->Insert (ev);
+       EventWithContext event = eventsWithContext.front ();
+       eventsWithContext.pop_front ();
+       Scheduler::Event ev;
+       ev.impl = event.event;
+       ev.key.m_ts = m_currentTs + event.timestamp;
+       ev.key.m_context = event.context;
+       ev.key.m_uid = m_uid;
+       m_uid++;
+       m_unscheduledEvents++;
+       m_events->Insert (ev);
     }
 }
 
@@ -195,11 +193,11 @@ DefaultSimulatorImpl::Run (void)
 {
   NS_LOG_FUNCTION (this);
   // Set the current threadId as the main threadId
-  m_main = SystemThread::Self ();
+  m_main = SystemThread::Self();
   ProcessEventsWithContext ();
   m_stop = false;
 
-  while (!m_events->IsEmpty () && !m_stop)
+  while (!m_events->IsEmpty () && !m_stop) 
     {
       ProcessOneEvent ();
     }
@@ -209,14 +207,14 @@ DefaultSimulatorImpl::Run (void)
   NS_ASSERT (!m_events->IsEmpty () || m_unscheduledEvents == 0);
 }
 
-void
+void 
 DefaultSimulatorImpl::Stop (void)
 {
   NS_LOG_FUNCTION (this);
   m_stop = true;
 }
 
-void
+void 
 DefaultSimulatorImpl::Stop (Time const &delay)
 {
   NS_LOG_FUNCTION (this << delay.GetTimeStep ());
@@ -272,7 +270,7 @@ DefaultSimulatorImpl::ScheduleWithContext (uint32_t context, Time const &delay, 
       ev.event = event;
       {
         CriticalSection cs (m_eventsWithContextMutex);
-        m_eventsWithContext.push_back (ev);
+        m_eventsWithContext.push_back(ev);
         m_eventsWithContextEmpty = false;
       }
     }
@@ -312,7 +310,7 @@ DefaultSimulatorImpl::Now (void) const
   return TimeStep (m_currentTs);
 }
 
-Time
+Time 
 DefaultSimulatorImpl::GetDelayLeft (const EventId &id) const
 {
   if (IsExpired (id))
@@ -372,8 +370,8 @@ DefaultSimulatorImpl::IsExpired (const EventId &id) const
 {
   if (id.GetUid () == 2)
     {
-      if (id.PeekEventImpl () == 0
-          || id.PeekEventImpl ()->IsCancelled ())
+      if (id.PeekEventImpl () == 0 ||
+          id.PeekEventImpl ()->IsCancelled ())
         {
           return true;
         }
@@ -387,10 +385,11 @@ DefaultSimulatorImpl::IsExpired (const EventId &id) const
         }
       return true;
     }
-  if (id.PeekEventImpl () == 0
-      || id.GetTs () < m_currentTs
-      || (id.GetTs () == m_currentTs && id.GetUid () <= m_currentUid)
-      || id.PeekEventImpl ()->IsCancelled ())
+  if (id.PeekEventImpl () == 0 ||
+      id.GetTs () < m_currentTs ||
+      (id.GetTs () == m_currentTs &&
+       id.GetUid () <= m_currentUid) ||
+      id.PeekEventImpl ()->IsCancelled ()) 
     {
       return true;
     }
@@ -400,7 +399,7 @@ DefaultSimulatorImpl::IsExpired (const EventId &id) const
     }
 }
 
-Time
+Time 
 DefaultSimulatorImpl::GetMaximumSimulationTime (void) const
 {
   return TimeStep (0x7fffffffffffffffLL);
@@ -410,12 +409,6 @@ uint32_t
 DefaultSimulatorImpl::GetContext (void) const
 {
   return m_currentContext;
-}
-
-uint64_t
-DefaultSimulatorImpl::GetEventCount (void) const
-{
-  return m_eventCount;
 }
 
 } // namespace ns3

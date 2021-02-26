@@ -28,13 +28,8 @@ namespace ns3 {
 /**
  * \ingroup stats
  *
- * \brief Quick and dirty delay and jitter estimation,
- * implementing the jitter algorithm originally from
- * \RFC{1889} (RTP), and unchanged in \RFC(3550) 
+ * \brief quick and dirty delay and jitter estimation
  *
- * This implementation uses the integer variant of the algorithm
- * given in RFC 1889 Appendix A.8 ,p. 71, and repeated in
- * RFC 3550 Appendix A.8, p. 94.
  */
 class DelayJitterEstimation
 {
@@ -74,8 +69,10 @@ public:
   uint64_t GetLastJitter (void) const;
 
 private:
-  Time m_jitter;       //!< Jitter estimation
-  Time m_transit;      //!< Relative transit time for the previous packet
+  Time m_previousRx;   //!< Previous Rx time
+  Time m_previousRxTx; //!< Previous Rx or Tx time
+  int64x64_t m_jitter; //!< Jitter estimation
+  Time m_delay;        //!< Delay estimation
 };
 
 } // namespace ns3

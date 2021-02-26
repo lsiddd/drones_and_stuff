@@ -44,7 +44,8 @@ class TimerImpl
 public:
   /** Destructor. */
   virtual ~TimerImpl ()
-  {}
+  {
+  }
 
   /**
    * Set the arguments to be used when invoking the expire function.
@@ -146,7 +147,7 @@ namespace ns3 {
  * \defgroup timerimpl TimerImpl Implementation
  * @{
  */
-
+  
 /** TimerImpl specialization class for varying numbers of arguments. */
 template <typename T1>
 struct TimerImplOne : public TimerImpl
@@ -184,7 +185,7 @@ struct TimerImplThree : public TimerImpl
   virtual void SetArguments (T1 a1,T2 a2,T3 a3) = 0;
 };
 /** TimerImpl specialization class for varying numbers of arguments. */
-template <typename T1, typename T2, typename T3, typename T4>
+template <typename T1, typename T2, typename  T3, typename T4>
 struct TimerImplFour : public TimerImpl
 {
   /**
@@ -198,7 +199,7 @@ struct TimerImplFour : public TimerImpl
   virtual void SetArguments (T1 a1,T2 a2,T3 a3, T4 a4) = 0;
 };
 /** TimerImpl specialization class for varying numbers of arguments. */
-template <typename T1, typename T2, typename T3, typename T4, typename T5>
+template <typename T1, typename T2, typename  T3, typename T4, typename T5>
 struct TimerImplFive : public TimerImpl
 {
   /**
@@ -213,7 +214,7 @@ struct TimerImplFive : public TimerImpl
   virtual void SetArguments (T1 a1,T2 a2,T3 a3, T4 a4, T5 a5) = 0;
 };
 /** TimerImpl specialization class for varying numbers of arguments. */
-template <typename T1, typename T2, typename T3, typename T4, typename T5, typename T6>
+template <typename T1, typename T2, typename  T3, typename T4, typename T5, typename T6>
 struct TimerImplSix : public TimerImpl
 {
   /**
@@ -267,7 +268,8 @@ MakeTimerImpl (IntToType<0>, FN fn)
   {
     FnTimerImplZero (FN fn)
       : m_fn (fn)
-    {}
+    {
+    }
     virtual EventId Schedule (const Time &delay)
     {
       return Simulator::Schedule (delay, m_fn);
@@ -297,7 +299,8 @@ MakeTimerImpl (IntToType<1>, FN fn)
   {
     FnTimerImplOne (FN fn)
       : m_fn (fn)
-    {}
+    {
+    }
     virtual void SetArguments (T1Parameter a1)
     {
       m_a1 = a1;
@@ -335,7 +338,8 @@ MakeTimerImpl (IntToType<2>, FN fn)
   {
     FnTimerImplTwo (FN fn)
       : m_fn (fn)
-    {}
+    {
+    }
     virtual void SetArguments (T1Parameter a1, T2Parameter a2)
     {
       m_a1 = a1;
@@ -378,7 +382,8 @@ MakeTimerImpl (IntToType<3>, FN fn)
   {
     FnTimerImplThree (FN fn)
       : m_fn (fn)
-    {}
+    {
+    }
     virtual void SetArguments (T1Parameter a1, T2Parameter a2, T3Parameter a3)
     {
       m_a1 = a1;
@@ -426,7 +431,8 @@ MakeTimerImpl (IntToType<4>, FN fn)
   {
     FnTimerImplFour (FN fn)
       : m_fn (fn)
-    {}
+    {
+    }
     virtual void SetArguments (T1Parameter a1, T2Parameter a2, T3Parameter a3, T4Parameter a4)
     {
       m_a1 = a1;
@@ -479,7 +485,8 @@ MakeTimerImpl (IntToType<5>, FN fn)
   {
     FnTimerImplFive (FN fn)
       : m_fn (fn)
-    {}
+    {
+    }
     virtual void SetArguments (T1Parameter a1, T2Parameter a2, T3Parameter a3, T4Parameter a4, T5Parameter a5)
     {
       m_a1 = a1;
@@ -537,7 +544,8 @@ MakeTimerImpl (IntToType<6>, FN fn)
   {
     FnTimerImplSix (FN fn)
       : m_fn (fn)
-    {}
+    {
+    }
     virtual void SetArguments (T1Parameter a1, T2Parameter a2, T3Parameter a3, T4Parameter a4, T5Parameter a5, T6Parameter a6)
     {
       m_a1 = a1;
@@ -598,7 +606,7 @@ struct TimerImplMemberTraits<T *>
    * \param [in] p The pointer.
    * \returns A reference to the object pointed to by \c p.
    */
-  static T & GetReference (T *p)
+  static T &GetReference (T *p)
   {
     return *p;
   }
@@ -635,7 +643,8 @@ MakeTimerImpl (IntToType<0>, MEM_PTR memPtr, OBJ_PTR objPtr)
     MemFnTimerImplZero (MEM_PTR memPtr, OBJ_PTR objPtr)
       : m_memPtr (memPtr),
         m_objPtr (objPtr)
-    {}
+    {
+    }
     virtual EventId Schedule (const Time &delay)
     {
       return Simulator::Schedule (delay, m_memPtr, m_objPtr);
@@ -667,7 +676,8 @@ MakeTimerImpl (IntToType<1>, MEM_PTR memPtr, OBJ_PTR objPtr)
     MemFnTimerImplOne (MEM_PTR memPtr, OBJ_PTR objPtr)
       : m_memPtr (memPtr),
         m_objPtr (objPtr)
-    {}
+    {
+    }
     virtual void SetArguments (T1Parameter a1)
     {
       m_a1 = a1;
@@ -707,7 +717,8 @@ MakeTimerImpl (IntToType<2>, MEM_PTR memPtr, OBJ_PTR objPtr)
     MemFnTimerImplTwo (MEM_PTR memPtr, OBJ_PTR objPtr)
       : m_memPtr (memPtr),
         m_objPtr (objPtr)
-    {}
+    {
+    }
     virtual void SetArguments (T1Parameter a1, T2Parameter a2)
     {
       m_a1 = a1;
@@ -752,7 +763,8 @@ MakeTimerImpl (IntToType<3>, MEM_PTR memPtr, OBJ_PTR objPtr)
     MemFnTimerImplThree (MEM_PTR memPtr, OBJ_PTR objPtr)
       : m_memPtr (memPtr),
         m_objPtr (objPtr)
-    {}
+    {
+    }
     virtual void SetArguments (T1Parameter a1, T2Parameter a2, T3Parameter a3)
     {
       m_a1 = a1;
@@ -802,7 +814,8 @@ MakeTimerImpl (IntToType<4>, MEM_PTR memPtr, OBJ_PTR objPtr)
     MemFnTimerImplFour (MEM_PTR memPtr, OBJ_PTR objPtr)
       : m_memPtr (memPtr),
         m_objPtr (objPtr)
-    {}
+    {
+    }
     virtual void SetArguments (T1Parameter a1, T2Parameter a2, T3Parameter a3, T4Parameter a4)
     {
       m_a1 = a1;
@@ -857,7 +870,8 @@ MakeTimerImpl (IntToType<5>, MEM_PTR memPtr, OBJ_PTR objPtr)
     MemFnTimerImplFive (MEM_PTR memPtr, OBJ_PTR objPtr)
       : m_memPtr (memPtr),
         m_objPtr (objPtr)
-    {}
+    {
+    }
     virtual void SetArguments (T1Parameter a1, T2Parameter a2, T3Parameter a3, T4Parameter a4,T5Parameter a5)
     {
       m_a1 = a1;
@@ -917,7 +931,8 @@ MakeTimerImpl (IntToType<6>, MEM_PTR memPtr, OBJ_PTR objPtr)
     MemFnTimerImplSix (MEM_PTR memPtr, OBJ_PTR objPtr)
       : m_memPtr (memPtr),
         m_objPtr (objPtr)
-    {}
+    {
+    }
     virtual void SetArguments (T1Parameter a1, T2Parameter a2, T3Parameter a3, T4Parameter a4,T5Parameter a5,T6Parameter a6)
     {
       m_a1 = a1;
@@ -949,18 +964,18 @@ MakeTimerImpl (IntToType<6>, MEM_PTR memPtr, OBJ_PTR objPtr)
 
 /**@}*/  // \ingroup timer
 
-
+  
 /********************************************************************
  *  Implementation of TimerImpl itself.
  ********************************************************************/
-
+  
 template <typename T1>
 void
 TimerImpl::SetArgs (T1 a1)
 {
   typedef struct TimerImplOne<
-      typename TimerTraits<T1>::ParameterType
-      > TimerImplBase;
+    typename TimerTraits<T1>::ParameterType
+    > TimerImplBase;
   TimerImplBase *impl = dynamic_cast<TimerImplBase *> (this);
   if (impl == 0)
     {
@@ -975,9 +990,9 @@ void
 TimerImpl::SetArgs (T1 a1, T2 a2)
 {
   typedef struct TimerImplTwo<
-      typename TimerTraits<T1>::ParameterType,
-      typename TimerTraits<T2>::ParameterType
-      > TimerImplBase;
+    typename TimerTraits<T1>::ParameterType,
+    typename TimerTraits<T2>::ParameterType
+    > TimerImplBase;
   TimerImplBase *impl = dynamic_cast<TimerImplBase *> (this);
   if (impl == 0)
     {
@@ -992,10 +1007,10 @@ void
 TimerImpl::SetArgs (T1 a1, T2 a2, T3 a3)
 {
   typedef struct TimerImplThree<
-      typename TimerTraits<T1>::ParameterType,
-      typename TimerTraits<T2>::ParameterType,
-      typename TimerTraits<T3>::ParameterType
-      > TimerImplBase;
+    typename TimerTraits<T1>::ParameterType,
+    typename TimerTraits<T2>::ParameterType,
+    typename TimerTraits<T3>::ParameterType
+    > TimerImplBase;
   TimerImplBase *impl = dynamic_cast<TimerImplBase *> (this);
   if (impl == 0)
     {
@@ -1010,11 +1025,11 @@ void
 TimerImpl::SetArgs (T1 a1, T2 a2, T3 a3, T4 a4)
 {
   typedef struct TimerImplFour<
-      typename TimerTraits<T1>::ParameterType,
-      typename TimerTraits<T2>::ParameterType,
-      typename TimerTraits<T3>::ParameterType,
-      typename TimerTraits<T4>::ParameterType
-      > TimerImplBase;
+    typename TimerTraits<T1>::ParameterType,
+    typename TimerTraits<T2>::ParameterType,
+    typename TimerTraits<T3>::ParameterType,
+    typename TimerTraits<T4>::ParameterType
+    > TimerImplBase;
   TimerImplBase *impl = dynamic_cast<TimerImplBase *> (this);
   if (impl == 0)
     {
@@ -1029,12 +1044,12 @@ void
 TimerImpl::SetArgs (T1 a1, T2 a2, T3 a3, T4 a4, T5 a5)
 {
   typedef struct TimerImplFive<
-      typename TimerTraits<T1>::ParameterType,
-      typename TimerTraits<T2>::ParameterType,
-      typename TimerTraits<T3>::ParameterType,
-      typename TimerTraits<T4>::ParameterType,
-      typename TimerTraits<T5>::ParameterType
-      > TimerImplBase;
+    typename TimerTraits<T1>::ParameterType,
+    typename TimerTraits<T2>::ParameterType,
+    typename TimerTraits<T3>::ParameterType,
+    typename TimerTraits<T4>::ParameterType,
+    typename TimerTraits<T5>::ParameterType
+    > TimerImplBase;
   TimerImplBase *impl = dynamic_cast<TimerImplBase *> (this);
   if (impl == 0)
     {
@@ -1049,13 +1064,13 @@ void
 TimerImpl::SetArgs (T1 a1, T2 a2, T3 a3, T4 a4, T5 a5, T6 a6)
 {
   typedef struct TimerImplSix<
-      typename TimerTraits<T1>::ParameterType,
-      typename TimerTraits<T2>::ParameterType,
-      typename TimerTraits<T3>::ParameterType,
-      typename TimerTraits<T4>::ParameterType,
-      typename TimerTraits<T5>::ParameterType,
-      typename TimerTraits<T6>::ParameterType
-      > TimerImplBase;
+    typename TimerTraits<T1>::ParameterType,
+    typename TimerTraits<T2>::ParameterType,
+    typename TimerTraits<T3>::ParameterType,
+    typename TimerTraits<T4>::ParameterType,
+    typename TimerTraits<T5>::ParameterType,
+    typename TimerTraits<T6>::ParameterType
+    > TimerImplBase;
   TimerImplBase *impl = dynamic_cast<TimerImplBase *> (this);
   if (impl == 0)
     {

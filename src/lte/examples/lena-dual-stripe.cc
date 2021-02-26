@@ -382,7 +382,7 @@ main (int argc, char *argv[])
   Config::SetDefault ("ns3::UdpClient::MaxPackets", UintegerValue (1000000));
   Config::SetDefault ("ns3::LteRlcUm::MaxTxBufferSize", UintegerValue (10 * 1024));
 
-  CommandLine cmd (__FILE__);
+  CommandLine cmd;
   cmd.Parse (argc, argv);
   ConfigStore inputConfig;
   inputConfig.ConfigureDefaults ();
@@ -842,6 +842,8 @@ main (int argc, char *argv[])
             }
         }
     }
+
+  BuildingsHelper::MakeMobilityModelConsistent ();
 
   Ptr<RadioEnvironmentMapHelper> remHelper;
   if (generateRem)

@@ -12,6 +12,5 @@ Traffic Control Layer
    red
    codel
    fq-codel
-   cobalt
    pie
    mq

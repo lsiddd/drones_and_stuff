@@ -447,11 +447,6 @@ private:
 
   // S1 SAP methods
   /**
-   * Initial context setup request
-   * \param params EpcEnbS1SapUser::InitialContextSetupRequestParameters
-   */
-  void DoInitialContextSetupRequest (EpcEnbS1SapUser::InitialContextSetupRequestParameters params);
-  /**
    * Data radio bearer setup request
    * \param params EpcEnbS1SapUser::DataRadioBearerSetupRequestParameters
    */

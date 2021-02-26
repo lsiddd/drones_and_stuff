@@ -22,17 +22,12 @@
 #define MPDU_AGGREGATOR_H
 
 #include "ns3/object.h"
-#include "wifi-mode.h"
-#include "qos-txop.h"
-#include "ns3/nstime.h"
-#include <vector>
 
 namespace ns3 {
 
 class AmpduSubframeHeader;
-class WifiTxVector;
+class WifiMacHeader;
 class Packet;
-class WifiMacQueueItem;
 
 /**
  * \brief Aggregator used to construct A-MPDUs
@@ -42,10 +37,13 @@ class MpduAggregator : public Object
 {
 public:
   /**
-   * EDCA queues typedef
+   * A list of deaggregated packets and their A-MPDU subframe headers.
    */
-  typedef std::map<AcIndex, Ptr<QosTxop> > EdcaQueues;
-
+  typedef std::list<std::pair<Ptr<Packet>, AmpduSubframeHeader> > DeaggregatedMpdus;
+  /**
+   * A constant iterator for a list of deaggregated packets and their A-MPDU subframe headers.
+   */
+  typedef std::list<std::pair<Ptr<Packet>, AmpduSubframeHeader> >::const_iterator DeaggregatedMpdusCI;
 
   /**
    * \brief Get the type ID.
@@ -57,96 +55,76 @@ public:
   virtual ~MpduAggregator ();
 
   /**
-   * Aggregate an MPDU to an A-MPDU.
+   * Sets the maximum A-MPDU size in bytes.
+   * Value 0 means that MPDU aggregation is disabled.
    *
-   * \param mpdu the MPDU.
-   * \param ampdu the A-MPDU.
-   * \param isSingle whether it is a single MPDU.
+   * \param maxSize the maximum A-MPDU size in bytes.
    */
-  static void Aggregate (Ptr<const WifiMacQueueItem> mpdu, Ptr<Packet> ampdu, bool isSingle);
-
+  void SetMaxAmpduSize (uint16_t maxSize);
   /**
-   * Compute the size of the A-MPDU resulting from the aggregation of an MPDU of
-   * size <i>mpduSize</i> and an A-MPDU of size <i>ampduSize</i>.
+   * Returns the maximum A-MPDU size in bytes.
+   * Value 0 means that MPDU aggregation is disabled.
    *
-   * \param mpduSize the MPDU size in bytes.
-   * \param ampduSize the A-MPDU size in bytes.
-   * \return the size of the resulting A-MPDU in bytes.
-   */
-  static uint32_t GetSizeIfAggregated (uint32_t mpduSize, uint32_t ampduSize);
-
-  /**
-   * Determine the maximum size for an A-MPDU of the given TID that can be sent
-   * to the given receiver when using the given modulation class.
-   *
-   * \param recipient the receiver station address.
-   * \param tid the TID.
-   * \param modulation the modulation class.
    * \return the maximum A-MPDU size in bytes.
    */
-  uint32_t GetMaxAmpduSize (Mac48Address recipient, uint8_t tid,
-                            WifiModulationClass modulation) const;
+  uint16_t GetMaxAmpduSize (void) const;
 
   /**
-   * Attempt to aggregate other MPDUs to the given MPDU, while meeting the
-   * following constraints:
+   * \param packet Packet we have to insert into <i>aggregatedPacket</i>.
+   * \param aggregatedPacket Packet that will contain <i>packet</i>, if aggregation is possible.
    *
-   * - the size of the resulting A-MPDU does not exceed the maximum A-MPDU size
-   * as determined for the modulation class indicated by the given TxVector
+   * \return true if <i>packet</i> can be aggregated to <i>aggregatedPacket</i>, false otherwise.
    *
-   * - the time to transmit the resulting PPDU, according to the given TxVector,
-   * does not exceed both the maximum PPDU duration allowed by the corresponding
-   * modulation class (if any) and the given PPDU duration limit (if distinct from
-   * Time::Min ())
-   *
-   * For now, only non-broadcast QoS Data frames can be aggregated (do not pass
-   * other types of frames to this method). MPDUs to aggregate are looked for
-   * among those with the same TID and receiver as the given MPDU.
-   *
-   * The resulting A-MPDU is returned as a vector of the constituent MPDUs
-   * (including the given MPDU), which are not actually aggregated (call the
-   * Aggregate method afterwards to get the actual A-MPDU). If aggregation was
-   * not possible (aggregation is disabled, there is no Block Ack agreement
-   * established with the receiver, or another MPDU to aggregate was not found),
-   * the returned vector is empty.
-   *
-   * \param mpdu the given MPDU.
-   * \param txVector the TxVector used to transmit the frame
-   * \param ppduDurationLimit the limit on the PPDU duration
-   * \return the resulting A-MPDU, if aggregation is possible.
+   * Adds <i>packet</i> to <i>aggregatedPacket</i>. In concrete aggregator's implementation is
+   * specified how and if <i>packet</i> can be added to <i>aggregatedPacket</i>.
    */
-  std::vector<Ptr<WifiMacQueueItem>> GetNextAmpdu (Ptr<const WifiMacQueueItem> mpdu,
-                                                   WifiTxVector txVector,
-                                                   Time ppduDurationLimit = Time::Min ()) const;
+  bool Aggregate (Ptr<const Packet> packet, Ptr<Packet> aggregatedPacket) const;
+  /**
+   * \param packet the packet we want to insert into <i>aggregatedPacket</i>.
+   * \param aggregatedPacket packet that will contain the packet of size <i>packetSize</i>, if aggregation is possible.
+   *
+   * This method performs a VHT/HE single MPDU aggregation.
+   */
+  void AggregateSingleMpdu (Ptr<const Packet> packet, Ptr<Packet> aggregatedPacket) const;
+  /**
+   * \param packet the packet we want to insert into <i>aggregatedPacket</i>.
+   * \param last true if it is the last packet.
+   * \param isSingleMpdu true if it is a single MPDU
+   *
+   * Adds A-MPDU subframe header and padding to each MPDU that is part of an A-MPDU before it is sent.
+   */
+  void AddHeaderAndPad (Ptr<Packet> packet, bool last, bool isSingleMpdu) const;
+  /**
+   * \param packetSize size of the packet we want to insert into <i>aggregatedPacket</i>.
+   * \param aggregatedPacket packet that will contain the packet of size <i>packetSize</i>, if aggregation is possible.
+   * \param blockAckSize size of the piggybacked block ack request
+   *
+   * \return true if the packet of size <i>packetSize</i> can be aggregated to <i>aggregatedPacket</i>, false otherwise.
+   *
+   * This method is used to determine if a packet could be aggregated to an A-MPDU without exceeding the maximum packet size.
+   */
+  bool CanBeAggregated (uint32_t packetSize, Ptr<Packet> aggregatedPacket, uint8_t blockAckSize) const;
 
   /**
-   * Set the map of EDCA queues.
+   * Deaggregates an A-MPDU by removing the A-MPDU subframe header and padding.
    *
-   * \param edcaQueues the map of EDCA queues.
+   * \param aggregatedPacket the aggregated packet
+   * \return list of deaggragted packets and their A-MPDU subframe headers
    */
-  void SetEdcaQueues (EdcaQueues edcaQueues);
+  static DeaggregatedMpdus Deaggregate (Ptr<Packet> aggregatedPacket);
 
-  /**
-   * \param ampduSize the size of the A-MPDU that needs to be padded in bytes
-   * \return the size of the padding that must be added to the end of an A-MPDU in bytes
-   *
-   * Calculates how much padding must be added to the end of an A-MPDU of the given size
-   * (once another MPDU is aggregated).
-   * Each A-MPDU subframe is padded so that its length is multiple of 4 octets.
-   */
-  static uint8_t CalculatePadding (uint32_t ampduSize);
-
-  /**
-   * Get the A-MPDU subframe header corresponding to the MPDU size and
-   * whether the MPDU is a single MPDU.
-   *
-   * \param mpduSize size of the MPDU in bytes.
-   * \param isSingle true if S-MPDU.
-   */
-  static AmpduSubframeHeader GetAmpduSubframeHeader (uint16_t mpduSize, bool isSingle);
 
 private:
-  EdcaQueues m_edca;   //!< the map of EDCA queues
+  /**
+   * \param packet the Packet
+   * \return padding that must be added to the end of an aggregated packet
+   *
+   * Calculates how much padding must be added to the end of an aggregated packet, after that a new packet is added.
+   * Each A-MPDU subframe is padded so that its length is multiple of 4 octets.
+   */
+  uint8_t CalculatePadding (Ptr<const Packet> packet) const;
+
+  uint16_t m_maxAmpduLength; //!< Maximum length in bytes of A-MPDUs
 };
 
 }  //namespace ns3

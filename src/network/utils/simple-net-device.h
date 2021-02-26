@@ -36,6 +36,7 @@ template <typename Item> class Queue;
 class SimpleChannel;
 class Node;
 class ErrorModel;
+class NetDeviceQueueInterface;
 
 /**
  * \ingroup netdevice
@@ -137,12 +138,15 @@ public:
 
 protected:
   virtual void DoDispose (void);
+  virtual void DoInitialize (void);
+  virtual void NotifyNewAggregate (void);
 
 private:
   Ptr<SimpleChannel> m_channel; //!< the channel the device is connected to
   NetDevice::ReceiveCallback m_rxCallback; //!< Receive callback
   NetDevice::PromiscReceiveCallback m_promiscCallback; //!< Promiscuous receive callback
   Ptr<Node> m_node; //!< Node this netDevice is associated to
+  Ptr<NetDeviceQueueInterface> m_queueInterface;   //!< NetDevice queue interface
   uint16_t m_mtu;   //!< MTU
   uint32_t m_ifIndex; //!< Interface index
   Mac48Address m_address; //!< MAC address
@@ -159,19 +163,10 @@ private:
   TracedCallback<Ptr<const Packet> > m_phyRxDropTrace;
 
   /**
-   * The StartTransmission method is used internally to start the process
-   * of sending a packet out on the channel, by scheduling the
-   * FinishTransmission method at a time corresponding to the transmission
-   * delay of the packet.
-   */
-  void StartTransmission (void);
-
-  /**
-   * The FinishTransmission method is used internally to finish the process
+   * The TransmitComplete method is used internally to finish the process
    * of sending a packet out on the channel.
-   * \param packet The packet to send on the channel
    */
-  void FinishTransmission (Ptr<Packet> packet);
+  void TransmitComplete (void);
 
   bool m_linkUp; //!< Flag indicating whether or not the link is up
 
@@ -183,7 +178,7 @@ private:
 
   Ptr<Queue<Packet> > m_queue; //!< The Queue for outgoing packets.
   DataRate m_bps; //!< The device nominal Data rate. Zero means infinite
-  EventId FinishTransmissionEvent; //!< the Tx Complete event
+  EventId TransmitCompleteEvent; //!< the Tx Complete event
 
   /**
    * List of callbacks to fire if the link changes state (up or down).

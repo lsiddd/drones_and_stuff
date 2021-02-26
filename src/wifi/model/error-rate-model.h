@@ -44,13 +44,14 @@ public:
 
   /**
    * \param txVector a specific transmission vector including WifiMode
-   * \param ber a target BER
+   * \param ber a target ber
    *
-   * \return the SNR which corresponds to the requested BER
+   * \return the snr which corresponds to the requested ber
    */
   double CalculateSnr (WifiTxVector txVector, double ber) const;
 
   /**
+   * A pure virtual method that must be implemented in the subclass.
    * This method returns the probability that the given 'chunk' of the
    * packet will be successfully received by the PHY.
    *
@@ -60,14 +61,11 @@ public:
    *
    * Note that both a WifiMode and a WifiTxVector (which contains a WifiMode)
    * are passed into this method.  The WifiTxVector may be from a signal that
-   * contains multiple modes (e.g. PHY header sent differently from PHY
+   * contains multiple modes (e.g. PLCP header sent differently from PLCP
    * payload).  Consequently, the mode parameter is what the method uses
    * to calculate the chunk error rate, and the txVector is used for
    * other information as needed.
    *
-   * This method handles 802.11b rates by using the DSSS error rate model.
-   * For all other rates, the method implemented by the subclass is called.
-   *
    * \param mode the Wi-Fi mode applicable to this chunk
    * \param txVector TXVECTOR of the overall transmission
    * \param snr the SNR of the chunk
@@ -75,21 +73,7 @@ public:
    *
    * \return probability of successfully receiving the chunk
    */
-  double GetChunkSuccessRate (WifiMode mode, WifiTxVector txVector, double snr, uint64_t nbits) const;
-
-
-private:
-  /**
-   * A pure virtual method that must be implemented in the subclass.
-   *
-   * \param mode the Wi-Fi mode applicable to this chunk
-   * \param txVector TXVECTOR of the overall transmission
-   * \param snr the SNR of the chunk
-   * \param nbits the number of bits in this chunk
-   *
-   * \return probability of successfully receiving the chunk
-   */
-  virtual double DoGetChunkSuccessRate (WifiMode mode, WifiTxVector txVector, double snr, uint64_t nbits) const = 0;
+  virtual double GetChunkSuccessRate (WifiMode mode, WifiTxVector txVector, double snr, uint64_t nbits) const = 0;
 };
 
 } //namespace ns3

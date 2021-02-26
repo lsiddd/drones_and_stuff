@@ -28,7 +28,6 @@
 #include "ns3/packet-socket-address.h"
 #include "ns3/mobility-model.h"
 #include "ns3/yans-wifi-helper.h"
-#include "ns3/sta-wifi-mac.h"
 #include "ns3/position-allocator.h"
 #include "ns3/packet-socket-helper.h"
 #include "ns3/mobility-helper.h"
@@ -209,7 +208,7 @@ OcbWifiMacTestCase::MacAssoc (std::string context,Mac48Address bssid)
     {
       macassoc_time = Now ();
       macassoc_pos = GetCurrentPosition (1);
-      std::cout << "MacAssoc time = " << macassoc_time.As (Time::NS)
+      std::cout << "MacAssoc time = " << macassoc_time.GetNanoSeconds ()
                 << " position = " << macassoc_pos
                 << std::endl;
     }
@@ -224,7 +223,7 @@ OcbWifiMacTestCase::PhyRxOkTrace (std::string context, Ptr<const Packet> packet,
     {
       phyrx_time = Now ();
       phyrx_pos = GetCurrentPosition (1);
-      std::cout << "PhyRxOk time = " << phyrx_time.As (Time::NS)
+      std::cout << "PhyRxOk time = " << phyrx_time.GetNanoSeconds ()
                 << " position = " << phyrx_pos
                 << std::endl;
     }
@@ -240,7 +239,7 @@ OcbWifiMacTestCase::PhyTxTrace (std::string context, Ptr<const Packet> packet, W
     {
       phytx_time = Now ();
       phytx_pos = GetCurrentPosition (1);
-      std::cout << "PhyTx data time = " << phytx_time.As (Time::NS)
+      std::cout << "PhyTx data time = " << phytx_time.GetNanoSeconds ()
                 << " position = " << phytx_pos
                 << std::endl;
     }
@@ -250,7 +249,7 @@ void
 OcbWifiMacTestCase::ConfigureApStaMode (Ptr<Node> static_node, Ptr<Node> mobile_node)
 {
   YansWifiChannelHelper wifiChannel = YansWifiChannelHelper::Default ();
-  YansWifiPhyHelper wifiPhy;
+  YansWifiPhyHelper wifiPhy = YansWifiPhyHelper::Default ();
   wifiPhy.SetChannel (wifiChannel.Create ());
 
   Ssid ssid = Ssid ("wifi-default");
@@ -260,7 +259,7 @@ OcbWifiMacTestCase::ConfigureApStaMode (Ptr<Node> static_node, Ptr<Node> mobile_
   wifiApMac.SetType ("ns3::ApWifiMac","Ssid", SsidValue (ssid));
 
   WifiHelper wifi;
-  wifi.SetStandard (WIFI_STANDARD_80211p);
+  wifi.SetStandard (WIFI_PHY_STANDARD_80211_10MHZ);
   wifi.SetRemoteStationManager ("ns3::ConstantRateWifiManager",
                                 "DataMode", StringValue ("OfdmRate6MbpsBW10MHz"),
                                 "ControlMode",StringValue ("OfdmRate6MbpsBW10MHz"));
@@ -272,14 +271,14 @@ void
 OcbWifiMacTestCase::ConfigureAdhocMode (Ptr<Node> static_node, Ptr<Node> mobile_node)
 {
   YansWifiChannelHelper wifiChannel = YansWifiChannelHelper::Default ();
-  YansWifiPhyHelper wifiPhy;
+  YansWifiPhyHelper wifiPhy = YansWifiPhyHelper::Default ();
   wifiPhy.SetChannel (wifiChannel.Create ());
 
   WifiMacHelper wifiMac;
   wifiMac.SetType ("ns3::AdhocWifiMac");
 
   WifiHelper wifi;
-  wifi.SetStandard (WIFI_STANDARD_80211p);
+  wifi.SetStandard (WIFI_PHY_STANDARD_80211_10MHZ);
   wifi.SetRemoteStationManager ("ns3::ConstantRateWifiManager",
                                 "DataMode", StringValue ("OfdmRate6MbpsBW10MHz"),
                                 "ControlMode",StringValue ("OfdmRate6MbpsBW10MHz"));
@@ -291,7 +290,7 @@ void
 OcbWifiMacTestCase::ConfigureOcbMode (Ptr<Node> static_node, Ptr<Node> mobile_node)
 {
   YansWifiChannelHelper wifiChannel = YansWifiChannelHelper::Default ();
-  YansWifiPhyHelper wifiPhy;
+  YansWifiPhyHelper wifiPhy = YansWifiPhyHelper::Default ();
   wifiPhy.SetChannel (wifiChannel.Create ());
 
   NqosWaveMacHelper wifi80211pMac = NqosWaveMacHelper::Default ();
@@ -354,11 +353,7 @@ OcbWifiMacTestCase::PostDeviceConfiguration (Ptr<Node> static_node, Ptr<Node> mo
   phytx_time = macassoc_time = phyrx_time = Time ();
   phytx_pos = macassoc_pos = phyrx_pos = Vector ();
 
-  if ( DynamicCast<StaWifiMac> (mobile_device->GetMac () ) )
-    {
-      // This trace is available only in a StaWifiMac
-      Config::Connect ("/NodeList/1/DeviceList/*/Mac/Assoc", MakeCallback (&OcbWifiMacTestCase::MacAssoc, this));
-    }
+  Config::Connect ("/NodeList/1/DeviceList/*/Mac/Assoc", MakeCallback (&OcbWifiMacTestCase::MacAssoc, this));
   Config::Connect ("/NodeList/1/DeviceList/*/Phy/State/RxOk", MakeCallback (&OcbWifiMacTestCase::PhyRxOkTrace, this));
   Config::Connect ("/NodeList/1/DeviceList/*/Phy/State/Tx", MakeCallback (&OcbWifiMacTestCase::PhyTxTrace, this));
 }
@@ -392,8 +387,7 @@ OcbWifiMacTestCase::DoRun ()
   Simulator::Destroy ();
   NS_TEST_ASSERT_MSG_LT (phyrx_time, macassoc_time, "In Sta mode with AP, you cannot associate until receive beacon or AssocResponse frame" );
   NS_TEST_ASSERT_MSG_LT (macassoc_time, phytx_time, "In Sta mode with AP,  you cannot send data packet until associate" );
-  //Are these position tests redundant with time check tests?
-  //NS_TEST_ASSERT_MSG_GT ((phyrx_pos.x - macassoc_pos.x), 0.0, "");
+  NS_TEST_ASSERT_MSG_GT ((phyrx_pos.x - macassoc_pos.x), 0.0, "");
   //actually macassoc_pos.x - phytx_pos.x is greater than 0
   //however associate switch to send is so fast with less than 100ms
   //and in our mobility model that every 0.1s update position,
@@ -431,7 +425,7 @@ OcbWifiMacTestCase::DoRun ()
   Simulator::Stop (Seconds (71.0));
   Simulator::Run ();
   Simulator::Destroy ();
-  NS_TEST_ASSERT_MSG_EQ (macassoc_time.GetNanoSeconds(), 0, "In Ocb mode, there is no associate state machine" );
+  NS_TEST_ASSERT_MSG_EQ (macassoc_time.GetNanoSeconds (), 0, "In Ocb mode, there is no associate state machine" );
   NS_TEST_ASSERT_MSG_LT (phytx_time, phyrx_time, "before mobile node receives frames from far static node, it can send data packet directly" );
   NS_TEST_ASSERT_MSG_EQ (macassoc_pos.x, 0.0, "");
   NS_TEST_ASSERT_MSG_GT ((phytx_pos.x - phyrx_pos.x), 0.0, "");
@@ -459,7 +453,7 @@ public:
 };
 
 OcbTestSuite::OcbTestSuite ()
-  : TestSuite ("wave-80211p-ocb", UNIT)
+  : TestSuite ("wifi-80211p-ocb", UNIT)
 {
   // TestDuration for TestCase can be QUICK, EXTENSIVE or TAKES_FOREVER
   AddTestCase (new OcbWifiMacTestCase, TestCase::QUICK);

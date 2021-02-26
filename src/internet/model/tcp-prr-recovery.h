@@ -20,8 +20,7 @@
  *         Mohit P. Tahiliani <tahiliani@nitk.edu.in>
  *
  */
-#ifndef TCP_PRR_RECOVERY_H
-#define TCP_PRR_RECOVERY_H
+#pragma once
 
 #include "ns3/tcp-recovery-ops.h"
 
@@ -73,9 +72,10 @@ public:
   std::string GetName () const override;
 
   virtual void EnterRecovery (Ptr<TcpSocketState> tcb, uint32_t dupAckCount,
-                              uint32_t unAckDataCount, uint32_t deliveredBytes) override;
+                              uint32_t unAckDataCount, uint32_t lastSackedBytes) override;
 
-  virtual void DoRecovery (Ptr<TcpSocketState> tcb, uint32_t deliveredBytes) override;
+  virtual void DoRecovery (Ptr<TcpSocketState> tcb, uint32_t lastAckedBytes,
+                           uint32_t lastSackedBytes) override;
 
   virtual void ExitRecovery (Ptr<TcpSocketState> tcb) override;
 
@@ -87,8 +87,8 @@ private:
   uint32_t m_prrDelivered                   {0};    //!< total bytes delivered during recovery phase
   uint32_t m_prrOut                         {0};    //!< total bytes sent during recovery phase
   uint32_t m_recoveryFlightSize             {0};    //!< value of bytesInFlight at the start of recovery phase
+  uint32_t m_previousSackedBytes            {0};    //!< total bytes SACKed by the previous ACK
   ReductionBound_t m_reductionBoundMode     {SSRB}; //!< mode of Reduction Bound to be used
 };
 } // namespace ns3
 
-#endif /* TCP_PRR_RECOVERY_H */

@@ -34,8 +34,8 @@
 
 namespace ns3 {
 
-namespace tests {
-
+  namespace tests {
+    
 
 /**
  * \ingroup randomvariable-tests
@@ -55,10 +55,12 @@ private:
 
 OneUniformRandomVariableManyGetValueCallsTestCase::OneUniformRandomVariableManyGetValueCallsTestCase ()
   : TestCase ("One Uniform Random Variable with Many GetValue() Calls")
-{}
+{
+}
 
 OneUniformRandomVariableManyGetValueCallsTestCase::~OneUniformRandomVariableManyGetValueCallsTestCase ()
-{}
+{
+}
 
 void
 OneUniformRandomVariableManyGetValueCallsTestCase::DoRun (void)
@@ -107,6 +109,6 @@ OneUniformRandomVariableManyGetValueCallsTestSuite::OneUniformRandomVariableMany
 static OneUniformRandomVariableManyGetValueCallsTestSuite g_oneUniformRandomVariableManyGetValueCallsTestSuite;
 
 
-}    // namespace tests
+  }  // namespace tests
 
 }  // namespace ns3

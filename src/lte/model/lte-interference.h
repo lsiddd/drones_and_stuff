@@ -31,7 +31,11 @@
 
 namespace ns3 {
 
+
+
+
 class LteChunkProcessor;
+
 
 
 /**
@@ -53,22 +57,22 @@ public:
   virtual void DoDispose ();
 
   /**
-   * \brief Add a LteChunkProcessor that will use the time-vs-frequency SINR
+   * Add a LteChunkProcessor that will use the time-vs-frequency SINR
    * calculated by this LteInterference instance. Note that all the
    * added LteChunkProcessors will work in parallel.
    *
    * @param p
    */
-  virtual void AddSinrChunkProcessor (Ptr<LteChunkProcessor> p);
+  void AddSinrChunkProcessor (Ptr<LteChunkProcessor> p);
 
   /**
-   * \brief Add a LteChunkProcessor that will use the time-vs-frequency
-   * interference calculated by this LteInterference instance. Note
-   * that all the added LteChunkProcessors will work in parallel.
+   * Add a LteChunkProcessor that will use the time-vs-frequency
+   *  interference calculated by this LteInterference instance. Note 
+   *  that all the added LteChunkProcessors will work in parallel.
    *
    * @param p
    */
-  virtual void AddInterferenceChunkProcessor (Ptr<LteChunkProcessor> p);
+  void AddInterferenceChunkProcessor (Ptr<LteChunkProcessor> p);
 
   /**
    * Add a LteChunkProcessor that will use the time-vs-frequency
@@ -77,21 +81,23 @@ public:
    *
    * @param p
    */
-  virtual void AddRsPowerChunkProcessor (Ptr<LteChunkProcessor> p);
+  void AddRsPowerChunkProcessor (Ptr<LteChunkProcessor> p);
 
   /**
-   * \brief Notify that the PHY is starting a RX attempt
+   * notify that the PHY is starting a RX attempt
    *
    * @param rxPsd the power spectral density of the signal being RX
    */
-  virtual void StartRx (Ptr<const SpectrumValue> rxPsd);
+  void StartRx (Ptr<const SpectrumValue> rxPsd);
+
 
   /**
    * notify that the RX attempt has ended. The receiving PHY must call
    * this method when RX ends or RX is aborted.
    *
    */
-  virtual void EndRx ();
+  void EndRx ();
+
 
   /**
    * notify that a new signal is being perceived in the medium. This
@@ -101,54 +107,56 @@ public:
    * @param spd the power spectral density of the new signal
    * @param duration the duration of the new signal
    */
-  virtual void AddSignal (Ptr<const SpectrumValue> spd, const Time duration);
+  void AddSignal (Ptr<const SpectrumValue> spd, const Time duration);
+
 
   /**
    *
    * @param noisePsd the Noise Power Spectral Density in power units
    * (Watt, Pascal...) per Hz.
    */
-  virtual void SetNoisePowerSpectralDensity (Ptr<const SpectrumValue> noisePsd);
+  void SetNoisePowerSpectralDensity (Ptr<const SpectrumValue> noisePsd);
 
-protected:
+private:
   /**
-   * Conditionally evaluate chunk
+   * Considitionally evaluate chunk
    */
-  virtual void ConditionallyEvaluateChunk ();
+  void ConditionallyEvaluateChunk ();
   /**
    * Add signal function
    *
    * @param spd the power spectral density of the new signal
    */
-  virtual void DoAddSignal (Ptr<const SpectrumValue> spd);
+  void DoAddSignal  (Ptr<const SpectrumValue> spd);
   /**
    * Subtract signal
    *
    * @param spd the power spectral density of the new signal
    * @param signalId the signal ID
    */
-  virtual void DoSubtractSignal (Ptr<const SpectrumValue> spd, uint32_t signalId);
+  void DoSubtractSignal  (Ptr<const SpectrumValue> spd, uint32_t signalId);
 
-  bool m_receiving {false}; ///< are we receiving?
 
-  Ptr<SpectrumValue> m_rxSignal {nullptr}; /**< stores the power spectral density of
-                                            * the signal whose RX is being
-                                            * attempted
-                                            */
 
-  Ptr<SpectrumValue> m_allSignals {nullptr}; /**< stores the spectral
-                                              * power density of the sum of incoming signals;
-                                              * does not include noise, includes the SPD of the signal being RX
-                                              */
+  bool m_receiving; ///< are we receiving?
 
-  Ptr<const SpectrumValue> m_noise {nullptr}; ///< the noise value
+  Ptr<SpectrumValue> m_rxSignal; /**< stores the power spectral density of
+                                  * the signal whose RX is being
+                                  * attempted
+                                  */
 
-  Time m_lastChangeTime {Seconds(0)}; /**< the time of the last change in
-                                       * m_TotalPower
-                                       */
+  Ptr<SpectrumValue> m_allSignals; /**< stores the spectral
+                                    * power density of the sum of incoming signals;
+                                    * does not include noise, includes the SPD of the signal being RX
+                                    */
 
-  uint32_t m_lastSignalId {0}; ///< the last signal ID
-  uint32_t m_lastSignalIdBeforeReset {0}; ///< the last signal ID before reset
+  Ptr<const SpectrumValue> m_noise; ///< the noise value
+
+  Time m_lastChangeTime;     /**< the time of the last change in
+                                m_TotalPower */
+
+  uint32_t m_lastSignalId; ///< the last signal ID
+  uint32_t m_lastSignalIdBeforeReset; ///< the last signal ID before reset
 
   /** all the processor instances that need to be notified whenever
   a new interference chunk is calculated */

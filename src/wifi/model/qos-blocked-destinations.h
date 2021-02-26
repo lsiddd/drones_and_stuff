@@ -31,7 +31,7 @@ class Mac48Address;
 
 /**
  * Keep track of destination address - TID pairs that are waiting
- * for a BlockAck response.
+ * for a block ACK response.
  */
 class QosBlockedDestinations : public SimpleRefCount<QosBlockedDestinations>
 {
@@ -41,26 +41,26 @@ public:
 
   /**
    * Block the given destination address and TID from sending (e.g. pending
-   * BlockAck response).
+   * block ACK response).
    *
-   * \param dest the destination MAC address
-   * \param tid the TID
+   * \param dest
+   * \param tid
    */
   void Block (Mac48Address dest, uint8_t tid);
   /**
-   * Un-block the given destination address and TID (e.g. BlockAck
+   * Un-block the given destination address and TID (e.g. block ACK
    * response received).
    *
-   * \param dest the destination MAC address
-   * \param tid the TID
+   * \param dest
+   * \param tid
    */
   void Unblock (Mac48Address dest, uint8_t tid);
   /**
    * Check if the given destination address and TID are blocked
-   * from sending (e.g. pending BlockAck response).
+   * from sending (e.g. pending block ACK response).
    *
-   * \param dest the destination MAC address
-   * \param tid the TID
+   * \param dest
+   * \param tid
    *
    * \return true if the given destination address and TID are blocked from sending,
    *         false otherwise
@@ -69,7 +69,7 @@ public:
 
 
 private:
-  std::set<std::pair<Mac48Address, uint8_t>> m_blockedQosPackets; ///< blocked QoS packets
+  std::set < std::pair < Mac48Address, uint8_t >> m_blockedQosPackets; ///< blocked QOS packets
 };
 
 } //namespace ns3

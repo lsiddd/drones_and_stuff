@@ -85,8 +85,6 @@ NscTcpLossTestCase1::DoRun (void)
   Time sinkStopTimeObj = Seconds (sinkStopTime);
   Time writerStopTimeObj = Seconds (writerStopTime);
   Time simStopTimeObj= Seconds (simStopTime);
-  // This test was written with initial window of 1 segment
-  Config::SetDefault ("ns3::TcpSocket::InitialCwnd", UintegerValue (1));
 
   Ptr<Node> n0 = CreateObject<Node> ();
   Ptr<Node> n1 = CreateObject<Node> ();
@@ -195,8 +193,6 @@ NscTcpLossTestCase2::DoRun (void)
   Time sinkStopTimeObj = Seconds (sinkStopTime);
   Time writerStopTimeObj = Seconds (writerStopTime);
   Time simStopTimeObj= Seconds (simStopTime);
-  // This test was written with initial window of 1 segment
-  Config::SetDefault ("ns3::TcpSocket::InitialCwnd", UintegerValue (1));
 
   Ptr<Node> n0 = CreateObject<Node> ();
   Ptr<Node> n1 = CreateObject<Node> ();

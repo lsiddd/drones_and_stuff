@@ -22,17 +22,23 @@
  *
  */
 
-#include <algorithm>
 #include "ns3/log.h"
 #include "ns3/assert.h"
+#include "ns3/ipv4-address.h"
 #include "ns3/nstime.h"
+#include "ns3/inet-socket-address.h"
 #include "ns3/ipv4-packet-info-tag.h"
 #include "ns3/socket.h"
 #include "ns3/simulator.h"
+#include "ns3/socket-factory.h"
 #include "ns3/packet.h"
-#include "ns3/ipv4.h"
+#include "ns3/uinteger.h"
+#include "ns3/config.h"
 #include "dhcp-server.h"
 #include "dhcp-header.h"
+#include "ns3/ipv4.h"
+#include <map>
+#include <algorithm>
 
 namespace ns3 {
 
@@ -178,7 +184,7 @@ void DhcpServer::StopApplication ()
     }
 
   m_leasedAddresses.clear ();
-  m_expiredEvent.Cancel ();
+  Simulator::Remove (m_expiredEvent);
 }
 
 void DhcpServer::TimerHandler ()
@@ -197,7 +203,7 @@ void DhcpServer::TimerHandler ()
             {
               NS_LOG_INFO ("Address leased state expired, address removed - " <<
                            "chaddr: " << i->first <<
-                           " IP address " << i->second.first);
+                           "IP address " << i->second.first);
               i->second.second = 0;
               m_expiredAddresses.push_front (i->first);
             }

@@ -209,7 +209,7 @@ void
 GaussMarkovMobilityModel::DoSetPosition (const Vector &position)
 {
   m_helper.SetPosition (position);
-  m_event.Cancel ();
+  Simulator::Remove (m_event);
   m_event = Simulator::ScheduleNow (&GaussMarkovMobilityModel::Start, this);
 }
 Vector

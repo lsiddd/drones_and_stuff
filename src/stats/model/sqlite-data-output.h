@@ -25,12 +25,12 @@
 
 #include "data-output-interface.h"
 
+#define STATS_HAS_SQLITE3
 
-struct sqlite3_stmt;
+#include <sqlite3.h>
 
 namespace ns3 {
 
-class SQLiteOutput;
 //------------------------------------------------------------
 //--------------------------------------------
 /**
@@ -38,19 +38,21 @@ class SQLiteOutput;
  * \class SqliteDataOutput
  * \brief Outputs data in a format compatible with SQLite
  */
-class SqliteDataOutput : public DataOutputInterface
-{
+class SqliteDataOutput : public DataOutputInterface {
 public:
-  SqliteDataOutput ();
-  virtual ~SqliteDataOutput () override;
+  SqliteDataOutput();
+  virtual ~SqliteDataOutput();
 
   /**
    * Register this type.
    * \return The TypeId.
    */
   static TypeId GetTypeId (void);
+  
+  virtual void Output (DataCollector &dc);
 
-  virtual void Output (DataCollector &dc) override;
+protected:
+  virtual void DoDispose ();
 
 private:
   /**
@@ -58,15 +60,14 @@ private:
    *
    * \brief Class to generate OMNeT output
    */
-  class SqliteOutputCallback : public DataOutputCallback
-  {
+  class SqliteOutputCallback : public DataOutputCallback {
 public:
     /**
      * Constructor
      * \param owner pointer to the instance this object belongs to
      * \param run experiment descriptor
      */
-    SqliteOutputCallback (const Ptr<SQLiteOutput> &db, std::string run);
+    SqliteOutputCallback(Ptr<SqliteDataOutput> owner, std::string run);
 
     /**
      * Destructor
@@ -134,18 +135,28 @@ public:
                           Time val);
 
 private:
-    Ptr<SQLiteOutput> m_db; //!< Db
+    Ptr<SqliteDataOutput> m_owner; //!< the instance this object belongs to
     std::string m_runLabel; //!< Run label
+    sqlite3_stmt *m_insertSingletonStatement; //!< Prepared singleton insert statement
 
-
-    sqlite3_stmt *m_insertSingletonStatement;
+    // end class SqliteOutputCallback
   };
 
-  Ptr<SQLiteOutput> m_sqliteOut; //!< Database
+
+  sqlite3 *m_db; //!< pointer to the SQL database
+
+  /**
+   * \brief Execute a sqlite3 query
+   * \param exe the query to execute
+   * \return sqlite return code.
+   */
+  int Exec (std::string exe);
+
+  // end class SqliteDataOutput
 };
 
 // end namespace ns3
-}
+};
 
 
 #endif /* SQLITE_DATA_OUTPUT_H */

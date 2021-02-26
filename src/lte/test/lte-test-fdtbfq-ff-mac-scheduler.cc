@@ -34,7 +34,6 @@
 #include <ns3/ptr.h>
 #include "ns3/radio-bearer-stats-calculator.h"
 #include <ns3/constant-position-mobility-model.h>
-#include <ns3/ff-mac-scheduler.h>
 #include <ns3/eps-bearer.h>
 #include <ns3/node-container.h>
 #include <ns3/mobility-helper.h>
@@ -270,10 +269,6 @@ LenaFdTbfqFfMacSchedulerTestCase1::DoRun (void)
     }
 
   Config::SetDefault ("ns3::LteHelper::UseIdealRrc", BooleanValue (true));
-  Config::SetDefault ("ns3::MacStatsCalculator::DlOutputFilename", StringValue (CreateTempDirFilename ("DlMacStats.txt")));
-  Config::SetDefault ("ns3::MacStatsCalculator::UlOutputFilename", StringValue (CreateTempDirFilename ("UlMacStats.txt")));
-  Config::SetDefault ("ns3::RadioBearerStatsCalculator::DlRlcOutputFilename", StringValue (CreateTempDirFilename ("DlRlcStats.txt")));
-  Config::SetDefault ("ns3::RadioBearerStatsCalculator::UlRlcOutputFilename", StringValue (CreateTempDirFilename ("UlRlcStats.txt")));
 
   Ptr<LteHelper> lteHelper = CreateObject<LteHelper> ();
   Ptr<PointToPointEpcHelper>  epcHelper = CreateObject<PointToPointEpcHelper> ();
@@ -335,7 +330,6 @@ LenaFdTbfqFfMacSchedulerTestCase1::DoRun (void)
   NetDeviceContainer enbDevs;
   NetDeviceContainer ueDevs;
   lteHelper->SetSchedulerType ("ns3::FdTbfqFfMacScheduler");
-  lteHelper->SetSchedulerAttribute ("UlCqiFilter", EnumValue (FfMacScheduler::SRS_UL_CQI));
   enbDevs = lteHelper->InstallEnbDevice (enbNodes);
   ueDevs = lteHelper->InstallUeDevice (ueNodes);
 
@@ -418,9 +412,9 @@ LenaFdTbfqFfMacSchedulerTestCase1::DoRun (void)
     }
 
   serverApps.Start (Seconds (0.001));
-  clientApps.Start (Seconds (0.04));
+  clientApps.Start (Seconds (0.001));
 
-  double statsStartTime = 0.04; // need to allow for RRC connection establishment + SRS
+  double statsStartTime = 0.040; // need to allow for RRC connection establishment + SRS
   double statsDuration = 1;
   double tolerance = 0.1;
   Simulator::Stop (Seconds (statsStartTime + statsDuration - 0.0001));
@@ -434,7 +428,7 @@ LenaFdTbfqFfMacSchedulerTestCase1::DoRun (void)
   Simulator::Run ();
 
   /**
-   * Check that the downlink assignment is done in a "token bank fair queue" manner
+   * Check that the downlink assignation is done in a "token bank fair queue" manner
    */
 
   NS_LOG_INFO ("DL - Test with " << m_nUser << " user(s) at distance " << m_dist);
@@ -456,7 +450,7 @@ LenaFdTbfqFfMacSchedulerTestCase1::DoRun (void)
     }
 
   /**
-  * Check that the uplink assignment is done in a "round robin" manner
+  * Check that the uplink assignation is done in a "round robin" manner
   */
 
   NS_LOG_INFO ("UL - Test with " << m_nUser << " user(s) at distance " << m_dist);
@@ -524,10 +518,7 @@ LenaFdTbfqFfMacSchedulerTestCase2::DoRun (void)
     }
 
   Config::SetDefault ("ns3::LteHelper::UseIdealRrc", BooleanValue (true));
-  Config::SetDefault ("ns3::MacStatsCalculator::DlOutputFilename", StringValue (CreateTempDirFilename ("DlMacStats.txt")));
-  Config::SetDefault ("ns3::MacStatsCalculator::UlOutputFilename", StringValue (CreateTempDirFilename ("UlMacStats.txt")));
-  Config::SetDefault ("ns3::RadioBearerStatsCalculator::DlRlcOutputFilename", StringValue (CreateTempDirFilename ("DlRlcStats.txt")));
-  Config::SetDefault ("ns3::RadioBearerStatsCalculator::UlRlcOutputFilename", StringValue (CreateTempDirFilename ("UlRlcStats.txt")));
+
 
   Ptr<LteHelper> lteHelper = CreateObject<LteHelper> ();
   Ptr<PointToPointEpcHelper>  epcHelper = CreateObject<PointToPointEpcHelper> ();
@@ -581,7 +572,6 @@ LenaFdTbfqFfMacSchedulerTestCase2::DoRun (void)
   NetDeviceContainer enbDevs;
   NetDeviceContainer ueDevs;
   lteHelper->SetSchedulerType ("ns3::FdTbfqFfMacScheduler");
-  lteHelper->SetSchedulerAttribute ("UlCqiFilter", EnumValue (FfMacScheduler::SRS_UL_CQI));
   enbDevs = lteHelper->InstallEnbDevice (enbNodes);
   ueDevs = lteHelper->InstallUeDevice (ueNodes);
 
@@ -687,7 +677,7 @@ LenaFdTbfqFfMacSchedulerTestCase2::DoRun (void)
   Simulator::Run ();
 
   /**
-   * Check that the downlink assignment is done in a "token bank fair queue" manner
+   * Check that the downlink assignation is done in a "token bank fair queue" manner
    */
 
   NS_LOG_INFO ("DL - Test with " << m_nUser << " user(s)");

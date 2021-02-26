@@ -154,6 +154,14 @@ BasicEnergySource::UpdateEnergySource (void)
   NS_LOG_FUNCTION (this);
   NS_LOG_DEBUG ("BasicEnergySource:Updating remaining energy.");
 
+  // do not update if simulation has finished
+  if (Simulator::IsFinished ())
+    {
+      return;
+    }
+
+  m_energyUpdateEvent.Cancel ();
+
   double remainingEnergy = m_remainingEnergyJ;
   CalculateRemainingEnergy ();
 
@@ -174,12 +182,9 @@ BasicEnergySource::UpdateEnergySource (void)
       NotifyEnergyChanged ();
     }
 
-  if (m_energyUpdateEvent.IsExpired ())
-    {
-      m_energyUpdateEvent = Simulator::Schedule (m_energyUpdateInterval,
-                                                 &BasicEnergySource::UpdateEnergySource,
-                                                 this);
-    }
+  m_energyUpdateEvent = Simulator::Schedule (m_energyUpdateInterval,
+                                             &BasicEnergySource::UpdateEnergySource,
+                                             this);
 }
 
 /*
@@ -224,7 +229,7 @@ BasicEnergySource::CalculateRemainingEnergy (void)
   Time duration = Simulator::Now () - m_lastUpdateTime;
   NS_ASSERT (duration.IsPositive ());
   // energy = current * voltage * time
-  double energyToDecreaseJ = (totalCurrentA * m_supplyVoltageV * duration).GetSeconds ();
+  double energyToDecreaseJ = (totalCurrentA * m_supplyVoltageV * duration.GetNanoSeconds ()) / 1e9;
   NS_ASSERT (m_remainingEnergyJ >= energyToDecreaseJ);
   m_remainingEnergyJ -= energyToDecreaseJ;
   NS_LOG_DEBUG ("BasicEnergySource:Remaining energy = " << m_remainingEnergyJ);

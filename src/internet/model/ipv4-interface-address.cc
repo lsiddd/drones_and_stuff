@@ -39,10 +39,6 @@ Ipv4InterfaceAddress::Ipv4InterfaceAddress (Ipv4Address local, Ipv4Mask mask)
 {
   NS_LOG_FUNCTION (this << local << mask);
   m_local = local;
-  if (m_local == Ipv4Address::GetLoopback ())
-    {
-      m_scope = HOST;
-    }
   m_mask = mask;
   m_broadcast = Ipv4Address (local.Get () | (~mask.Get ()));
 }

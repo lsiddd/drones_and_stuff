@@ -76,12 +76,6 @@
 #include "ns3/csma-module.h"
 #include "ns3/internet-module.h"
 
-/**
- * \file
- * \ingroup bridge
- * Bridge example connecting two broadcast domains.
- */
-
 using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE ("CsmaBridgeOneHopExample");
@@ -101,7 +95,7 @@ main (int argc, char *argv[])
   // Allow the user to override any of the defaults and the above Bind() at
   // run-time, via command-line arguments
   //
-  CommandLine cmd (__FILE__);
+  CommandLine cmd;
   cmd.Parse (argc, argv);
 
   //

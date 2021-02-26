@@ -121,12 +121,20 @@ ErpInformation::DeserializeInformationField (Buffer::Iterator start,
   return length;
 }
 
+/**
+ * output stream output operator
+ *
+ * \param os output stream
+ * \param erpinformation
+ *
+ * \returns output stream
+ */
 std::ostream &
-operator << (std::ostream &os, const ErpInformation &erpInformation)
+operator << (std::ostream &os, const ErpInformation &erpinformation)
 {
-  os <<  bool (erpInformation.GetBarkerPreambleMode ())
-     << "|" << bool (erpInformation.GetUseProtection ())
-     << "|" << bool (erpInformation.GetNonErpPresent ());
+  os <<  bool (erpinformation.GetBarkerPreambleMode ())
+     << "|" << bool (erpinformation.GetUseProtection ())
+     << "|" << bool (erpinformation.GetNonErpPresent ());
 
   return os;
 }

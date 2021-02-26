@@ -44,7 +44,6 @@
 #include "ipv6-option.h"
 #include "icmpv6-l4-protocol.h"
 #include "ndisc-cache.h"
-#include "ipv6-raw-socket-factory-impl.h"
 
 /// Minimum IPv6 MTU, as defined by \RFC{2460}
 #define IPV6_MIN_MTU 1280
@@ -126,21 +125,18 @@ TypeId Ipv6L3Protocol::GetTypeId ()
 Ipv6L3Protocol::Ipv6L3Protocol ()
   : m_nInterfaces (0)
 {
-  NS_LOG_FUNCTION (this);
+  NS_LOG_FUNCTION_NOARGS ();
   m_pmtuCache = CreateObject<Ipv6PmtuCache> ();
-  
-  Ptr<Ipv6RawSocketFactoryImpl> rawFactoryImpl = CreateObject<Ipv6RawSocketFactoryImpl> ();
-  AggregateObject (rawFactoryImpl);
 }
 
 Ipv6L3Protocol::~Ipv6L3Protocol ()
 {
-  NS_LOG_FUNCTION (this);
+  NS_LOG_FUNCTION_NOARGS ();
 }
 
 void Ipv6L3Protocol::DoDispose ()
 {
-  NS_LOG_FUNCTION (this);
+  NS_LOG_FUNCTION_NOARGS ();
 
   /* clear protocol and interface list */
   for (L4List_t::iterator it = m_protocols.begin (); it != m_protocols.end (); ++it)
@@ -188,7 +184,7 @@ void Ipv6L3Protocol::SetRoutingProtocol (Ptr<Ipv6RoutingProtocol> routingProtoco
 
 Ptr<Ipv6RoutingProtocol> Ipv6L3Protocol::GetRoutingProtocol () const
 {
-  NS_LOG_FUNCTION (this);
+  NS_LOG_FUNCTION_NOARGS ();
   return m_routingProtocol;
 }
 
@@ -211,6 +207,7 @@ uint32_t Ipv6L3Protocol::AddInterface (Ptr<NetDevice> device)
   interface->SetDevice (device);
   interface->SetTrafficControl (tc);
   interface->SetForwarding (m_ipForward);
+  tc->SetupDevice (device);
   return AddIpv6Interface (interface);
 }
 
@@ -238,7 +235,7 @@ Ptr<Ipv6Interface> Ipv6L3Protocol::GetInterface (uint32_t index) const
 
 uint32_t Ipv6L3Protocol::GetNInterfaces () const
 {
-  NS_LOG_FUNCTION (this);
+  NS_LOG_FUNCTION_NOARGS ();
   return m_nInterfaces;
 }
 
@@ -312,7 +309,24 @@ void Ipv6L3Protocol::AddAutoconfiguredAddress (uint32_t interface, Ipv6Address n
 
   if (flags & (1 << 6)) /* auto flag */
     {
-      address = Ipv6Address::MakeAutoconfiguredAddress (addr, network);
+      // In case of new MacAddress types, remember to change Ipv6L3Protocol::RemoveAutoconfiguredAddress as well
+      if (Mac64Address::IsMatchingType (addr))
+        {
+          address = Ipv6InterfaceAddress (Ipv6Address::MakeAutoconfiguredAddress (Mac64Address::ConvertFrom (addr), network));
+        }
+      else if (Mac48Address::IsMatchingType (addr))
+        {
+          address = Ipv6InterfaceAddress (Ipv6Address::MakeAutoconfiguredAddress (Mac48Address::ConvertFrom (addr), network));
+        }
+      else if (Mac16Address::IsMatchingType (addr))
+        {
+          address = Ipv6InterfaceAddress (Ipv6Address::MakeAutoconfiguredAddress (Mac16Address::ConvertFrom (addr), network));
+        }
+      else
+        {
+          NS_FATAL_ERROR ("Unknown method to make autoconfigured address for this kind of device.");
+          return;
+        }
 
       /* see if we have already the prefix */
       for (Ipv6AutoconfiguredPrefixListI it = m_prefixes.begin (); it != m_prefixes.end (); ++it)
@@ -350,18 +364,37 @@ void Ipv6L3Protocol::RemoveAutoconfiguredAddress (uint32_t interface, Ipv6Addres
   NS_LOG_FUNCTION (this << interface << network << mask);
   Ptr<Ipv6Interface> iface = GetInterface (interface);
   Address addr = iface->GetDevice ()->GetAddress ();
-  
-  Ipv6Address addressToFind = Ipv6Address::MakeAutoconfiguredAddress (addr, network);
+  uint32_t max = iface->GetNAddresses ();
+  uint32_t i = 0;
+  Ipv6Address toFound;
 
-  for (uint32_t i = 0; i < iface->GetNAddresses (); i++)
+  if (Mac64Address::IsMatchingType (addr))
     {
-      if (iface->GetAddress (i).GetAddress () == addressToFind)
+      toFound = Ipv6Address::MakeAutoconfiguredAddress (Mac64Address::ConvertFrom (addr), network);
+    }
+  else if (Mac48Address::IsMatchingType (addr))
+    {
+      toFound = Ipv6Address::MakeAutoconfiguredAddress (Mac48Address::ConvertFrom (addr), network);
+    }
+  else if (Mac16Address::IsMatchingType (addr))
+    {
+      toFound = Ipv6Address::MakeAutoconfiguredAddress (Mac16Address::ConvertFrom (addr), network);
+    }
+  else
+    {
+      NS_FATAL_ERROR ("Unknown method to make autoconfigured address for this kind of device.");
+      return;
+    }
+
+  for (i = 0; i < max; i++)
+    {
+      if (iface->GetAddress (i).GetAddress () == toFound)
         {
           RemoveAddress (interface, i);
           break;
         }
     }
-  
+
   /* remove from list of autoconfigured address */
   for (Ipv6AutoconfiguredPrefixListI it = m_prefixes.begin (); it != m_prefixes.end (); ++it)
     {
@@ -525,7 +558,7 @@ void Ipv6L3Protocol::SetDown (uint32_t i)
 
 void Ipv6L3Protocol::SetupLoopback ()
 {
-  NS_LOG_FUNCTION (this);
+  NS_LOG_FUNCTION_NOARGS ();
   Ptr<Ipv6Interface> interface = CreateObject<Ipv6Interface> ();
   Ptr<LoopbackNetDevice> device = 0;
   uint32_t i = 0;
@@ -628,7 +661,7 @@ void Ipv6L3Protocol::SetIpForward (bool forward)
 
 bool Ipv6L3Protocol::GetIpForward () const
 {
-  NS_LOG_FUNCTION (this);
+  NS_LOG_FUNCTION_NOARGS ();
   return m_ipForward;
 }
 
@@ -652,13 +685,13 @@ void Ipv6L3Protocol::SetSendIcmpv6Redirect (bool sendIcmpv6Redirect)
 
 bool Ipv6L3Protocol::GetSendIcmpv6Redirect () const
 {
-  NS_LOG_FUNCTION (this);
+  NS_LOG_FUNCTION_NOARGS ();
   return m_sendIcmpv6Redirect;
 }
 
 void Ipv6L3Protocol::NotifyNewAggregate ()
 {
-  NS_LOG_FUNCTION (this);
+  NS_LOG_FUNCTION_NOARGS ();
 
   if (m_node == 0)
     {
@@ -670,7 +703,6 @@ void Ipv6L3Protocol::NotifyNewAggregate ()
           this->SetNode (node);
         }
     }
-  
   Ipv6::NotifyNewAggregate ();
 }
 
@@ -773,7 +805,7 @@ Ptr<IpL4Protocol> Ipv6L3Protocol::GetProtocol (int protocolNumber, int32_t inter
 
 Ptr<Socket> Ipv6L3Protocol::CreateRawSocket ()
 {
-  NS_LOG_FUNCTION (this);
+  NS_LOG_FUNCTION_NOARGS ();
   Ptr<Ipv6RawSocketImpl> sock = CreateObject<Ipv6RawSocketImpl> ();
   sock->SetNode (m_node);
   m_sockets.push_back (sock);
@@ -796,7 +828,7 @@ void Ipv6L3Protocol::DeleteRawSocket (Ptr<Socket> socket)
 
 Ptr<Icmpv6L4Protocol> Ipv6L3Protocol::GetIcmpv6 () const
 {
-  NS_LOG_FUNCTION (this);
+  NS_LOG_FUNCTION_NOARGS ();
   Ptr<IpL4Protocol> protocol = GetProtocol (Icmpv6L4Protocol::GetStaticProtocolNumber ());
 
   if (protocol)
@@ -863,7 +895,8 @@ void Ipv6L3Protocol::Send (Ptr<Packet> packet, Ipv6Address source, Ipv6Address d
   /* 2) */
   if (route && route->GetGateway () == Ipv6Address::GetZero ())
     {
-      NS_LOG_LOGIC ("Ipv6L3Protocol::Send case 2: probably sent to machine on same IPv6 network");
+      NS_LOG_LOGIC ("Ipv6L3Protocol::Send case 1: probably sent to machine on same IPv6 network");
+      /* NS_FATAL_ERROR ("This case is not yet implemented"); */
       hdr = BuildHeader (source, destination, protocol, packet->GetSize (), ttl, tclass);
       int32_t interface = GetInterfaceForDevice (route->GetOutputDevice ());
       m_sendOutgoingTrace (hdr, packet, interface);
@@ -1028,7 +1061,7 @@ void Ipv6L3Protocol::Receive (Ptr<NetDevice> device, Ptr<const Packet> p, uint16
             {
               Ipv6InterfaceAddress iaddr = GetAddress (j, i);
               Ipv6Address addr = iaddr.GetAddress ();
-              if (addr == hdr.GetDestinationAddress ())
+              if (addr.IsEqual (hdr.GetDestinationAddress ()))
                 {
                   if (j == interface)
                     {
@@ -1128,7 +1161,7 @@ void Ipv6L3Protocol::SendRealOut (Ptr<Ipv6Route> route, Ptr<Packet> packet, Ipv6
       ipv6Fragment->GetFragments (packet, ipHeader, targetMtu, fragments);
     }
 
-  if (route->GetGateway () != Ipv6Address::GetAny ())
+  if (!route->GetGateway ().IsEqual (Ipv6Address::GetAny ()))
     {
       if (outInterface->IsUp ())
         {

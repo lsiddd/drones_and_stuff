@@ -37,7 +37,7 @@ using std::vector;
 int
 main (int argc, char *argv[])
 {
-  CommandLine cmd (__FILE__);
+  CommandLine cmd;
   cmd.Parse (argc, argv);
 
   ConfigStore inputConfig;
@@ -203,6 +203,8 @@ main (int argc, char *argv[])
       EpsBearer bearer (q);
       lteHelper->ActivateDataRadioBearer (ueDev, bearer);
     }
+
+  BuildingsHelper::MakeMobilityModelConsistent ();
 
   // by default, simulation will anyway stop right after the REM has been generated
   Simulator::Stop (Seconds (0.0069));  

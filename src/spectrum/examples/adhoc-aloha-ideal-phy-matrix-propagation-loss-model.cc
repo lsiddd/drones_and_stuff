@@ -80,7 +80,7 @@ public:
    * \param rxPhy the receiving PHY
    * \param lossDb the loss in dB
    */
-  void UpdatePathloss (std::string context, Ptr<const SpectrumPhy> txPhy, Ptr<const SpectrumPhy> rxPhy, double lossDb);
+  void UpdatePathloss (std::string context, Ptr<SpectrumPhy> txPhy, Ptr<SpectrumPhy> rxPhy, double lossDb);
 
   /** 
    * print the stored pathloss values to standard output
@@ -94,12 +94,10 @@ private:
 
 void
 GlobalPathlossDatabase::UpdatePathloss (std::string context, 
-                                        Ptr<const SpectrumPhy> txPhyConst, 
-                                        Ptr<const SpectrumPhy> rxPhyConst, 
+                                        Ptr<SpectrumPhy> txPhy, 
+                                        Ptr<SpectrumPhy> rxPhy, 
                                         double lossDb)
 {
-  Ptr<SpectrumPhy> txPhy = ConstCast<SpectrumPhy> (txPhyConst);
-  Ptr<SpectrumPhy> rxPhy = ConstCast<SpectrumPhy> (rxPhyConst);
   uint32_t txNodeId = txPhy->GetMobility ()->GetObject<Node> ()->GetId ();
   uint32_t rxNodeId = rxPhy->GetMobility ()->GetObject<Node> ()->GetId ();
   m_pathlossMap[txNodeId][rxNodeId] = lossDb;
@@ -125,7 +123,7 @@ GlobalPathlossDatabase::Print ()
 
 int main (int argc, char** argv)
 {
-  CommandLine cmd (__FILE__);
+  CommandLine cmd;
   double lossDb = 130;
   double txPowerW = 0.1; 
   uint64_t phyRate = 500000;
@@ -197,7 +195,7 @@ int main (int argc, char** argv)
   Config::Connect ("/NodeList/*/DeviceList/*/Phy/RxEndOk", MakeCallback (&PhyRxEndOkTrace));
 
   GlobalPathlossDatabase globalPathlossDatabase;
-  Config::Connect ("/ChannelList/*/$ns3::SpectrumChannel/PathLoss", 
+  Config::Connect ("/ChannelList/*/PropagationLoss",
                    MakeCallback (&GlobalPathlossDatabase::UpdatePathloss, &globalPathlossDatabase));
 
   g_rxBytes = 0;

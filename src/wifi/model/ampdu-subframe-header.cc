@@ -44,8 +44,7 @@ AmpduSubframeHeader::GetInstanceTypeId (void) const
 
 AmpduSubframeHeader::AmpduSubframeHeader ()
   : m_length (0),
-    m_eof (0),
-    m_signature (0x4E) // Per 802.11 standard, the unique pattern is set to the value 0x4E.
+    m_eof (0)
 {
 }
 
@@ -64,7 +63,7 @@ AmpduSubframeHeader::Serialize (Buffer::Iterator i) const
 {
   i.WriteHtolsbU16 ((m_eof << 15) | m_length);
   i.WriteU8 (1); //not used, CRC always set to 1
-  i.WriteU8 (m_signature);
+  i.WriteU8 (0x4E); // Per 802.11 standard, the unique pattern is set to the value 0x4E.
 }
 
 uint32_t
@@ -75,15 +74,14 @@ AmpduSubframeHeader::Deserialize (Buffer::Iterator start)
   m_eof = (field & 0x8000) >> 15;
   m_length = (field & 0x3fff);
   i.ReadU8 (); //CRC
-  m_signature = i.ReadU8 (); //SIG
+  i.ReadU8 (); //SIG
   return i.GetDistanceFrom (start);
 }
 
 void
 AmpduSubframeHeader::Print (std::ostream &os) const
 {
-  os << "EOF = " << m_eof << ", length = " << m_length
-     << ", signature = 0x" << std::hex << m_signature;
+  os << "EOF = " << m_eof << ", length = " << m_length;
 }
 
 void
@@ -108,12 +106,6 @@ bool
 AmpduSubframeHeader::GetEof (void) const
 {
   return m_eof;
-}
-
-bool
-AmpduSubframeHeader::IsSignatureValid (void) const
-{
-  return m_signature == 0x4E;
 }
 
 } //namespace ns3

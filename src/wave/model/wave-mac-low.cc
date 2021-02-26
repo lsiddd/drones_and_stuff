@@ -60,17 +60,17 @@ WaveMacLow::SetWaveNetDevice (Ptr<WaveNetDevice> device)
 }
 
 WifiTxVector
-WaveMacLow::GetDataTxVector (Ptr<const WifiMacQueueItem> item) const
+WaveMacLow::GetDataTxVector (Ptr<const Packet> packet, const WifiMacHeader *hdr) const
 {
-  NS_LOG_FUNCTION (this << *item);
+  NS_LOG_FUNCTION (this << packet << hdr);
   HigherLayerTxVectorTag datatag;
   bool found;
-  found = ConstCast<Packet> (item->GetPacket ())->PeekPacketTag (datatag);
+  found = ConstCast<Packet> (packet)->PeekPacketTag (datatag);
   // if high layer has not controlled transmit parameters, the real transmit parameters
   // will be determined by MAC layer itself.
   if (!found)
     {
-      return MacLow::GetDataTxVector (item);
+      return MacLow::GetDataTxVector (packet, hdr);
     }
 
   // if high layer has set the transmit parameters with non-adaption mode,
@@ -83,7 +83,7 @@ WaveMacLow::GetDataTxVector (Ptr<const WifiMacQueueItem> item) const
   // if high layer has set the transmit parameters with non-adaption mode,
   // the real transmit parameters are determined by both high layer and MAC layer.
   WifiTxVector txHigher = datatag.GetTxVector ();
-  WifiTxVector txMac = MacLow::GetDataTxVector (item);
+  WifiTxVector txMac = MacLow::GetDataTxVector (packet, hdr);
   WifiTxVector txAdapter;
   txAdapter.SetChannelWidth (10);
   // the DataRate set by higher layer is the minimum data rate
@@ -106,34 +106,35 @@ WaveMacLow::GetDataTxVector (Ptr<const WifiMacQueueItem> item) const
 }
 
 void
-WaveMacLow::StartTransmission (Ptr<WifiMacQueueItem> mpdu,
+WaveMacLow::StartTransmission (Ptr<const Packet> packet,
+                               const WifiMacHeader* hdr,
                                MacLowTransmissionParameters params,
                                Ptr<Txop> dca)
 {
-  NS_LOG_FUNCTION (this << *mpdu << params << dca);
+  NS_LOG_FUNCTION (this << packet << hdr << params << dca);
   Ptr<WifiPhy> phy = MacLow::GetPhy ();
   uint32_t curChannel = phy->GetChannelNumber ();
   // if current channel access is not AlternatingAccess, just do as MacLow.
   if (!m_scheduler->IsAlternatingAccessAssigned (curChannel))
     {
-      MacLow::StartTransmission (mpdu, params, dca);
+      MacLow::StartTransmission (packet, hdr, params, dca);
       return;
     }
 
-  Time transmissionTime = MacLow::CalculateTransmissionTime (mpdu->GetPacket (), &mpdu->GetHeader (), params);
+  Time transmissionTime = MacLow::CalculateTransmissionTime (packet, hdr, params);
   Time remainingTime = m_coordinator->NeedTimeToGuardInterval ();
 
   if (transmissionTime > remainingTime)
     {
       // The attempt for this transmission will be canceled;
       // and this packet will be pending for next transmission by QosTxop class
-      NS_LOG_DEBUG ("Because the required transmission time = " << transmissionTime.As (Time::MS)
-                                                                << " exceeds the remainingTime = " << remainingTime.As (Time::MS)
-                                                                << ", currently this packet will not be transmitted.");
+      NS_LOG_DEBUG ("Because the required transmission time = " << transmissionTime.GetMilliSeconds ()
+                                                                << "ms exceeds the remainingTime = " << remainingTime.GetMilliSeconds ()
+                                                                << "ms, currently this packet will not be transmitted.");
     }
   else
     {
-      MacLow::StartTransmission (mpdu, params, dca);
+      MacLow::StartTransmission (packet, hdr, params, dca);
     }
 }
 

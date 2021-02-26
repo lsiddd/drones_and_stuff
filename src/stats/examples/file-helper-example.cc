@@ -92,14 +92,14 @@ void
 Emitter::Count (void)
 {
   NS_LOG_FUNCTION (this);
-  NS_LOG_DEBUG ("Counting at " << Simulator::Now ().As (Time::S));
+  NS_LOG_DEBUG ("Counting at " << Simulator::Now ().GetSeconds ());
   m_counter += 1.0;
   Simulator::Schedule (Seconds (m_var->GetValue ()), &Emitter::Count, this);
 }
 
 int main (int argc, char *argv[])
 {
-  CommandLine cmd (__FILE__);
+  CommandLine cmd;
   cmd.Parse (argc, argv);
 
   //

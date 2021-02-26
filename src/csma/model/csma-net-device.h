@@ -39,6 +39,7 @@ namespace ns3 {
 template <typename Item> class Queue;
 class CsmaChannel;
 class ErrorModel;
+class NetDeviceQueueInterface;
 
 /** 
  * \defgroup csma CSMA Network Device
@@ -355,6 +356,9 @@ protected:
    * payload contained in this packet.
    */
   void AddHeader (Ptr<Packet> p, Mac48Address source, Mac48Address dest, uint16_t protocolNumber);
+
+  virtual void DoInitialize (void);
+  virtual void NotifyNewAggregate (void);
 
 private:
 
@@ -682,6 +686,11 @@ private:
    * The Node to which this device is attached.
    */
   Ptr<Node> m_node;
+
+  /**
+   * NetDevice queue interface.
+   */
+  Ptr<NetDeviceQueueInterface> m_queueInterface;
 
   /**
    * The MAC address which has been assigned to this device.

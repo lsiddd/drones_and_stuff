@@ -44,15 +44,15 @@ public:
   TypeId GetInstanceTypeId (void) const;
 
   /**
-   * Create a AmpduTag with the default =0 no A-MPDU
+   * Create a AmpduTag with the default =0 no Ampdu
    */
   AmpduTag ();
   /**
-   * \param nbOfMpdus the remaining number of MPDUs
+   * \param nbofmpdus the remaining number of MPDUs
    *
    * Set the remaining number of MPDUs in the A-MPDU.
    */
-  void SetRemainingNbOfMpdus (uint8_t nbOfMpdus);
+  void SetRemainingNbOfMpdus (uint8_t nbofmpdus);
   /**
    * \param duration the remaining duration of the A-MPDU
    *
@@ -81,7 +81,7 @@ public:
 
 private:
   uint8_t m_nbOfMpdus; //!< Remaining number of MPDUs in the A-MPDU
-  Time m_duration;     //!< Remaining duration of the A-MPDU
+  Time m_duration;     //!< Remaining duration of the A-MPDU in nanoseconds
 };
 
 } //namespace ns3

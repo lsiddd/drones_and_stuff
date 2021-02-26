@@ -104,7 +104,7 @@ void
 RandomWaypointMobilityModel::DoSetPosition (const Vector &position)
 {
   m_helper.SetPosition (position);
-  m_event.Cancel ();
+  Simulator::Remove (m_event);
   m_event = Simulator::ScheduleNow (&RandomWaypointMobilityModel::DoInitializePrivate, this);
 }
 Vector

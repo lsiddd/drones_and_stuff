@@ -72,7 +72,7 @@ protected:
   virtual void DoReportUlCqiInfo (const struct FfMacSchedSapProvider::SchedUlCqiInfoReqParameters& params);
   virtual void DoReportUlCqiInfo ( std::map <uint16_t, std::vector <double> > ulCqiMap );
   virtual uint8_t DoGetTpc (uint16_t rnti);
-  virtual uint16_t DoGetMinContinuousUlBandwidth ();
+  virtual uint8_t DoGetMinContinuousUlBandwidth ();
 
   // FFR SAP RRC PROVIDER IMPLEMENTATION
   virtual void DoReportUeMeas (uint16_t rnti, LteRrcSap::MeasResults measResults);
@@ -174,9 +174,9 @@ private:
     uint8_t m_rsrq; ///< RSRQ
   };
 
-  /// Cell Id is used as the key for the following map
+  ///               cellId
   typedef std::map<uint16_t, Ptr<UeMeasure> > MeasurementRow_t;
-  /// RNTI is used as the key for the following map
+  ///               rnti
   typedef std::map<uint16_t, MeasurementRow_t> MeasurementTable_t;
   MeasurementTable_t m_ueMeasures; ///< UE measures
 

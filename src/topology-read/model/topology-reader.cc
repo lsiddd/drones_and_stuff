@@ -20,14 +20,9 @@
  */
 
 #include "ns3/log.h"
+
 #include "topology-reader.h"
 
-
-/**
- * \file
- * \ingroup topology
- * ns3::TopologyReader implementation.
- */
 
 namespace ns3 {
 

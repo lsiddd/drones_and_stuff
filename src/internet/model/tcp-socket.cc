@@ -73,7 +73,7 @@ TcpSocket::GetTypeId (void)
                    MakeUintegerChecker<uint32_t> ())
     .AddAttribute ("InitialCwnd",
                    "TCP initial congestion window size (segments)",
-                   UintegerValue (10),
+                   UintegerValue (1),
                    MakeUintegerAccessor (&TcpSocket::GetInitialCwnd,
                                          &TcpSocket::SetInitialCwnd),
                    MakeUintegerChecker<uint32_t> ())
@@ -125,12 +125,12 @@ TcpSocket::GetTypeId (void)
 
 TcpSocket::TcpSocket ()
 {
-  NS_LOG_FUNCTION (this);
+  NS_LOG_FUNCTION_NOARGS ();
 }
 
 TcpSocket::~TcpSocket ()
 {
-  NS_LOG_FUNCTION (this);
+  NS_LOG_FUNCTION_NOARGS ();
 }
 
 } // namespace ns3

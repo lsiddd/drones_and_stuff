@@ -217,7 +217,7 @@ private:
   * \param ulBandwidth the UL bandwidth
   * \param dlBandwidth the DL bandwidth
   */
-  void DoConfigureMac (uint16_t ulBandwidth, uint16_t dlBandwidth);
+  void DoConfigureMac (uint8_t ulBandwidth, uint8_t dlBandwidth);
   /**
   * \brief Add UE function
   * \param rnti the RNTI
@@ -343,17 +343,6 @@ private:
    * \param bsr the BSR
    */
   void DoReportMacCeToScheduler (MacCeListElement_s bsr);
-
-  /**
-   * \brief Report SR to scheduler
-   * \param rnti RNTI of the UE that requested the SR
-   *
-   * Since SR is not implemented in LTE, this method does nothing.
-   */
-  void DoReportSrToScheduler (uint16_t rnti)
-  {
-    NS_UNUSED (rnti);
-  }
   
 public:
   /**
@@ -374,7 +363,7 @@ private:
   */
   void DoDlInfoListElementHarqFeeback (DlInfoListElement_s params);
 
-  /// RNTI, LC ID, SAP of the RLC instance
+  /// rnti, lcid, SAP of the RLC instance
   std::map <uint16_t, std::map<uint8_t, LteMacSapUser*> > m_rlcAttached;
 
   std::vector <CqiListElement_s> m_dlCqiReceived; ///< DL-CQI received
@@ -441,7 +430,6 @@ private:
   uint8_t m_numberOfRaPreambles; ///< number of RA preambles
   uint8_t m_preambleTransMax; ///< preamble transmit maximum
   uint8_t m_raResponseWindowSize; ///< RA response window size
-  uint8_t m_connEstFailCount; ///< the counter value for T300 timer expiration
 
   /**
    * info associated with a preamble allocated for non-contention based RA
@@ -462,7 +450,7 @@ private:
  
   std::map<uint8_t, uint32_t> m_receivedRachPreambleCount; ///< received RACH preamble count
 
-  std::map<uint16_t, uint32_t> m_rapIdRntiMap; ///< RAPID RNTI map
+  std::map<uint8_t, uint32_t> m_rapIdRntiMap; ///< RAPID RNTI map
 
   /// component carrier Id used to address sap
   uint8_t m_componentCarrierId;

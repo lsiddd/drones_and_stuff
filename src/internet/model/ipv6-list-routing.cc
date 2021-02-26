@@ -46,18 +46,18 @@ Ipv6ListRouting::GetTypeId (void)
 Ipv6ListRouting::Ipv6ListRouting ()
   : m_ipv6 (0)
 {
-  NS_LOG_FUNCTION (this);
+  NS_LOG_FUNCTION_NOARGS ();
 }
 
 Ipv6ListRouting::~Ipv6ListRouting ()
 {
-  NS_LOG_FUNCTION (this);
+  NS_LOG_FUNCTION_NOARGS ();
 }
 
 void
 Ipv6ListRouting::DoDispose (void)
 {
-  NS_LOG_FUNCTION (this);
+  NS_LOG_FUNCTION_NOARGS ();
   for (Ipv6RoutingProtocolList::iterator rprotoIter = m_routingProtocols.begin ();
        rprotoIter != m_routingProtocols.end (); rprotoIter++)
     {

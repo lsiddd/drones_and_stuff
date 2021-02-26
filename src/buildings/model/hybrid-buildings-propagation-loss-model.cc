@@ -153,13 +153,10 @@ HybridBuildingsPropagationLossModel::GetLoss (Ptr<MobilityModel> a, Ptr<Mobility
   NS_ASSERT_MSG ((a1 != 0) && (b1 != 0), "HybridBuildingsPropagationLossModel only works with MobilityBuildingInfo");
 
   double loss = 0.0;
-  bool isAIndoor = a1->IsIndoor ();
-  bool isBIndoor = b1->IsIndoor ();
 
-
-  if (!isAIndoor) // a is outdoor
+  if (a1->IsOutdoor ())
     {
-      if (!isBIndoor) // b is outdoor
+      if (b1->IsOutdoor ())
         {
           if (distance > 1000)
             {
@@ -211,12 +208,12 @@ HybridBuildingsPropagationLossModel::GetLoss (Ptr<MobilityModel> a, Ptr<Mobility
   else
     {
       // a is indoor
-      if (isBIndoor) // b is indoor
+      if (b1->IsIndoor ())
         {
           if (a1->GetBuilding () == b1->GetBuilding ())
             {
               // nodes are in same building -> indoor communication ITU-R P.1238
-              loss = ItuR1238 (a, b) + InternalWallsLoss (a1, b1);
+              loss = ItuR1238 (a, b) + InternalWallsLoss (a1, b1);;
               NS_LOG_INFO (this << " I-I (same building) ITUR1238 : " << loss);
 
             }
@@ -250,8 +247,8 @@ HybridBuildingsPropagationLossModel::GetLoss (Ptr<MobilityModel> a, Ptr<Mobility
               loss = ItuR1411 (a, b) + ExternalWallLoss (a1)  + HeightLoss (a1);
               NS_LOG_INFO (this << " I-O (<1000)  ITUR1411 + BEL + HG: " << loss);
             }
-        } // end if (isBIndoor)
-    } // end if (!isAIndoor)
+        } // end b1->IsIndoor ()
+    } // end a1->IsOutdoor ()
 
   loss = std::max (loss, 0.0);
 

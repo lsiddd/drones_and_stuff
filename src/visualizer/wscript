@@ -43,7 +43,7 @@ def configure(conf):
 
 def build(bld):
 
-    module = bld.create_ns3_module('visualizer', ['internet', 'wifi', 'point-to-point', 'csma', 'bridge', 'wimax', 'lte', 'mesh'])
+    module = bld.create_ns3_module('visualizer', ['internet', 'wifi', 'point-to-point'])
     headers = bld(features='ns3header')
     headers.module = 'visualizer'
 

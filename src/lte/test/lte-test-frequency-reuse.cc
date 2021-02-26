@@ -175,7 +175,7 @@ UlDataRxStartNofitication (LteFrTestCase *testcase,
 }
 
 LteFrTestCase::LteFrTestCase (std::string name,
-                              uint32_t userNum,uint16_t dlBandwidth,uint16_t ulBandwidth,
+                              uint32_t userNum,uint8_t dlBandwidth,uint8_t ulBandwidth,
                               std::vector<bool> availableDlRb, std::vector<bool> availableUlRb)
   : TestCase ("Test: " + name),
     m_userNum (userNum),
@@ -185,10 +185,12 @@ LteFrTestCase::LteFrTestCase (std::string name,
     m_usedMutedDlRbg (false),
     m_availableUlRb (availableUlRb),
     m_usedMutedUlRbg (false)
-{}
+{
+}
 
 LteFrTestCase::~LteFrTestCase ()
-{}
+{
+}
 
 
 
@@ -233,14 +235,16 @@ LteFrTestCase::UlDataRxStart (Ptr<const SpectrumValue> spectrumValue)
 
 void
 LteFrTestCase::DoRun (void)
-{}
+{
+
+}
 
 
 LteHardFrTestCase::LteHardFrTestCase (std::string name, uint32_t userNum,
                                       std::string schedulerType,
-                                      uint16_t dlBandwidth, uint16_t ulBandwidth,
-                                      uint8_t dlSubBandOffset, uint16_t dlSubBandwidth,
-                                      uint8_t ulSubBandOffset, uint16_t ulSubBandwidth,
+                                      uint8_t dlBandwidth, uint8_t ulBandwidth,
+                                      uint8_t dlSubBandOffset, uint8_t dlSubBandwidth,
+                                      uint8_t ulSubBandOffset, uint8_t ulSubBandwidth,
                                       std::vector<bool> availableDlRb, std::vector<bool> availableUlRb)
   : LteFrTestCase (name, userNum, dlBandwidth, ulBandwidth, availableDlRb, availableUlRb),
     m_schedulerType (schedulerType),
@@ -253,7 +257,8 @@ LteHardFrTestCase::LteHardFrTestCase (std::string name, uint32_t userNum,
 }
 
 LteHardFrTestCase::~LteHardFrTestCase ()
-{}
+{
+}
 
 void
 LteHardFrTestCase::DoRun (void)
@@ -300,17 +305,8 @@ LteHardFrTestCase::DoRun (void)
   lteHelper->Attach (ueDevs, enbDevs.Get (0));
 
   // Activate the default EPS bearer
-  //Since this test includes the Token Bank Fair Queue Scheduler
-  //(ns3::FdTbfqFfMacScheduler) we have to treat the default
-  //bearer as the dedicated bearer with QoS.
-  GbrQosInformation qos;
-  qos.mbrUl = 1e6;
-  qos.mbrDl = 1e6;
-  qos.gbrUl = 1e4;
-  qos.gbrDl = 1e4;
-
-  enum EpsBearer::Qci q = EpsBearer::GBR_CONV_VOICE;
-  EpsBearer bearer (q, qos);
+  enum EpsBearer::Qci q = EpsBearer::NGBR_VIDEO_TCP_DEFAULT;
+  EpsBearer bearer (q);
   lteHelper->ActivateDataRadioBearer (ueDevs, bearer);
 
   //Test SpectrumPhy to get signals form DL channel
@@ -352,9 +348,9 @@ LteHardFrTestCase::DoRun (void)
 
 LteStrictFrTestCase::LteStrictFrTestCase (std::string name, uint32_t userNum,
                                           std::string schedulerType,
-                                          uint16_t dlBandwidth, uint16_t ulBandwidth,
-                                          uint16_t dlCommonSubBandwidth, uint8_t dlEdgeSubBandOffset, uint16_t dlEdgeSubBandwidth,
-                                          uint16_t ulCommonSubBandwidth, uint8_t ulEdgeSubBandOffset, uint16_t ulEdgeSubBandwidth,
+                                          uint8_t dlBandwidth, uint8_t ulBandwidth,
+                                          uint8_t dlCommonSubBandwidth, uint8_t dlEdgeSubBandOffset, uint8_t dlEdgeSubBandwidth,
+                                          uint8_t ulCommonSubBandwidth, uint8_t ulEdgeSubBandOffset, uint8_t ulEdgeSubBandwidth,
                                           std::vector<bool> availableDlRb, std::vector<bool> availableUlRb)
   : LteFrTestCase (name, userNum, dlBandwidth, ulBandwidth, availableDlRb, availableUlRb),
     m_schedulerType (schedulerType),
@@ -369,7 +365,8 @@ LteStrictFrTestCase::LteStrictFrTestCase (std::string name, uint32_t userNum,
 }
 
 LteStrictFrTestCase::~LteStrictFrTestCase ()
-{}
+{
+}
 
 void
 LteStrictFrTestCase::DoRun (void)
@@ -417,18 +414,8 @@ LteStrictFrTestCase::DoRun (void)
   lteHelper->Attach (ueDevs, enbDevs.Get (0));
 
   // Activate the default EPS bearer
-  //Since this test includes the Token Bank Fair Queue Scheduler
-  //(ns3::FdTbfqFfMacScheduler) we have to treat the default
-  //bearer as the dedicated bearer with QoS.
-
-  GbrQosInformation qos;
-  qos.mbrUl = 1e6;
-  qos.mbrDl = 1e6;
-  qos.gbrUl = 1e4;
-  qos.gbrDl = 1e4;
-
-  enum EpsBearer::Qci q = EpsBearer::GBR_CONV_VOICE;
-  EpsBearer bearer (q, qos);
+  enum EpsBearer::Qci q = EpsBearer::NGBR_VIDEO_TCP_DEFAULT;
+  EpsBearer bearer (q);
   lteHelper->ActivateDataRadioBearer (ueDevs, bearer);
 
   //Test SpectrumPhy to get signals form DL channel
@@ -490,7 +477,8 @@ LteFrAreaTestCase::LteFrAreaTestCase (std::string name, std::string schedulerTyp
   m_usedWrongUlRbg = false;
 }
 LteFrAreaTestCase::~LteFrAreaTestCase ()
-{}
+{
+}
 
 void
 LteFrAreaTestCase::DlDataRxStart (Ptr<const SpectrumValue> spectrumValue)
@@ -536,28 +524,9 @@ LteFrAreaTestCase::UlDataRxStart (Ptr<const SpectrumValue> spectrumValue)
   NS_LOG_DEBUG ("UL DATA Power allocation :");
   Values::const_iterator it;
   uint32_t i = 0;
-  uint32_t numActiveRbs = 0;
-
-  // At the moment I could not find a better way to find total number
-  // of active RBs. This method is independent of the bandwidth
-  // configuration done in a test scenario, thus, it requires
-  // minimum change to the script.
   for (it = spectrumValue->ConstValuesBegin (); it != spectrumValue->ConstValuesEnd (); it++)
     {
-      // Count the RB as active if it is part of
-      // the expected UL RBs and has Power Spectral Density (PSD) > 0
-      if (m_expectedUlRb[numActiveRbs] == true && (*it) > 0)
-        {
-          numActiveRbs++;
-        }
-    }
-  NS_LOG_DEBUG ("Total number of active RBs = " << numActiveRbs);
-
-  // The uplink power control and the uplink PSD
-  // calculation only consider active resource blocks.
-  for (it = spectrumValue->ConstValuesBegin (); it != spectrumValue->ConstValuesEnd (); it++)
-    {
-      double power =  (*it) * (numActiveRbs * 180000);
+      double power =  (*it) * (m_ulBandwidth * 180000);
       NS_LOG_DEBUG ("RB " << i << " POWER: " << power << " expectedUlPower: " << m_expectedUlPower);
       if (m_expectedUlRb[i] == false && power > 0)
         {
@@ -566,7 +535,7 @@ LteFrAreaTestCase::UlDataRxStart (Ptr<const SpectrumValue> spectrumValue)
       else if (m_expectedUlRb[i] == true && power > 0)
         {
           NS_TEST_ASSERT_MSG_EQ_TOL (power, m_expectedUlPower, 0.01,
-                                     "Wrong Data Channel UL Power level" << Simulator::Now ().As (Time::S));
+                                     "Wrong Data Channel UL Power level" << Simulator::Now ().GetSeconds ());
         }
       i++;
     }
@@ -625,7 +594,8 @@ LteFrAreaTestCase::SetUlExpectedValues (double expectedUlPower, std::vector<bool
 
 void
 LteFrAreaTestCase::DoRun (void)
-{}
+{
+}
 
 LteStrictFrAreaTestCase::LteStrictFrAreaTestCase (std::string name, std::string schedulerType)
   : LteFrAreaTestCase (name, schedulerType)
@@ -634,7 +604,8 @@ LteStrictFrAreaTestCase::LteStrictFrAreaTestCase (std::string name, std::string 
 }
 
 LteStrictFrAreaTestCase::~LteStrictFrAreaTestCase ()
-{}
+{
+}
 
 void
 LteStrictFrAreaTestCase::DoRun (void)
@@ -724,19 +695,9 @@ LteStrictFrAreaTestCase::DoRun (void)
   lteHelper->Attach (ueDevs1, enbDevs.Get (0));
   lteHelper->Attach (ueDevs2, enbDevs.Get (1));
 
-  // Activate the default EPS bearer
-  //Since this test includes the Token Bank Fair Queue Scheduler
-  //(ns3::FdTbfqFfMacScheduler) we have to treat the default
-  //bearer as the dedicated bearer with QoS.
-  GbrQosInformation qos;
-  qos.mbrUl = 1e6;
-  qos.mbrDl = 1e6;
-  qos.gbrUl = 1e4;
-  qos.gbrDl = 1e4;
-
+  // Activate an EPS bearer
   enum EpsBearer::Qci q = EpsBearer::GBR_CONV_VOICE;
-  EpsBearer bearer (q, qos);
-
+  EpsBearer bearer (q);
   lteHelper->ActivateDataRadioBearer (ueDevs1, bearer);
   lteHelper->ActivateDataRadioBearer (ueDevs2, bearer);
 
@@ -820,7 +781,8 @@ LteSoftFrAreaTestCase::LteSoftFrAreaTestCase (std::string name, std::string sche
 }
 
 LteSoftFrAreaTestCase::~LteSoftFrAreaTestCase ()
-{}
+{
+}
 
 void
 LteSoftFrAreaTestCase::DoRun (void)
@@ -908,18 +870,9 @@ LteSoftFrAreaTestCase::DoRun (void)
   lteHelper->Attach (ueDevs1, enbDevs.Get (0));
   lteHelper->Attach (ueDevs2, enbDevs.Get (1));
 
-  // Activate the default EPS bearer
-  //Since this test includes the Token Bank Fair Queue Scheduler
-  //(ns3::FdTbfqFfMacScheduler) we have to treat the default
-  //bearer as the dedicated bearer with QoS.
-  GbrQosInformation qos;
-  qos.mbrUl = 1e6;
-  qos.mbrDl = 1e6;
-  qos.gbrUl = 1e4;
-  qos.gbrDl = 1e4;
-
+  // Activate an EPS bearer
   enum EpsBearer::Qci q = EpsBearer::GBR_CONV_VOICE;
-  EpsBearer bearer (q, qos);
+  EpsBearer bearer (q);
   lteHelper->ActivateDataRadioBearer (ueDevs1, bearer);
   lteHelper->ActivateDataRadioBearer (ueDevs2, bearer);
 
@@ -1011,7 +964,8 @@ LteSoftFfrAreaTestCase::LteSoftFfrAreaTestCase (std::string name, std::string sc
 }
 
 LteSoftFfrAreaTestCase::~LteSoftFfrAreaTestCase ()
-{}
+{
+}
 
 void
 LteSoftFfrAreaTestCase::DoRun (void)
@@ -1104,18 +1058,9 @@ LteSoftFfrAreaTestCase::DoRun (void)
   lteHelper->Attach (ueDevs1, enbDevs.Get (0));
   lteHelper->Attach (ueDevs2, enbDevs.Get (1));
 
-  // Activate the default EPS bearer
-  //Since this test includes the Token Bank Fair Queue Scheduler
-  //(ns3::FdTbfqFfMacScheduler) we have to treat the default
-  //bearer as the dedicated bearer with QoS.
-  GbrQosInformation qos;
-  qos.mbrUl = 1e6;
-  qos.mbrDl = 1e6;
-  qos.gbrUl = 1e4;
-  qos.gbrDl = 1e4;
-
+  // Activate an EPS bearer
   enum EpsBearer::Qci q = EpsBearer::GBR_CONV_VOICE;
-  EpsBearer bearer (q, qos);
+  EpsBearer bearer (q);
   lteHelper->ActivateDataRadioBearer (ueDevs1, bearer);
   lteHelper->ActivateDataRadioBearer (ueDevs2, bearer);
 
@@ -1234,7 +1179,8 @@ LteEnhancedFfrAreaTestCase::LteEnhancedFfrAreaTestCase (std::string name, std::s
 }
 
 LteEnhancedFfrAreaTestCase::~LteEnhancedFfrAreaTestCase ()
-{}
+{
+}
 
 void
 LteEnhancedFfrAreaTestCase::DoRun (void)
@@ -1333,18 +1279,9 @@ LteEnhancedFfrAreaTestCase::DoRun (void)
   lteHelper->Attach (ueDevs1, enbDevs.Get (0));
   lteHelper->Attach (ueDevs2, enbDevs.Get (1));
 
-  // Activate the default EPS bearer
-  //Since this test includes the Token Bank Fair Queue Scheduler
-  //(ns3::FdTbfqFfMacScheduler) we have to treat the default
-  //bearer as the dedicated bearer with QoS.
-  GbrQosInformation qos;
-  qos.mbrUl = 1e6;
-  qos.mbrDl = 1e6;
-  qos.gbrUl = 1e4;
-  qos.gbrDl = 1e4;
-
+  // Activate an EPS bearer
   enum EpsBearer::Qci q = EpsBearer::GBR_CONV_VOICE;
-  EpsBearer bearer (q, qos);
+  EpsBearer bearer (q);
   lteHelper->ActivateDataRadioBearer (ueDevs1, bearer);
   lteHelper->ActivateDataRadioBearer (ueDevs2, bearer);
 
@@ -1468,7 +1405,8 @@ LteDistributedFfrAreaTestCase::LteDistributedFfrAreaTestCase (std::string name, 
 }
 
 LteDistributedFfrAreaTestCase::~LteDistributedFfrAreaTestCase ()
-{}
+{
+}
 
 void
 LteDistributedFfrAreaTestCase::DoRun (void)
@@ -1495,7 +1433,7 @@ LteDistributedFfrAreaTestCase::DoRun (void)
   Config::SetDefault ("ns3::LteEnbRrc::RsrqFilterCoefficient",
                       UintegerValue (0));
 
-  uint16_t bandwidth = 25;
+  uint8_t bandwidth = 25;
 
   Ptr<LteHelper> lteHelper = CreateObject<LteHelper> ();
   Ptr<PointToPointEpcHelper> epcHelper = CreateObject<PointToPointEpcHelper> ();
@@ -1664,17 +1602,7 @@ LteDistributedFfrAreaTestCase::DoRun (void)
           ulpf.remotePortStart = ulPort;
           ulpf.remotePortEnd = ulPort;
           tft->Add (ulpf);
-          //Since this test includes the Token Bank Fair Queue Scheduler
-          //(ns3::FdTbfqFfMacScheduler) we have to use GBR bearer with
-          //certain QoS.
-          GbrQosInformation qos;
-          qos.mbrUl = 1e6;
-          qos.mbrDl = 1e6;
-          qos.gbrUl = 1e4;
-          qos.gbrDl = 1e4;
-
-          enum EpsBearer::Qci q = EpsBearer::GBR_CONV_VOICE;
-          EpsBearer bearer (q, qos);
+          EpsBearer bearer (EpsBearer::NGBR_VIDEO_TCP_DEFAULT);
           lteHelper->ActivateDedicatedEpsBearer (ueLteDevs.Get (u), bearer, tft);
 
           Time startTime = Seconds (startTimeSeconds->GetValue ());

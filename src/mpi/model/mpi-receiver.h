@@ -16,12 +16,7 @@
  * Author: George Riley <riley@ece.gatech.edu>
  */
 
-/**
- * \file
- * \ingroup mpi
- * ns3::MpiReciver declaration,
- * provides an interface to aggregate to MPI-compatible NetDevices.
- */
+// Provides an interface to aggregate to MPI-compatible NetDevices
 
 #ifndef NS3_MPI_RECEIVER_H
 #define NS3_MPI_RECEIVER_H
@@ -47,10 +42,6 @@ namespace ns3 {
 class MpiReceiver : public Object
 {
 public:
-  /**
-   *  Register this type.
-   *  \return The object TypeId.
-   */
   static TypeId GetTypeId (void);
   virtual ~MpiReceiver ();
 
@@ -67,7 +58,6 @@ public:
 private:
   virtual void DoDispose (void);
 
-  /** Callback to send received packets to. */
   Callback<void, Ptr<Packet> > m_rxCallback;
 };
 

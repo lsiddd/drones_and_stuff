@@ -22,12 +22,6 @@
 #include "ns3/channel.h"
 #include <vector>
 
-/**
- * \file
- * \ingroup bridge
- * ns3::BridgeChannel declaration.
- */
-
 namespace ns3 {
 
 /**

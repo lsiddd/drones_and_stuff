@@ -15,7 +15,7 @@
  *
  * Author: Lucas Pacheco <lucas.pacheco@inf.unibe.ch>
  */
-
+#include <time.h> /* time */
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
@@ -67,14 +67,14 @@ std::ofstream time_to_centroid_file;
 std::ofstream ue_positions_log;
 uint32_t active_drones = 0;
 // std::string clustering_algoritm = "kmeans";
-uint32_t seedValue = 10000;
+uint32_t seedValue = time(NULL);
 std::string ns3_dir;
 
 uint32_t SimTime = 10;
 const uint32_t numUAVs = 10;
 const uint32_t number_of_hot_spots = numUAVs;
-const uint32_t numUes = 50;
-const uint32_t numStaticCells = 40;
+const uint32_t numUes = 30;
+const uint32_t numStaticCells = 20;
 const uint32_t numEdgeServers = numStaticCells;
 const uint32_t numBSs = numUAVs + numStaticCells;
 int eNodeBTxPower = 46;
@@ -82,6 +82,7 @@ Time management_interval = Seconds(1);
 
 std::string mobil_trace = "traces/koln.tcl";
 std::string requests_trace = "traces/requests.tcl_but_not_really";
+std::string handover_policy = "iuavbs";
 float distance_multiplier = 1.0 / 10;
 
 uint16_t node_remote = 1; // HOST_REMOTO
@@ -108,7 +109,7 @@ int edgeUe[numEdgeServers][numUes]{{0}};             // stores which edge server
 int edgeMigrationChart[numUes][numEdgeServers]{{0}}; // I forgot
 int cell_usage[numBSs]{{0}};                         // stores the amount of downlink usage being
                                                      // requested to each cell at the current time
-std::unordered_map<int, double> user_throughput;
+double user_throughput[numUes];
 Ipv4Address serverNodesAddresses[numEdgeServers][2]; // stores the ipv4 address
                                                      // of each edge server
 std::unordered_map<int, Ipv4Address>
@@ -1047,12 +1048,9 @@ bool find_handover(Handover h)
 {
   for (auto &handover_compare : handover_vector)
   {
-    LOG("Eu nao aguento mais essa merdaaa");
-    LOG(handover_compare);
-    LOG(h);
     if (h == handover_compare)
     {
-      LOG("!!!!!!!");
+      LOG("Handover already requested, not repeating.");
       return true;
     }
   }
@@ -1064,8 +1062,8 @@ void handoverManager(std::string path)
   // todo: put logging functions in handover manager
   // random handover
   // get serving cell of user
-  // int user_thr = 5 * 1024 * 1024;
-  // int cell_thr = 10 * 1024 * 1024;
+  int user_thr = 5 * 1024 * 1024;
+  int cell_thr = 10 * 1024 * 1024;
 
   // user-wise strongest cell implementation
   for (uint32_t i = 0; i < numUes; i++)
@@ -1074,7 +1072,7 @@ void handoverManager(std::string path)
     uint32_t servingCell = getServingcell(imsi);
     int rsrp = std::numeric_limits<int>::lowest();
     uint32_t strongestNeighborCell = 0;
-    int signal_threshold = 5;
+    int signal_threshold = 3;
 
     if (neighbors[servingCell][i] == 0)
     {
@@ -1082,34 +1080,110 @@ void handoverManager(std::string path)
       return;
     }
 
-    for (uint32_t cell = 0; cell < numBSs; cell++)
+    if (handover_policy == "iuavbs")
     {
-      if (neighbors[cell][i] > rsrp && cell != servingCell)
+      if (user_throughput[i] >= user_thr)
       {
-        rsrp = neighbors[cell][i];
-        strongestNeighborCell = cell;
+        for (uint32_t cell = 0; cell < numBSs; cell++)
+        {
+          if (neighbors[cell][i] > rsrp && cell != servingCell && is_drone(cell) && cell_throughput[cell] < cell_thr)
+          {
+            rsrp = neighbors[cell][i];
+            strongestNeighborCell = cell;
+          }
+        }
+      }
+
+      if (rsrp > (signal_threshold + neighbors[servingCell][imsi - 1]) &&
+          neighbors[servingCell][imsi - 1] != 0 &&
+          strongestNeighborCell != servingCell)
+      {
+        // create handover identifier
+        Handover handover(Simulator::Now().GetSeconds(), i, servingCell,
+                          strongestNeighborCell);
+        // if this handover has already been attempted, return.
+        if (find_handover(handover))
+        {
+          return;
+        }
+        // if handover is valid, add it to list of handovers
+        handover_vector.push_back(handover);
+
+        LOG(handover);
+        lteHelper->HandoverRequest(Simulator::Now(), ueDevs.Get(i),
+                                   enbDevs.Get(servingCell),
+                                   enbDevs.Get(strongestNeighborCell));
       }
     }
 
-    if (rsrp > (signal_threshold + neighbors[servingCell][imsi - 1]) &&
-        neighbors[servingCell][imsi - 1] != 0 &&
-        strongestNeighborCell != servingCell)
+    else if (handover_policy == "competing")
     {
-      // create handover identifier
-      Handover handover(Simulator::Now().GetSeconds(), i, servingCell,
-                        strongestNeighborCell);
-      // if this handover has already been attempted, return.
-      if (find_handover(handover))
+            if (user_throughput[i] >= user_thr)
       {
-        return;
+        for (uint32_t cell = 0; cell < numBSs; cell++)
+        {
+          if (neighbors[cell][i] > rsrp && cell != servingCell && cell_throughput[cell] < cell_thr)
+          {
+            rsrp = neighbors[cell][i];
+            strongestNeighborCell = cell;
+          }
+        }
       }
-      // if handover is valid, add it to list of handovers
-      handover_vector.push_back(handover);
 
-      LOG(handover);
-      lteHelper->HandoverRequest(Simulator::Now(), ueDevs.Get(i),
-                                 enbDevs.Get(servingCell),
-                                 enbDevs.Get(strongestNeighborCell));
+      if (rsrp > (signal_threshold + neighbors[servingCell][imsi - 1]) &&
+          neighbors[servingCell][imsi - 1] != 0 &&
+          strongestNeighborCell != servingCell)
+      {
+        // create handover identifier
+        Handover handover(Simulator::Now().GetSeconds(), i, servingCell,
+                          strongestNeighborCell);
+        // if this handover has already been attempted, return.
+        if (find_handover(handover))
+        {
+          return;
+        }
+        // if handover is valid, add it to list of handovers
+        handover_vector.push_back(handover);
+
+        LOG(handover);
+        lteHelper->HandoverRequest(Simulator::Now(), ueDevs.Get(i),
+                                   enbDevs.Get(servingCell),
+                                   enbDevs.Get(strongestNeighborCell));
+      }
+
+    }
+
+    else if (handover_policy == "classic")
+    {
+      for (uint32_t cell = 0; cell < numBSs; cell++)
+      {
+        if (neighbors[cell][i] > rsrp && cell != servingCell)
+        {
+          rsrp = neighbors[cell][i];
+          strongestNeighborCell = cell;
+        }
+      }
+
+      if (rsrp > (signal_threshold + neighbors[servingCell][imsi - 1]) &&
+          neighbors[servingCell][imsi - 1] != 0 &&
+          strongestNeighborCell != servingCell)
+      {
+        // create handover identifier
+        Handover handover(Simulator::Now().GetSeconds(), i, servingCell,
+                          strongestNeighborCell);
+        // if this handover has already been attempted, return.
+        if (find_handover(handover))
+        {
+          return;
+        }
+        // if handover is valid, add it to list of handovers
+        handover_vector.push_back(handover);
+
+        LOG(handover);
+        lteHelper->HandoverRequest(Simulator::Now(), ueDevs.Get(i),
+                                   enbDevs.Get(servingCell),
+                                   enbDevs.Get(strongestNeighborCell));
+      }
     }
   }
 }
@@ -1284,7 +1358,7 @@ int main(int argc, char *argv[])
 
   // lte specific config
   lteHelper->SetAttribute("PathlossModel",
-                          StringValue("ns3::NakagamiPropagationLossModel"));
+                          StringValue("ns3::RangePropagationLossModel"));
   lteHelper->SetHandoverAlgorithmType("ns3::NoOpHandoverAlgorithm");
   // todo: change for uavs
   lteHelper->SetEnbDeviceAttribute("DlBandwidth",
@@ -1308,7 +1382,7 @@ int main(int argc, char *argv[])
   Config::SetDefault("ns3::LteSpectrumPhy::CtrlErrorModelEnabled",
                      BooleanValue(false));
   Config::SetDefault("ns3::LteSpectrumPhy::DataErrorModelEnabled",
-                     BooleanValue(false));
+                     BooleanValue(true));
 
   // create nodes in global containers
   UAVNodes.Create(numUAVs);
@@ -1452,7 +1526,7 @@ int main(int argc, char *argv[])
   Simulator::Schedule(management_interval, &UAVManager,
                       centers); // only executed in the beginning?
   Simulator::Schedule(management_interval, &generate_requests, remoteHost,
-                      centers, 20 * 1024, 500);              // recurrent
+                      centers, 20 * 1024 * 1024, 500);       // recurrent
   Simulator::Schedule(management_interval, &just_a_monitor); // just a monitor
 
   /* handover reporting callbacks*/

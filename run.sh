@@ -13,10 +13,10 @@ else
     exit
 fi
 
-if [ $algorithm == "competing" ] || [ $algorithm == "iuavs" ]
+if [ $algorithm = "competing" ] || [ $algorithm = "iuavs" ]
 then
     num_uav=10
-elif [ $algorithm == "classic" ] || [ $algorithm == "none" ]
+elif [ $algorithm = "classic" ] || [ $algorithm = "none" ]
 then
     num_uav=0
 fi

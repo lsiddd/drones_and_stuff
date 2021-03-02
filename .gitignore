@@ -5,6 +5,7 @@
 
 *.txt
 *.xml
+simul*
 
 *.o
 *.pyc

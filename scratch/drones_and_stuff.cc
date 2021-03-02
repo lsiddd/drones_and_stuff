@@ -15,7 +15,6 @@
  *
  * Author: Lucas Pacheco <lucas.pacheco@inf.unibe.ch>
  */
-#include <time.h> /* time */
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
@@ -26,6 +25,7 @@
 #include <random>
 #include <sstream>
 #include <string>
+#include <time.h> /* time */
 #include <unordered_map>
 #include <utility> // std::pair
 #include <vector>
@@ -71,10 +71,10 @@ uint32_t seedValue = time(NULL);
 std::string ns3_dir;
 
 uint32_t SimTime = 10;
-const uint32_t numUAVs = 0;
+const uint32_t numUAVs = 10;
 // make sure there's hot spots even if the number of uavs is 0
 const uint32_t number_of_hot_spots = numUAVs == 0 ? 10 : numUAVs;
-const uint32_t numUes = 30;
+const uint32_t numUes = 90;
 const uint32_t numStaticCells = 20;
 const uint32_t numEdgeServers = numStaticCells;
 const uint32_t numBSs = numUAVs + numStaticCells;
@@ -111,6 +111,7 @@ int edgeMigrationChart[numUes][numEdgeServers]{{0}}; // I forgot
 int cell_usage[numBSs]{{0}};                         // stores the amount of downlink usage being
                                                      // requested to each cell at the current time
 double user_throughput[numUes];
+double user_requests[numUes];
 Ipv4Address serverNodesAddresses[numEdgeServers][2]; // stores the ipv4 address
                                                      // of each edge server
 std::unordered_map<int, Ipv4Address>
@@ -428,6 +429,7 @@ void generate_requests(Ptr<Node> remoteHost,
           << payload << " bytes");
 
       cell_usage[get_cell(i)] += payload;
+      user_requests[i] = payload;
       requestApplication(remoteHost, ueNodes.Get(i), payload);
     }
   }
@@ -1087,7 +1089,8 @@ void handoverManager(std::string path)
       {
         for (uint32_t cell = 0; cell < numBSs; cell++)
         {
-          if (neighbors[cell][i] > rsrp && cell != servingCell && is_drone(cell) && cell_throughput[cell] < cell_thr)
+          if (neighbors[cell][i] > rsrp && cell != servingCell &&
+              is_drone(cell) && cell_throughput[cell] < cell_thr)
           {
             rsrp = neighbors[cell][i];
             strongestNeighborCell = cell;
@@ -1119,11 +1122,12 @@ void handoverManager(std::string path)
 
     else if (handover_policy == "competing")
     {
-            if (user_throughput[i] >= user_thr)
+      if (user_throughput[i] >= user_thr)
       {
         for (uint32_t cell = 0; cell < numBSs; cell++)
         {
-          if (neighbors[cell][i] > rsrp && cell != servingCell && cell_throughput[cell] < cell_thr)
+          if (neighbors[cell][i] > rsrp && cell != servingCell &&
+              cell_throughput[cell] < cell_thr)
           {
             rsrp = neighbors[cell][i];
             strongestNeighborCell = cell;
@@ -1151,7 +1155,6 @@ void handoverManager(std::string path)
                                    enbDevs.Get(servingCell),
                                    enbDevs.Get(strongestNeighborCell));
       }
-
     }
 
     else if (handover_policy == "classic")
@@ -1185,6 +1188,12 @@ void handoverManager(std::string path)
                                    enbDevs.Get(servingCell),
                                    enbDevs.Get(strongestNeighborCell));
       }
+    }
+    else if (handover_policy == "none")
+      return;
+    else
+    {
+      NS_FATAL_ERROR("Handover policy type invalid.");
     }
   }
 }
@@ -1316,6 +1325,9 @@ void just_a_monitor()
     for (uint32_t i = 0; i < numUes; i++)
     {
       LOG("User " << i << " throughput " << user_throughput[i]);
+      LOG("User " << i << " request value " << user_requests[i]);
+      std::string cell_type = is_drone(get_cell(i)) ? " UAV." : "GBS.";
+      LOG("User is in " << cell_type);
     }
   }
 

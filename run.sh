@@ -10,7 +10,8 @@ if [ $# -ne 0 ]
 then
     algorithm=$1
 else
-    exit
+then
+  result=${PWD##*/}          # to assign to a variable
 fi
 
 if [ $algorithm = "competing" ] || [ $algorithm = "iuavs" ]

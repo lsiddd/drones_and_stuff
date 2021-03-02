@@ -71,8 +71,9 @@ uint32_t seedValue = time(NULL);
 std::string ns3_dir;
 
 uint32_t SimTime = 10;
-const uint32_t numUAVs = 10;
-const uint32_t number_of_hot_spots = numUAVs;
+const uint32_t numUAVs = 0;
+// make sure there's hot spots even if the number of uavs is 0
+const uint32_t number_of_hot_spots = numUAVs == 0 ? 10 : numUAVs;
 const uint32_t numUes = 30;
 const uint32_t numStaticCells = 20;
 const uint32_t numEdgeServers = numStaticCells;

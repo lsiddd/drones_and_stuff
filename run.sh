@@ -10,8 +10,7 @@ if [ $# -ne 0 ]
 then
     algorithm=$1
 else
-then
-  result=${PWD##*/}          # to assign to a variable
+  algorithm=${PWD##*/}          # to assign to a variable
 fi
 
 if [ $algorithm = "competing" ] || [ $algorithm = "iuavs" ]
@@ -26,14 +25,12 @@ sed -i -r "s/(numUAVs =) [0-9]{1,2}/\1 ${num_uav}/g" scratch/drones_and_stuff.cc
 sed -i -r "s/(numStaticCells =) [0-9]{1,2}/\1 ${num_bs}/g" scratch/drones_and_stuff.cc
 sed -i -r "s/(handover_policy =) \"\w+\"/\1 \"${algorithm}\"/g" scratch/drones_and_stuff.cc
 
-./waf configure --disable-werror
-
 for i in $(seq 1)
 do
     for num_ue in 30 60 90
     do
         sed -i -r "s/(numUes =) [0-9]{1,2}/\1 ${num_ue}/g" scratch/drones_and_stuff.cc
         
-        ./waf --run scratch/drones_and_stuff > simul_${algorithm}_${i}_${num_ue}
+        ./waf --run scratch/drones_and_stuff > simul_${algorithm}_${i}_${num_ue} 2>&1
     done
 done

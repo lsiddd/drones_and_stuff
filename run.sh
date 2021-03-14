@@ -1,10 +1,7 @@
 #!/bin/bash
 
 num_uav=10
-# num_ue=30
 num_bs=20
-
-algorithm="iuavbs"
 
 if [ $# -ne 0 ]
 then
@@ -25,9 +22,9 @@ sed -i -r "s/(numUAVs =) [0-9]{1,2}/\1 ${num_uav}/g" scratch/drones_and_stuff.cc
 sed -i -r "s/(numStaticCells =) [0-9]{1,2}/\1 ${num_bs}/g" scratch/drones_and_stuff.cc
 sed -i -r "s/(handover_policy =) \"\w+\"/\1 \"${algorithm}\"/g" scratch/drones_and_stuff.cc
 
-for seed in $(seq 10)
+for seed in $(seq 4)
 do
-    for num_ue in 30 60 90
+    for num_ue in 30 60 90 120
     do
         sed -i -r "s/(numUes =) [0-9]{1,2}/\1 ${num_ue}/g" scratch/drones_and_stuff.cc
         

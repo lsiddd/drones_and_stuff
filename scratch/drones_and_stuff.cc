@@ -83,7 +83,7 @@ Time management_interval = Seconds(1);
 
 std::string mobil_trace = "traces/koln.tcl";
 std::string requests_trace = "traces/requests.tcl_but_not_really";
-std::string handover_policy = "drones_and_stuff";
+std::string handover_policy = "iuavbs";
 float distance_multiplier = 1.0 / 10;
 
 uint16_t node_remote = 1; // HOST_REMOTO
@@ -561,7 +561,7 @@ int get_closest_center_index(Ptr<Node> node,
 int get_user_id_from_ipv4(Ipv4Address ip)
 {
 
-  for (int i = 0; i < numUes; i++) {
+  for (uint32_t i = 0; i < numUes; i++) {
     if (user_ip[i] == ip) {
       return i;
     }

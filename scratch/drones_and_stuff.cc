@@ -114,8 +114,8 @@ double user_throughput[numUes];
 double user_requests[numUes];
 Ipv4Address serverNodesAddresses[numEdgeServers][2]; // stores the ipv4 address
                                                      // of each edge server
-Ipv4Address    user_ip[numUes];                                     // stores the ipv4 address of each user connected to the network
-std::unordered_map<int, double> cell_throughput; //
+Ipv4Address user_ip[numUes];                         // stores the ipv4 address of each user connected to the network
+std::unordered_map<int, double> cell_throughput;     //
 
 // struct that contains info aabout the handovers performed in the network
 struct Handover
@@ -423,13 +423,15 @@ void generate_requests(Ptr<Node> remoteHost,
     if (payload)
     {
       LOG("requesting app from user "
-          << i << " to server " << serving_node << " at address "
-          << serverNodesAddresses[serving_node][1] << " with payload "
+          << i << " to server " << serving_node << " with payload "
           << payload << " bytes");
 
-      cell_usage[get_cell(i)] += payload;
-      user_requests[i] = payload;
-      requestApplication(remoteHost, ueNodes.Get(i), payload);
+      if (int cell = get_cell(i) != -1)
+      {
+        cell_usage[cell] += payload;
+        user_requests[i] = payload;
+        requestApplication(remoteHost, ueNodes.Get(i), payload);
+      }
     }
   }
 
@@ -556,13 +558,14 @@ int get_closest_center_index(Ptr<Node> node,
   return closest;
 }
 
-
 // this is not workiiiing
 int get_user_id_from_ipv4(Ipv4Address ip)
 {
 
-  for (uint32_t i = 0; i < numUes; i++) {
-    if (user_ip[i] == ip) {
+  for (uint32_t i = 0; i < numUes; i++)
+  {
+    if (user_ip[i] == ip)
+    {
       return i;
     }
   }
@@ -1331,10 +1334,17 @@ void just_a_monitor()
   {
     for (uint32_t i = 0; i < numUes; i++)
     {
-      LOG("User " << i << " throughput " << user_throughput[i]);
+      LOG("User " << i << " throughput " << 1024 * 1024 * user_throughput[i]);
       LOG("User " << i << " request value " << user_requests[i]);
-      std::string cell_type = is_drone(get_cell(i)) ? " UAV." : "GBS.";
-      LOG("User is in " << cell_type);
+      if (int cell = get_cell(i) != -1)
+      {
+        std::string cell_type = is_drone(cell) ? " UAV." : "GBS.";
+        LOG("User is in " << cell_type);
+      }
+      else
+      {
+        LOG("User is not connected.");
+      }
     }
   }
 

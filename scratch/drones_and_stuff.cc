@@ -15,6 +15,7 @@
  *
  * Author: Lucas Pacheco <lucas.pacheco@inf.unibe.ch>
  */
+
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
@@ -68,20 +69,20 @@ std::ofstream ue_positions_log;
 uint32_t active_drones = 0;
 // std::string clustering_algoritm = "kmeans";
 uint32_t seedValue = 10000;
-std::string ns3_dir;
 
-uint32_t SimTime = 100;
+uint32_t SimTime = 10;
 const uint32_t numUAVs = 10;
 // make sure there's hot spots even if the number of uavs is 0
 const uint32_t number_of_hot_spots = numUAVs == 0 ? 10 : numUAVs;
-const uint32_t numUes = 90;
+const uint32_t numUes = 20;
 const uint32_t numStaticCells = 20;
 const uint32_t numEdgeServers = numStaticCells;
 const uint32_t numBSs = numUAVs + numStaticCells;
 int eNodeBTxPower = 46;
-Time management_interval = Seconds(1);
+Time management_interval = Seconds(0.1);
 
 std::string mobil_trace = "traces/koln.tcl";
+std::string req_mode = "trace";
 std::string requests_trace = "traces/requests.tcl_but_not_really";
 std::string handover_policy = "iuavbs";
 float distance_multiplier = 1.0 / 10;
@@ -102,24 +103,24 @@ bool useCa = false;
 int connections[numBSs][numUes]{{0}}; // stores which user is connected in which
                                       // cell in a cell x users matrix
 double neighbors[numBSs][numUes]{
-    {0}};                                            // stores all beacons received by each user in a cells x users matrix
-int handoverPredictions[numUes][3]{{0}};             // stores in which voronoi cell  the
-                                                     // user will be in the given time stamp
-int edgeUe[numEdgeServers][numUes]{{0}};             // stores which edge server each user
-                                                     // is connected to, currently not used
+    {0}}; // stores all beacons received by each user in a cells x users matrix
+int handoverPredictions[numUes][3]{{0}}; // stores in which voronoi cell  the
+                                         // user will be in the given time stamp
+int edgeUe[numEdgeServers][numUes]{{0}}; // stores which edge server each user
+                                         // is connected to, currently not used
 int edgeMigrationChart[numUes][numEdgeServers]{{0}}; // I forgot
-int cell_usage[numBSs]{{0}};                         // stores the amount of downlink usage being
-                                                     // requested to each cell at the current time
+int cell_usage[numBSs]{{0}}; // stores the amount of downlink usage being
+                             // requested to each cell at the current time
 double user_throughput[numUes];
 double user_requests[numUes];
 Ipv4Address serverNodesAddresses[numEdgeServers][2]; // stores the ipv4 address
                                                      // of each edge server
-Ipv4Address user_ip[numUes];                         // stores the ipv4 address of each user connected to the network
-std::unordered_map<int, double> cell_throughput;     //
+Ipv4Address user_ip[numUes]; // stores the ipv4 address of each user connected
+                             // to the network
+std::unordered_map<int, double> cell_throughput; //
 
 // struct that contains info aabout the handovers performed in the network
-struct Handover
-{
+struct Handover {
   double time;
   int user;
   int source;
@@ -129,15 +130,13 @@ struct Handover
       : time{t}, user{u}, source{s}, target{tg} {}
 
   // operator to compare two handover instances within a given time window
-  bool operator==(const Handover &other) const
-  {
+  bool operator==(const Handover &other) const {
     return std::abs(other.time - time) < 1 && user == other.user;
     //&& source == other.source && source == other.source &&
     //    target == other.target;
   }
 
-  friend std::ostream &operator<<(std::ostream &os, const Handover &h)
-  {
+  friend std::ostream &operator<<(std::ostream &os, const Handover &h) {
     os << "Handover(" << h.time << ", " << h.user << ", " << h.source << ", "
        << h.target << ")";
 
@@ -147,7 +146,7 @@ struct Handover
 // store hsitorical handover info
 std::vector<Handover> handover_vector;
 
-bool drones_in_use[numUAVs];                // flags drones being used at the current time
+bool drones_in_use[numUAVs]; // flags drones being used at the current time
 bool hot_spots_served[number_of_hot_spots]; // flags which of the detected hot
                                             // spots have a drone allocated to
                                             // them
@@ -211,8 +210,7 @@ int get_cell(int);
 // global lte helper for mobility management
 Ptr<LteHelper> lteHelper = CreateObject<LteHelper>();
 
-bool IsTopLevelSourceDir(std::string path)
-{
+bool IsTopLevelSourceDir(std::string path) {
   bool haveVersion = false;
   bool haveLicense = false;
 
@@ -223,14 +221,10 @@ bool IsTopLevelSourceDir(std::string path)
 
   std::list<std::string> files = SystemPath::ReadFiles(path);
   for (std::list<std::string>::const_iterator i = files.begin();
-       i != files.end(); ++i)
-  {
-    if (*i == "VERSION")
-    {
+       i != files.end(); ++i) {
+    if (*i == "VERSION") {
       haveVersion = true;
-    }
-    else if (*i == "LICENSE")
-    {
+    } else if (*i == "LICENSE") {
       haveLicense = true;
     }
   }
@@ -238,15 +232,12 @@ bool IsTopLevelSourceDir(std::string path)
   return haveVersion && haveLicense;
 }
 
-std::string GetTopLevelSourceDir(void)
-{
+std::string GetTopLevelSourceDir(void) {
   std::string self = SystemPath::FindSelfDirectory();
   std::list<std::string> elements = SystemPath::Split(self);
-  while (!elements.empty())
-  {
+  while (!elements.empty()) {
     std::string path = SystemPath::Join(elements.begin(), elements.end());
-    if (IsTopLevelSourceDir(path))
-    {
+    if (IsTopLevelSourceDir(path)) {
       return path;
     }
     elements.pop_back();
@@ -255,8 +246,7 @@ std::string GetTopLevelSourceDir(void)
 }
 
 /*============================================================*/
-void HandoverPrediction(int nodeId, int timeWindow)
-{
+void HandoverPrediction(int nodeId, int timeWindow) {
   std::string mobilityTrace = mobil_trace;
   // means no connection has been found
   // happens if it's called too early in the simulation
@@ -283,10 +273,8 @@ void HandoverPrediction(int nodeId, int timeWindow)
   string aux1, aux2, aux4, aux5;
   string cell_id;
 
-  while (getline(mobilityFile, fileLines))
-  {
-    if (fileLines.find("setdest") != string::npos)
-    {
+  while (getline(mobilityFile, fileLines)) {
+    if (fileLines.find("setdest") != string::npos) {
 
       std::stringstream ss(fileLines);
       // cout << ss.str();
@@ -300,8 +288,7 @@ void HandoverPrediction(int nodeId, int timeWindow)
 
       // for (int time_offset = 0; time_offset < timeWindow; time_offset++)
       if (aux4 == nodeColumn && Simulator::Now().GetSeconds() + timeWindow ==
-                                    round(node_position_time))
-      {
+                                    round(node_position_time)) {
         Vector uePos = Vector(node_x, node_y, node_z);
 
         // double distanceServingCell = CalculateDistance(uePos,
@@ -309,8 +296,7 @@ void HandoverPrediction(int nodeId, int timeWindow)
         // ());
 
         // calculate distance from node to each enb
-        for (uint32_t i = 0; i < numStaticCells; ++i)
-        {
+        for (uint32_t i = 0; i < numStaticCells; ++i) {
           // get Ith enb  position
           Vector enbPos =
               BSNodes.Get(i)->GetObject<MobilityModel>()->GetPosition();
@@ -318,16 +304,14 @@ void HandoverPrediction(int nodeId, int timeWindow)
           double distanceUeEnb = CalculateDistance(uePos, enbPos);
 
           // get closest enb
-          if (distanceUeEnb < shortestDistance)
-          {
+          if (distanceUeEnb < shortestDistance) {
             closestCell = i;
             shortestDistance = distanceUeEnb;
           }
         }
 
         // if closest enb != current, predict handover
-        if (closestCell != servingCell)
-        {
+        if (closestCell != servingCell) {
           std::cout << "Handover to happen at " << node_position_time << endl;
           std::cout << "Node " << nodeId << " from cell " << servingCell
                     << " to cell " << closestCell << endl;
@@ -342,19 +326,16 @@ void HandoverPrediction(int nodeId, int timeWindow)
 
 Ptr<ListPositionAllocator>
 generatePositionAllocator(int number_of_nodes = 300, int area = 1000,
-                          std::string allocation = "random")
-{
+                          std::string allocation = "random") {
 
   Ptr<ListPositionAllocator> HpnPosition =
       CreateObject<ListPositionAllocator>();
   std::uniform_int_distribution<int> distribution(0, area);
 
-  if (allocation == "koln")
-  {
+  if (allocation == "koln") {
     std::ifstream cellList("traces/cellList_koln");
     double a, b, c;
-    while (cellList >> a >> b >> c)
-    {
+    while (cellList >> a >> b >> c) {
       LOG("adding cell to position " << b * distance_multiplier << " "
                                      << c * distance_multiplier);
       HpnPosition->Add(
@@ -362,10 +343,8 @@ generatePositionAllocator(int number_of_nodes = 300, int area = 1000,
     }
   }
 
-  else
-  {
-    for (int i = 0; i < number_of_nodes; i++)
-    {
+  else {
+    for (int i = 0; i < number_of_nodes; i++) {
       HpnPosition->Add(
           Vector3D(distribution(generator), distribution(generator), 45));
     }
@@ -373,13 +352,11 @@ generatePositionAllocator(int number_of_nodes = 300, int area = 1000,
   return HpnPosition;
 }
 
-std::vector<std::pair<int, int>> create_hot_spots()
-{
+std::vector<std::pair<int, int>> create_hot_spots() {
   std::vector<std::pair<int, int>> centers;
   std::uniform_int_distribution<int> distribution(0, 2000);
 
-  for (uint32_t i = 0; i < number_of_hot_spots; i++)
-  {
+  for (uint32_t i = 0; i < number_of_hot_spots; i++) {
     std::pair<int, int> center;
     center.first = distribution(generator);
     center.second = distribution(generator);
@@ -390,44 +367,45 @@ std::vector<std::pair<int, int>> create_hot_spots()
   return centers;
 }
 
-void generate_requests(Ptr<Node> remoteHost,
-                       std::vector<std::pair<int, int>> centers,
-                       int max_payload = 10 * 1024 * 1024, int decay = 500)
-{
+std::map<std::pair<int, int>, double> populate_requests_trace() {
+
+  std::map<std::pair<int, int>, double> requests; //
+
   // at 978 user 99 requests 1043.98848 bytes
   std::ifstream trace_file(requests_trace);
-  // int currentTime = Simulator::Now().GetSeconds();
-  std::unordered_map<int, double> requests;
   std::string str;
+
+  while (std::getline(trace_file, str)) {
+    vector<std::string> split_string;
+    boost::split(split_string, str, boost::is_any_of(" "));
+
+    // pegar triple time [1], user [], valor da request
+    LOG(split_string[1] << " " << split_string[3] << " " << split_string[5]
+                        << " ");
+    int user = stoi(split_string[3]);
+    int time = stoi(split_string[1]);
+    double request_value = stod(split_string[5]);
+    requests[{time, user}] = request_value;
+    // wait;
+  }
+  trace_file.close();
+  return requests;
+}
+
+void generate_requests(Ptr<Node> remoteHost,
+                       std::vector<std::pair<int, int>> centers,
+                       std::map<std::pair<int, int>, double> &requests,
+                       int max_payload = 10 * 1024 * 1024, int decay = 500) {
 
   // zero cell usage so it's updated every second
   for (auto &cu : cell_usage)
     cu = 0;
 
-  // generate payload user-wise
-  for (uint32_t i = 0; i < ueNodes.GetN(); i++)
-  {
-    int serving_node = 0;
-
-    // get distance to closest hot spot and calculate payload
-    int index_to_closest = get_closest_center_index(ueNodes.Get(i), centers);
-    std::pair<int, int> closest_surge = centers[index_to_closest];
-    Vector3D surge(closest_surge.first, closest_surge.second, 1);
-
-    // payload follows an exponential function with max when dist to hot spot =
-    // 0
-    Vector node_position = get_node_position(ueNodes.Get(i));
-    double dist = CalculateDistance(surge, node_position);
-    int payload = max_payload * exp((dist * -1) / decay);
-
-    if (payload)
-    {
-      LOG("requesting app from user "
-          << i << " to server " << serving_node << " with payload "
-          << payload << " bytes");
-
-      if (int cell = get_cell(i) != -1)
-      {
+  if (req_mode == "trace") {
+    for (uint32_t i = 0; i < ueNodes.GetN(); i++) {
+      // payload associated with pair of time and user id
+      double payload = requests[{(int)Simulator::Now().GetSeconds(), i}];
+      if (int cell = get_cell(i) != -1) {
         cell_usage[cell] += payload;
         user_requests[i] = payload;
         requestApplication(remoteHost, ueNodes.Get(i), payload);
@@ -435,14 +413,44 @@ void generate_requests(Ptr<Node> remoteHost,
     }
   }
 
-  trace_file.close();
+  else if (req_mode == "random") {
+    // generate payload user-wise
+    for (uint32_t i = 0; i < ueNodes.GetN(); i++) {
+      int serving_node = 0;
+
+      // get distance to closest hot spot and calculate payload
+      int index_to_closest = get_closest_center_index(ueNodes.Get(i), centers);
+
+      std::pair<int, int> closest_surge = centers[index_to_closest];
+      Vector3D surge(closest_surge.first, closest_surge.second, 1);
+
+      // payload follows an exponential function with max when dist to hot spot
+      // =
+      // 0
+      Vector node_position = get_node_position(ueNodes.Get(i));
+      double dist = CalculateDistance(surge, node_position);
+      int payload = max_payload * exp((dist * -1) / decay);
+
+      if (payload) {
+        LOG("requesting app from user " << i << " to server " << serving_node
+                                        << " with payload " << payload
+                                        << " bytes");
+
+        if (int cell = get_cell(i) != -1) {
+          cell_usage[cell] += payload;
+          user_requests[i] = payload;
+          requestApplication(remoteHost, ueNodes.Get(i), payload);
+        }
+      }
+    }
+  }
+
   Simulator::Schedule(management_interval, &generate_requests, remoteHost,
-                      centers, 10 * 1024 * 1024, 500);
+                      centers, requests, 10 * 1024 * 1024, 500);
 }
 
 // populate pairing from nodeid to imsi
-int populate_path_imsi(std::string path, int imsi)
-{
+int populate_path_imsi(std::string path, int imsi) {
   int nodeid;
 
   std::vector<std::string> split_path;
@@ -455,12 +463,9 @@ int populate_path_imsi(std::string path, int imsi)
   return nodeid;
 }
 
-void print_meas()
-{
-  for (uint32_t i = 0; i < numBSs; i++)
-  {
-    for (uint32_t j = 0; j < numUes; j++)
-    {
+void print_meas() {
+  for (uint32_t i = 0; i < numBSs; i++) {
+    for (uint32_t j = 0; j < numUes; j++) {
       std::cout << connections[i][j] << "\t";
     }
     std::cout << std::endl;
@@ -469,34 +474,27 @@ void print_meas()
 }
 
 // getter methods
-Vector get_node_position(Ptr<Node> node)
-{
+Vector get_node_position(Ptr<Node> node) {
   Ptr<MobilityModel> mob = node->GetObject<MobilityModel>();
   return mob->GetPosition();
 }
 
-int get_cell(int user_id)
-{
-  for (uint32_t i = 0; i < numBSs + numUAVs; i++)
-  {
+int get_cell(int user_id) {
+  for (uint32_t i = 0; i < numBSs + numUAVs; i++) {
     if (connections[i][user_id])
       return i;
   }
   return -1;
 }
 
-int get_imsi(int cellId, int rnti)
-{
+int get_imsi(int cellId, int rnti) {
   return rnti_cells[cellId][rnti] == 0 ? -1 : rnti_cells[cellId][rnti];
 }
 
-int getServingcell(int imsi)
-{
+int getServingcell(int imsi) {
   int servingCell = 0;
-  for (uint32_t i = 0; i < numBSs; i++)
-  {
-    if (connections[i][imsi - 1] != 0)
-    {
+  for (uint32_t i = 0; i < numBSs; i++) {
+    if (connections[i][imsi - 1] != 0) {
       servingCell = i;
     }
   }
@@ -505,8 +503,7 @@ int getServingcell(int imsi)
 
 bool is_drone(int node_id) { return node_id >= (int)numStaticCells; }
 
-int getNodeId(Ptr<Node> node, string type = "server")
-{
+int getNodeId(Ptr<Node> node, string type = "server") {
   // seleced the desired node container
   NodeContainer tmpNodesContainer;
   if (type == "server")
@@ -517,10 +514,8 @@ int getNodeId(Ptr<Node> node, string type = "server")
     tmpNodesContainer = BSNodes;
 
   // find th enode id
-  for (uint32_t i = 0; i < tmpNodesContainer.GetN(); ++i)
-  {
-    if (node == tmpNodesContainer.Get(i))
-    {
+  for (uint32_t i = 0; i < tmpNodesContainer.GetN(); ++i) {
+    if (node == tmpNodesContainer.Get(i)) {
       // NS_LOG_UNCOND("node " << node << " is " << tmpNodesContainer.Get(i) <<
       // " ?");
       return i;
@@ -530,28 +525,27 @@ int getNodeId(Ptr<Node> node, string type = "server")
   return -1;
 }
 
-int getEdge(int nodeId)
-{
+int getEdge(int nodeId) {
   int edgeId = -1;
   for (uint32_t i = 0; i < numEdgeServers; ++i)
-    if (edgeUe[i][nodeId])
-    {
+    if (edgeUe[i][nodeId]) {
       edgeId = i;
     }
   return edgeId;
 }
 
 int get_closest_center_index(Ptr<Node> node,
-                             std::vector<std::pair<int, int>> centers)
-{
+                             std::vector<std::pair<int, int>> centers) {
   Vector m_position = get_node_position(node);
   double dist = INT_MAX;
   int closest = -1;
-  for (uint32_t i = 0; i < number_of_hot_spots; i++)
-  {
+
+  if (centers.size() == 0)
+    return closest;
+
+  for (uint32_t i = 0; i < number_of_hot_spots; i++) {
     if (dist > CalculateDistance(m_position, Vector3D(centers[i].first,
-                                                      centers[i].second, 1)))
-    {
+                                                      centers[i].second, 1))) {
       closest = i;
     }
   }
@@ -559,13 +553,10 @@ int get_closest_center_index(Ptr<Node> node,
 }
 
 // this is not workiiiing
-int get_user_id_from_ipv4(Ipv4Address ip)
-{
+int get_user_id_from_ipv4(Ipv4Address ip) {
 
-  for (uint32_t i = 0; i < numUes; i++)
-  {
-    if (user_ip[i] == ip)
-    {
+  for (uint32_t i = 0; i < numUes; i++) {
+    if (user_ip[i] == ip) {
       return i;
     }
   }
@@ -590,8 +581,7 @@ void ReportUeMeasurementsCallback(std::string path, uint16_t rnti,
 
   int node_id = populate_path_imsi(path, imsi);
 
-  if (verbose)
-  {
+  if (verbose) {
     LOG("Simulation time: " << Simulator::Now().GetSeconds());
     LOG(path);
     LOG("rnti " << rnti);
@@ -615,10 +605,8 @@ void ReportUeMeasurementsCallback(std::string path, uint16_t rnti,
 
 void RecvMeasurementReportCallback(std::string path, uint64_t imsi,
                                    uint16_t cellId, uint16_t rnti,
-                                   LteRrcSap::MeasurementReport meas)
-{
-  if (verbose)
-  {
+                                   LteRrcSap::MeasurementReport meas) {
+  if (verbose) {
     LOG("Simulation time: " << Simulator::Now().GetSeconds());
     LOG(path);
     LOG(imsi);
@@ -630,13 +618,11 @@ void RecvMeasurementReportCallback(std::string path, uint64_t imsi,
 }
 
 void NotifyConnectionEstablishedUe(std::string context, uint64_t imsi,
-                                   uint16_t cellid, uint16_t rnti)
-{
+                                   uint16_t cellid, uint16_t rnti) {
   LOG(Simulator::Now().GetSeconds()
       << " " << context << " UE IMSI " << imsi << ": connected to CellId "
       << cellid << " with RNTI " << rnti << "\n");
-  for (uint32_t i = 0; i < numBSs; ++i)
-  {
+  for (uint32_t i = 0; i < numBSs; ++i) {
     connections[i][imsi - 1] = 0;
   }
   connections[cellid - 1][imsi - 1] = rnti;
@@ -644,31 +630,27 @@ void NotifyConnectionEstablishedUe(std::string context, uint64_t imsi,
 }
 
 void NotifyHandoverStartUe(std::string context, uint64_t imsi, uint16_t cellId,
-                           uint16_t rnti, uint16_t targetCellId)
-{
+                           uint16_t rnti, uint16_t targetCellId) {
   std::cout << Simulator::Now().GetSeconds() << " " << context << " UE IMSI "
             << imsi << ": previously connected to CellId " << cellId
             << " with RNTI " << rnti << ", doing handover to CellId "
             << targetCellId << std::endl;
 }
 void NotifyHandoverEndOkUe(std::string context, uint64_t imsi, uint16_t cellId,
-                           uint16_t rnti)
-{
+                           uint16_t rnti) {
   std::cout << Simulator::Now().GetSeconds() << " " << context << " UE IMSI "
             << imsi << ": successful handover to CellId " << cellId
 
             << " with RNTI " << rnti << std::endl;
 }
 void NotifyHandoverStartEnb(std::string context, uint64_t imsi, uint16_t cellId,
-                            uint16_t rnti, uint16_t targetCellId)
-{
+                            uint16_t rnti, uint16_t targetCellId) {
   std::cout << Simulator::Now().GetSeconds() << " " << context << " eNB CellId "
             << cellId << ": start handover of UE with IMSI " << imsi << " RNTI "
             << rnti << " to CellId " << targetCellId << std::endl;
 }
 void NotifyHandoverEndOkEnb(std::string context, uint64_t imsi, uint16_t cellId,
-                            uint16_t rnti)
-{
+                            uint16_t rnti) {
   std::cout << Simulator::Now().GetSeconds() << " " << context << " eNB CellId "
             << cellId << ": completed handover of UE with IMSI " << imsi
             << " RNTI " << rnti << std::endl;
@@ -676,67 +658,72 @@ void NotifyHandoverEndOkEnb(std::string context, uint64_t imsi, uint16_t cellId,
 
 void PhySyncDetectionCallback(std::string context, uint64_t imsi, uint16_t rnti,
                               uint16_t cellId, std::string type,
-                              uint8_t count)
-{
+                              uint8_t count) {
   LOG("PhySyncDetectionCallback imsi " << imsi << " cellid " << cellId
                                        << " rnti " << rnti);
 }
 
 void RadioLinkFailureCallback(std::string context, uint64_t imsi,
-                              uint16_t cellId, uint16_t rnti)
-{
+                              uint16_t cellId, uint16_t rnti) {
   LOG("RadioLinkFailureCallback " << imsi << " cellid " << cellId << " rnti "
                                   << rnti);
   LOG("RLF at " << Simulator::Now());
 }
 
 // move node "smoothly" towards the given position
-void move_drones(Ptr<Node> drone, Vector position, double n_vel)
-{
-  double interval = 0.1;
-  double new_n_vel = interval * n_vel;
+void move_drones(Ptr<Node> drone, Vector position, double n_vel) {
 
-  // get mobility model for drone
-  Vector m_position = get_node_position(drone);
-  double distance = CalculateDistance(position, m_position);
+  bool teletransport = true;
 
-  // 1meter of accuracy is acceptable
-  if (distance > 1)
-  {
-    Vector diff = position - m_position;
-
-    double len = diff.GetLength();
-    Vector new_pos = m_position + Vector((diff.x / len) * new_n_vel,
-                                         (diff.y / len) * new_n_vel,
-                                         (diff.z / len) * new_n_vel);
-    // making sure not to overshoot
-    if (CalculateDistance(new_pos, position) >
-        CalculateDistance(position, m_position))
-    {
-      new_pos = position;
-      return;
-    }
-
+  if (teletransport) {
     // set new node position for a smoother movement
     auto mob = drone->GetObject<MobilityModel>();
-    mob->SetPosition(new_pos);
+    mob->SetPosition(position);
 
-    Simulator::Schedule(management_interval, &move_drones, drone, position,
-                        n_vel);
-    return;
   }
-  LOG("drone arrived at " << Simulator::Now().GetSeconds());
+
+  else {
+    double interval = 0.1;
+    double new_n_vel = interval * n_vel;
+
+    // get mobility model for drone
+    Vector m_position = get_node_position(drone);
+    double distance = CalculateDistance(position, m_position);
+
+    // 1meter of accuracy is acceptable
+    if (distance > 1) {
+      Vector diff = position - m_position;
+
+      double len = diff.GetLength();
+      Vector new_pos = m_position + Vector((diff.x / len) * new_n_vel,
+                                           (diff.y / len) * new_n_vel,
+                                           (diff.z / len) * new_n_vel);
+      // making sure not to overshoot
+      if (CalculateDistance(new_pos, position) >
+          CalculateDistance(position, m_position)) {
+        new_pos = position;
+        return;
+      }
+
+      // set new node position for a smoother movement
+      auto mob = drone->GetObject<MobilityModel>();
+      mob->SetPosition(new_pos);
+
+      Simulator::Schedule(management_interval, &move_drones, drone, position,
+                          n_vel);
+      return;
+    }
+    LOG("drone arrived at " << Simulator::Now().GetSeconds());
+  }
 }
 
-std::string exec(std::string cmd)
-{
+std::string exec(std::string cmd) {
   std::array<char, 128> buffer;
   std::string result;
   std::shared_ptr<FILE> pipe(popen(cmd.c_str(), "r"), pclose);
   if (!pipe)
     throw std::runtime_error("popen() failed!");
-  while (!feof(pipe.get()))
-  {
+  while (!feof(pipe.get())) {
     if (fgets(buffer.data(), 128, pipe.get()) != nullptr)
       result += buffer.data();
   }
@@ -746,18 +733,15 @@ std::string exec(std::string cmd)
 /* ======================= TRAFFIC GENERATORS ===============*/
 
 void migrate(Ptr<Node> sourceServer, Ptr<Node> targetServer,
-             Ipv4Address sourceServerAddress, Ipv4Address targetServerAddress)
-{
+             Ipv4Address sourceServerAddress, Ipv4Address targetServerAddress) {
   static int migrationPort = 10000;
   // return if migration is not available
-  if (!doMigrate)
-  {
+  if (!doMigrate) {
     std::cout << "Migration not enabled. :(\n";
     // return;
   }
 
-  if (resources[getNodeId(targetServer)] <= 0)
-  {
+  if (resources[getNodeId(targetServer)] <= 0) {
     NS_LOG_UNCOND("MIGRATION FAILED FOR LACK OF RESOURCES");
     return;
   }
@@ -801,8 +785,7 @@ void migrate(Ptr<Node> sourceServer, Ptr<Node> targetServer,
 }
 
 void requestApplication(Ptr<Node> ueNode, Ptr<Node> targetServer,
-                        double payload = 0)
-{
+                        double payload = 0) {
 
   static int applicationPort = 11000;
 
@@ -819,19 +802,15 @@ void requestApplication(Ptr<Node> ueNode, Ptr<Node> targetServer,
   uint32_t maxPacketCount;
   uint32_t MaxPacketSize = 1024;
   // uint32_t maxPacketCount = migrationSize / MaxPacketSize;
-  if (payload != 0)
-  {
+  if (payload != 0) {
     maxPacketCount = payload / 1024;
 
     // call a default value in case no valid amount is available
-    if (maxPacketCount == 0)
-    {
+    if (maxPacketCount == 0) {
       maxPacketCount = 100;
     }
     interPacketInterval = Seconds(1) / maxPacketCount;
-  }
-  else
-  {
+  } else {
     maxPacketCount = 50;
     interPacketInterval = MilliSeconds(10);
   }
@@ -846,8 +825,7 @@ void requestApplication(Ptr<Node> ueNode, Ptr<Node> targetServer,
 }
 
 void request_video(Ptr<Node> sender_node, Ptr<Node> receiver_node,
-                   Ipv4Address targetServerAddress)
-{
+                   Ipv4Address targetServerAddress) {
   static uint16_t m_port = 2000;
   static int request_id = 0;
 
@@ -871,8 +849,7 @@ void request_video(Ptr<Node> sender_node, Ptr<Node> receiver_node,
   m_port++;
 }
 
-void UDPApp(Ptr<Node> remoteHost, NodeContainer ueNodes)
-{
+void UDPApp(Ptr<Node> remoteHost, NodeContainer ueNodes) {
   // Install and start applications on UEs and remote host
 
   ApplicationContainer serverApps;
@@ -885,15 +862,13 @@ void UDPApp(Ptr<Node> remoteHost, NodeContainer ueNodes)
   Ipv4Address remoteIpAddr =
       remoteIpv4->GetAddress(1, 0).GetLocal(); // Interface 0 is loopback
 
-  for (uint32_t u = 0; u < ueNodes.GetN(); ++u)
-  {
+  for (uint32_t u = 0; u < ueNodes.GetN(); ++u) {
     Ptr<Node> ue = ueNodes.Get(u);
     Ptr<Ipv4> ueIpv4 = ue->GetObject<Ipv4>();
     Ipv4Address ueIpAddr = ueIpv4->GetAddress(1, 0).GetLocal();
     ulPort++;
 
-    if (!disableDl)
-    {
+    if (!disableDl) {
       PacketSinkHelper dlPacketSinkHelper(
           "ns3::UdpSocketFactory",
           InetSocketAddress(Ipv4Address::GetAny(), dlPort));
@@ -906,8 +881,7 @@ void UDPApp(Ptr<Node> remoteHost, NodeContainer ueNodes)
       clientApps.Add(dlClient.Install(remoteHost));
     }
 
-    if (!disableUl)
-    {
+    if (!disableUl) {
       ++ulPort;
       PacketSinkHelper ulPacketSinkHelper(
           "ns3::UdpSocketFactory",
@@ -926,14 +900,12 @@ void UDPApp(Ptr<Node> remoteHost, NodeContainer ueNodes)
   clientApps.Start(Seconds(startTime));
 }
 
-void write_metrics()
-{
+void write_metrics() {
   std::stringstream sinrdata;
   unsigned int qtyUEs = ues_sinr.size();
   unsigned int qtyUEsCovered = 0;
   float coverageRatio = 0;
-  for (unsigned int id = 0; id < qtyUEs; ++id)
-  {
+  for (unsigned int id = 0; id < qtyUEs; ++id) {
     if (ues_sinr[id] >= 3)
       qtyUEsCovered++;
     sinrdata << "Id: " << id << ", SINR: " << ues_sinr[id] << "dB" << std::endl;
@@ -946,8 +918,7 @@ void write_metrics()
   std::stringstream timedata;
   double total_time = 0;
   double mean_time;
-  for (auto time : time_to_centroid)
-  {
+  for (auto time : time_to_centroid) {
     total_time += time;
     timedata << time << std::endl;
   }
@@ -956,11 +927,9 @@ void write_metrics()
   time_to_centroid_file << timedata.str();
 }
 
-void print_position(NodeContainer ueNodes)
-{
+void print_position(NodeContainer ueNodes) {
   std::cout << '\n';
-  for (uint32_t j = 0; j < ueNodes.GetN(); ++j)
-  {
+  for (uint32_t j = 0; j < ueNodes.GetN(); ++j) {
     Ptr<MobilityModel> mob = ueNodes.Get(j)->GetObject<MobilityModel>();
     Vector pos = mob->GetPosition();
     Vector3D speed = mob->GetVelocity();
@@ -969,8 +938,7 @@ void print_position(NodeContainer ueNodes)
   }
 }
 
-void ThroughputMonitor(FlowMonitorHelper *fmhelper, Ptr<FlowMonitor> flowMon)
-{
+void ThroughputMonitor(FlowMonitorHelper *fmhelper, Ptr<FlowMonitor> flowMon) {
   // count lost packets
   flowMon->CheckForLostPackets();
 
@@ -982,8 +950,7 @@ void ThroughputMonitor(FlowMonitorHelper *fmhelper, Ptr<FlowMonitor> flowMon)
       DynamicCast<Ipv4FlowClassifier>(fmhelper->GetClassifier());
   std::ofstream qos_file;
 
-  for (auto stats : flowStats)
-  {
+  for (auto stats : flowStats) {
     // find flow characteristics
     Ipv4FlowClassifier::FiveTuple fiveTuple = classing->FindFlow(stats.first);
 
@@ -1024,8 +991,7 @@ void ThroughputMonitor(FlowMonitorHelper *fmhelper, Ptr<FlowMonitor> flowMon)
 
     // received id will be -1 in case it is not a mobile user
     int receiver_id = get_user_id_from_ipv4(fiveTuple.destinationAddress);
-    if (receiver_id != -1)
-    {
+    if (receiver_id != -1) {
       user_throughput[receiver_id] = Throughput;
       cell_throughput[get_user_id_from_ipv4(fiveTuple.destinationAddress)] +=
           Throughput;
@@ -1037,16 +1003,29 @@ void ThroughputMonitor(FlowMonitorHelper *fmhelper, Ptr<FlowMonitor> flowMon)
                       flowMon);
 }
 
-void UAVManager(std::vector<std::pair<int, int>> centers)
-{
-  for (uint32_t i = 0; i < numUAVs; i++)
-  {
+void UAVManager() {
+
+  // get centers from python script
+  exec("python3 scratch/clustering.py");
+  std::ifstream centroids("centroids.txt");
+  std::vector<std::pair<int, int>> centers;
+  double tmp_x, tmp_y;
+  while (centroids >> tmp_x >> tmp_y) {
+    centers.push_back({tmp_x, tmp_y});
+    LOG("tmp_x " << tmp_x << " tmp_y" << tmp_y);
+    wait;
+  }
+
+  for (uint32_t i = 0; i < numUAVs; i++) {
     Ptr<Node> drone = UAVNodes.Get(i);
     int closest_hot_spot_index = get_closest_center_index(drone, centers);
+    if (closest_hot_spot_index = -1) {
+      continue;
+    }
+
     std::pair<int, int> closest_hot_spot = centers[closest_hot_spot_index];
     if (drones_in_use[i] == false and
-        hot_spots_served[closest_hot_spot_index] == false)
-    {
+        hot_spots_served[closest_hot_spot_index] == false) {
       move_drones(drone,
                   Vector(closest_hot_spot.first, closest_hot_spot.second, 20),
                   100);
@@ -1054,24 +1033,24 @@ void UAVManager(std::vector<std::pair<int, int>> centers)
       hot_spots_served[closest_hot_spot_index] = true;
     }
   }
+
+  centroids.close();
+
+  Simulator::Schedule(management_interval, &UAVManager);
   return;
 }
 
-bool find_handover(Handover h)
-{
-  for (auto &handover_compare : handover_vector)
-  {
-    if (h == handover_compare)
-    {
-      LOG("Handover already requested, not repeating.");
+bool find_handover(Handover h) {
+  for (auto &handover_compare : handover_vector) {
+    if (h == handover_compare) {
+      // LOG("Handover already requested, not repeating.");
       return true;
     }
   }
   return false;
 }
 
-void handoverManager(std::string path)
-{
+void handoverManager(std::string path) {
   // todo: put logging functions in handover manager
   // random handover
   // get serving cell of user
@@ -1079,29 +1058,23 @@ void handoverManager(std::string path)
   int cell_thr = 10 * 1024 * 1024;
 
   // user-wise strongest cell implementation
-  for (uint32_t i = 0; i < numUes; i++)
-  {
+  for (uint32_t i = 0; i < numUes; i++) {
     int imsi = i + 1;
     uint32_t servingCell = getServingcell(imsi);
     int rsrp = std::numeric_limits<int>::lowest();
     uint32_t strongestNeighborCell = 0;
     int signal_threshold = 3;
 
-    if (neighbors[servingCell][i] == 0)
-    {
+    if (neighbors[servingCell][i] == 0) {
       // user not connected
       return;
     }
 
-    if (handover_policy == "iuavbs")
-    {
-      if (user_throughput[i] >= user_thr)
-      {
-        for (uint32_t cell = 0; cell < numBSs; cell++)
-        {
+    if (handover_policy == "iuavbs") {
+      if (user_throughput[i] >= user_thr) {
+        for (uint32_t cell = 0; cell < numBSs; cell++) {
           if (neighbors[cell][i] > rsrp && cell != servingCell &&
-              is_drone(cell) && cell_throughput[cell] < cell_thr)
-          {
+              is_drone(cell) && cell_throughput[cell] < cell_thr) {
             rsrp = neighbors[cell][i];
             strongestNeighborCell = cell;
           }
@@ -1110,14 +1083,12 @@ void handoverManager(std::string path)
 
       if (rsrp > (signal_threshold + neighbors[servingCell][imsi - 1]) &&
           neighbors[servingCell][imsi - 1] != 0 &&
-          strongestNeighborCell != servingCell)
-      {
+          strongestNeighborCell != servingCell) {
         // create handover identifier
         Handover handover(Simulator::Now().GetSeconds(), i, servingCell,
                           strongestNeighborCell);
         // if this handover has already been attempted, return.
-        if (find_handover(handover))
-        {
+        if (find_handover(handover)) {
           return;
         }
         // if handover is valid, add it to list of handovers
@@ -1130,15 +1101,11 @@ void handoverManager(std::string path)
       }
     }
 
-    else if (handover_policy == "competing")
-    {
-      if (user_throughput[i] >= user_thr)
-      {
-        for (uint32_t cell = 0; cell < numBSs; cell++)
-        {
+    else if (handover_policy == "competing") {
+      if (user_throughput[i] >= user_thr) {
+        for (uint32_t cell = 0; cell < numBSs; cell++) {
           if (neighbors[cell][i] > rsrp && cell != servingCell &&
-              cell_throughput[cell] < cell_thr)
-          {
+              cell_throughput[cell] < cell_thr) {
             rsrp = neighbors[cell][i];
             strongestNeighborCell = cell;
           }
@@ -1147,14 +1114,12 @@ void handoverManager(std::string path)
 
       if (rsrp > (signal_threshold + neighbors[servingCell][imsi - 1]) &&
           neighbors[servingCell][imsi - 1] != 0 &&
-          strongestNeighborCell != servingCell)
-      {
+          strongestNeighborCell != servingCell) {
         // create handover identifier
         Handover handover(Simulator::Now().GetSeconds(), i, servingCell,
                           strongestNeighborCell);
         // if this handover has already been attempted, return.
-        if (find_handover(handover))
-        {
+        if (find_handover(handover)) {
           return;
         }
         // if handover is valid, add it to list of handovers
@@ -1167,12 +1132,10 @@ void handoverManager(std::string path)
       }
     }
 
-    else if (handover_policy == "classic")
-    {
-      for (uint32_t cell = 0; cell < numBSs; cell++)
-      {
-        if (neighbors[cell][i] > rsrp && cell != servingCell)
-        {
+    // this is taking a lot of time, why?
+    else if (handover_policy == "classic") {
+      for (uint32_t cell = 0; cell < numBSs; cell++) {
+        if (neighbors[cell][i] > rsrp && cell != servingCell) {
           rsrp = neighbors[cell][i];
           strongestNeighborCell = cell;
         }
@@ -1180,60 +1143,52 @@ void handoverManager(std::string path)
 
       if (rsrp > (signal_threshold + neighbors[servingCell][imsi - 1]) &&
           neighbors[servingCell][imsi - 1] != 0 &&
-          strongestNeighborCell != servingCell)
-      {
+          strongestNeighborCell != servingCell) {
         // create handover identifier
         Handover handover(Simulator::Now().GetSeconds(), i, servingCell,
                           strongestNeighborCell);
+        //
         // if this handover has already been attempted, return.
-        if (find_handover(handover))
-        {
-          return;
-        }
-        // if handover is valid, add it to list of handovers
-        handover_vector.push_back(handover);
+        if (!find_handover(handover)) {
+          // if handover is valid, add it to list of handovers
+          handover_vector.push_back(handover);
 
-        LOG(handover);
-        lteHelper->HandoverRequest(Simulator::Now(), ueDevs.Get(i),
-                                   enbDevs.Get(servingCell),
-                                   enbDevs.Get(strongestNeighborCell));
+          LOG(handover);
+          lteHelper->HandoverRequest(Simulator::Now(), ueDevs.Get(i),
+                                     enbDevs.Get(servingCell),
+                                     enbDevs.Get(strongestNeighborCell));
+        }
       }
-    }
-    else if (handover_policy == "none")
+    } else if (handover_policy == "none")
       return;
-    else
-    {
+    else {
       NS_FATAL_ERROR("Handover policy type invalid.");
     }
   }
 }
 
 // migrations manager
-void migration_manager()
-{
+void migration_manager() {
   double weights[3] = {57, 14, 28};
 
   Simulator::Schedule(managerInterval, &migration_manager);
 
   std::cout << "manager started at " << Simulator::Now().GetSeconds() << " \n";
 
-  for (uint32_t i = 0; i < serverNodes.GetN(); ++i)
-  {
+  for (uint32_t i = 0; i < serverNodes.GetN(); ++i) {
     std::cout << "server n " << i << " with " << resources[i]
               << " resource units\n";
   }
 
   std::cout << "..................................\n\n\n";
 
-  for (uint32_t i = 0; i < ueNodes.GetN(); ++i)
-  {
+  for (uint32_t i = 0; i < ueNodes.GetN(); ++i) {
     // check if node is being served
 
     int serving_node = getEdge(i);
     NS_LOG_UNCOND("Serving node: " << serving_node);
 
-    if (serving_node != -1)
-    {
+    if (serving_node != -1) {
 
       if (algorithm == "nomigration" || algorithm == "greedy")
         continue;
@@ -1246,11 +1201,9 @@ void migration_manager()
       HandoverPrediction(i, 5);
 
       // if a handover is going to happen
-      if (Seconds(handoverPredictions[i][0]) > Simulator::Now())
-      {
+      if (Seconds(handoverPredictions[i][0]) > Simulator::Now()) {
         // for (int edgeId = 0; edgeId < numEdgeNodes; ++edgeId) {
-        while ((uint32_t)edgeId < serverNodes.GetN())
-        {
+        while ((uint32_t)edgeId < serverNodes.GetN()) {
           double score = 0;
 
           // server characteristics
@@ -1285,21 +1238,18 @@ void migration_manager()
               << " -- server " << edgeId << " score: " << score);
 
           // get greated score
-          if (score > greatestScore)
-          {
+          if (score > greatestScore) {
             greatestScore = score;
             bestEdgeServer = edgeId;
           }
           edgeId++;
         }
-        if (bestEdgeServer != serving_node)
-        {
+        if (bestEdgeServer != serving_node) {
           if (edgeMigrationChart[i][bestEdgeServer] + 5 >
               Simulator::Now().GetSeconds())
             ; // do nothing
           // return;
-          else
-          {
+          else {
             migrate(serverNodes.Get(serving_node),
                     serverNodes.Get(bestEdgeServer),
                     serverNodesAddresses[serving_node][1],
@@ -1314,72 +1264,79 @@ void migration_manager()
 
       // renew applications periodically
       requestApplication(ueNodes.Get(i), serverNodes.Get(serving_node));
-    }
-    else
-    {
+    } else {
       NS_LOG_UNCOND("Node " << i << " not being served?");
     }
   }
 }
 
-void just_a_monitor()
-{
-  Time warm_up = Seconds(1);
-  if (Simulator::Now() < warm_up)
-  {
-    return;
-  }
+void just_a_monitor() {
+  // Time warm_up = Seconds(1);
+  // if (Simulator::Now() < warm_up) {
+  //   return;
+  // }
+
+  // percentage t f throughput below requested to consider the user as underved
+  double lenience = 0.2;
+
+  // open blank file for positions of unserved users
+  std::ofstream unserved("unserved.txt", std::ofstream::out);
+
   // test
-  if (Simulator::Now() > Seconds(1))
-  {
-    for (uint32_t i = 0; i < numUes; i++)
-    {
-      LOG("User " << i << " throughput " << 1024 * 1024 * user_throughput[i]);
+  if (Simulator::Now() > Seconds(1)) {
+    for (uint32_t i = 0; i < numUes; i++) {
+
+      double throughput = 1024 * 1024 * user_throughput[i];
+
+      LOG("User " << i << " throughput " << throughput);
       LOG("User " << i << " request value " << user_requests[i]);
-      if (int cell = get_cell(i) != -1)
-      {
+
+      if (lenience * user_requests[i] < throughput) {
+        // user marked as unserved;
+        Vector user_pos =
+            ueNodes.Get(i)->GetObject<MobilityModel>()->GetPosition();
+
+        unserved << i << " " << user_pos.x << " " << user_pos.y << " "
+                 << user_requests[i] << "\n";
+      }
+
+      if (int cell = get_cell(i) != -1) {
         std::string cell_type = is_drone(cell) ? " UAV." : "GBS.";
         LOG("User is in " << cell_type);
-      }
-      else
-      {
+      } else {
         LOG("User is not connected.");
       }
     }
   }
 
-  for (uint32_t i = 0; i < numBSs; i++)
-  {
+  for (uint32_t i = 0; i < numBSs; i++) {
     double cell_thr = 0; // cell throughput in Mbps
-    for (uint32_t u = 0; u < numUes; u++)
-    {
-      if (connections[i][u])
-      {
+    for (uint32_t u = 0; u < numUes; u++) {
+      if (connections[i][u]) {
         cell_thr += user_throughput[u]; // not very precise, does not consider
                                         // time window...
       }
     }
-    LOG("Cell " << i << " usage: " << cell_thr);
+    LOG(Simulator::Now().GetSeconds()
+        << "s Cell " << i << " usage: " << cell_thr);
   }
+
+  unserved.close();
   Simulator::Schedule(management_interval, &just_a_monitor);
 }
 
-int main(int argc, char *argv[])
-{
-  // LogComponentEnable("Config", LOG_LEVEL_ALL);
+int main(int argc, char *argv[]) {
   LogComponentEnable("EvalvidClient", LOG_LEVEL_ALL);
   LogComponentEnable("EvalvidServer", LOG_LEVEL_ALL);
 
   CommandLine cmd;
   cmd.AddValue("seedValue", "Random seed of the simulation", seedValue);
-
   ConfigStore inputConfig;
   inputConfig.ConfigureDefaults();
-
   cmd.Parse(argc, argv);
 
+  // fix random seed
   ns3::RngSeedManager::SetSeed(seedValue);
-  ns3_dir = GetTopLevelSourceDir();
 
   // create epc helper and set as default
   Ptr<PointToPointEpcHelper> epcHelper = CreateObject<PointToPointEpcHelper>();
@@ -1398,8 +1355,7 @@ int main(int argc, char *argv[])
                                    UintegerValue(25)); // Set Upload Bandwidth
 
   // Network config
-  if (useCa)
-  {
+  if (useCa) {
     Config::SetDefault("ns3::LteHelper::UseCa", BooleanValue(useCa));
     Config::SetDefault("ns3::LteHelper::NumberOfComponentCarriers",
                        UintegerValue(2));
@@ -1477,15 +1433,11 @@ int main(int argc, char *argv[])
   ueDevs = lteHelper->InstallUeDevice(ueNodes);
 
   // set up different transmission powers for drones
-  for (uint32_t i = 0; (unsigned)i < enbDevs.GetN(); i++)
-  {
+  for (uint32_t i = 0; (unsigned)i < enbDevs.GetN(); i++) {
     auto enb0Phy = enbDevs.Get(i)->GetObject<LteEnbNetDevice>()->GetPhy();
-    if (i < numStaticCells)
-    {
+    if (i < numStaticCells) {
       enb0Phy->SetTxPower(43);
-    }
-    else
-    {
+    } else {
       enb0Phy->SetTxPower(23);
     }
   }
@@ -1496,8 +1448,7 @@ int main(int argc, char *argv[])
   Ipv4InterfaceContainer ueIpIface;
   ueIpIface = epcHelper->AssignUeIpv4Address(NetDeviceContainer(ueDevs));
   // Assign IP address to UEs, and install applications
-  for (uint32_t u = 0; u < ueNodes.GetN(); ++u)
-  {
+  for (uint32_t u = 0; u < ueNodes.GetN(); ++u) {
     Ptr<Node> ueNode = ueNodes.Get(u);
     // Set the default gateway for the UE
     Ptr<Ipv4StaticRouting> ueStaticRouting =
@@ -1511,8 +1462,7 @@ int main(int argc, char *argv[])
   lteHelper->AddX2Interface(BSNodes);
 
   // populate user ip map
-  for (uint32_t i = 0; i < ueNodes.GetN(); i++)
-  {
+  for (uint32_t i = 0; i < ueNodes.GetN(); i++) {
     Ptr<Ipv4> remoteIpv4 = ueNodes.Get(i)->GetObject<Ipv4>();
     Ipv4Address remoteIpAddr = remoteIpv4->GetAddress(1, 0).GetLocal();
     user_ip[i] = remoteIpAddr;
@@ -1520,23 +1470,20 @@ int main(int argc, char *argv[])
 
   AnimationInterface animator("lte_animation.xml");
   // animator.SetMobilityPollInterval(Seconds(1));
-  for (uint32_t i = 0; i < UAVNodes.GetN(); ++i)
-  {
+  for (uint32_t i = 0; i < UAVNodes.GetN(); ++i) {
     animator.UpdateNodeDescription(UAVNodes.Get(i), "UAV " + std::to_string(i));
     animator.UpdateNodeColor(UAVNodes.Get(i), 250, 200, 45);
     animator.UpdateNodeSize(UAVNodes.Get(i)->GetId(), 10,
                             10); // to change the node size in the animation.
   }
 
-  for (uint32_t j = 0; j < ueNodes.GetN(); ++j)
-  {
+  for (uint32_t j = 0; j < ueNodes.GetN(); ++j) {
     animator.UpdateNodeDescription(ueNodes.Get(j), "UE " + std::to_string(j));
     animator.UpdateNodeColor(ueNodes.Get(j), 20, 10, 145);
     animator.UpdateNodeSize(ueNodes.Get(j)->GetId(), 10, 10);
   }
 
-  for (uint32_t j = 0; j < BSNodes.GetN(); ++j)
-  {
+  for (uint32_t j = 0; j < BSNodes.GetN(); ++j) {
     animator.UpdateNodeDescription(BSNodes.Get(j), "Cell " + std::to_string(j));
     animator.UpdateNodeColor(BSNodes.Get(j), 20, 10, 145);
     animator.UpdateNodeSize(BSNodes.Get(j)->GetId(), 10, 10);
@@ -1551,13 +1498,16 @@ int main(int argc, char *argv[])
   // populate centroids
   auto centers = create_hot_spots();
 
+  // populate simulation with requests trace
+  auto requests = populate_requests_trace();
+
   /* all scheduled functions*/
   Simulator::Schedule(management_interval, &ThroughputMonitor, &flowmon,
                       monitor); // recurrent
-  Simulator::Schedule(management_interval, &UAVManager,
-                      centers); // only executed in the beginning?
+  Simulator::Schedule(management_interval,
+                      &UAVManager); // only executed in the beginning?
   Simulator::Schedule(management_interval, &generate_requests, remoteHost,
-                      centers, 20 * 1024 * 1024, 500);       // recurrent
+                      centers, requests, 20 * 1024 * 1024, 500); // recurrent
   Simulator::Schedule(management_interval, &just_a_monitor); // just a monitor
 
   /* handover reporting callbacks*/
@@ -1589,30 +1539,31 @@ int main(int argc, char *argv[])
   Simulator::Stop(Seconds(SimTime));
   Simulator::Run();
 
-  monitor->CheckForLostPackets();
-  FlowMonitor::FlowStatsContainer stats = monitor->GetFlowStats();
-  for (map<FlowId, FlowMonitor::FlowStats>::const_iterator i = stats.begin();
-       i != stats.end(); ++i)
-  {
-    Ipv4FlowClassifier::FiveTuple t = classifier->FindFlow(i->first);
-    std::cout << "Flow " << i->first << " (" << t.sourceAddress << " ->"
-              << t.destinationAddress << ")\n";
-    std::cout << "  Tx Packets: " << i->second.txPackets << "\n";
-    std::cout << "  Tx Bytes:   " << i->second.txBytes << "\n";
-    std::cout << "  TxOffered:  " << i->second.txBytes * 8.0 / 9.0 / 1000 / 1000
-              << " Mbps\n";
-    std::cout << "  Rx Packets: " << i->second.rxPackets << "\n";
-    std::cout << "  Rx Bytes:   " << i->second.rxBytes << "\n";
-    std::cout << "  Lost Packets:   " << i->second.lostPackets << "\n";
-    std::cout << "  Throughput: " << i->second.rxBytes * 8.0 / 9.0 / 1000 / 1000
-              << " Mbps\n";
-    if (i->second.rxBytes)
-      std::cout << "  DelaySum: "
-                << i->second.jitterSum /
-                       (i->second.rxPackets + i->second.txPackets)
-                << "\n";
-    std::cout << "......................................\n";
-  }
+  // monitor->CheckForLostPackets();
+  // FlowMonitor::FlowStatsContainer stats = monitor->GetFlowStats();
+  // for (map<FlowId, FlowMonitor::FlowStats>::const_iterator i = stats.begin();
+  //      i != stats.end(); ++i) {
+  //   Ipv4FlowClassifier::FiveTuple t = classifier->FindFlow(i->first);
+  //   std::cout << "Flow " << i->first << " (" << t.sourceAddress << " ->"
+  //             << t.destinationAddress << ")\n";
+  //   std::cout << "  Tx Packets: " << i->second.txPackets << "\n";
+  //   std::cout << "  Tx Bytes:   " << i->second.txBytes << "\n";
+  //   std::cout << "  TxOffered:  " << i->second.txBytes * 8.0 / 9.0 / 1000 /
+  //   1000
+  //             << " Mbps\n";
+  //   std::cout << "  Rx Packets: " << i->second.rxPackets << "\n";
+  //   std::cout << "  Rx Bytes:   " << i->second.rxBytes << "\n";
+  //   std::cout << "  Lost Packets:   " << i->second.lostPackets << "\n";
+  //   std::cout << "  Throughput: " << i->second.rxBytes * 8.0 / 9.0 / 1000 /
+  //   1000
+  //             << " Mbps\n";
+  //   if (i->second.rxBytes)
+  //     std::cout << "  DelaySum: "
+  //               << i->second.jitterSum /
+  //                      (i->second.rxPackets + i->second.txPackets)
+  //               << "\n";
+  //   std::cout << "......................................\n";
+  // }
 
   // serialize flow monitor to xml
   flowmon.SerializeToXmlFile("drones_flowmon.xml", true, true);

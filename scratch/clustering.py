@@ -16,6 +16,6 @@ def main():
 
 		centroids = kmeans.cluster_centers_
 
-		np.savetxt("centroids", centroids, delimiter=" ")
+		np.savetxt("centroids.txt", centroids, delimiter=" ")
 if __name__ == "__main__":
 	main()

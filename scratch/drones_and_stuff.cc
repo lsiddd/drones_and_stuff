@@ -71,10 +71,10 @@ uint32_t active_drones = 0;
 uint32_t seedValue = 10000;
 
 uint32_t SimTime = 10;
-const uint32_t numUAVs = 10;
+const uint32_t numUAVs = 0;
 // make sure there's hot spots even if the number of uavs is 0
 const uint32_t number_of_hot_spots = numUAVs == 0 ? 10 : numUAVs;
-const uint32_t numUes = 20;
+const uint32_t numUes = 30;
 const uint32_t numStaticCells = 20;
 const uint32_t numEdgeServers = numStaticCells;
 const uint32_t numBSs = numUAVs + numStaticCells;
@@ -84,7 +84,7 @@ Time management_interval = Seconds(0.1);
 std::string mobil_trace = "traces/koln.tcl";
 std::string req_mode = "trace";
 std::string requests_trace = "traces/requests.tcl_but_not_really";
-std::string handover_policy = "iuavbs";
+std::string handover_policy = "classic";
 float distance_multiplier = 1.0 / 10;
 
 uint16_t node_remote = 1; // HOST_REMOTO
@@ -119,7 +119,7 @@ Ipv4Address user_ip[numUes]; // stores the ipv4 address of each user connected
                              // to the network
 std::unordered_map<int, double> cell_throughput; //
 
-// struct that contains info aabout the handovers performed in the network
+// struct that contains info a  about the handovers performed in the network
 struct Handover {
   double time;
   int user;
@@ -131,7 +131,8 @@ struct Handover {
 
   // operator to compare two handover instances within a given time window
   bool operator==(const Handover &other) const {
-    return std::abs(other.time - time) < 1 && user == other.user;
+    //return std::abs(other.time - time) < 1 && user == other.user;
+    return user == other.user;
     //&& source == other.source && source == other.source &&
     //    target == other.target;
   }
@@ -210,39 +211,52 @@ int get_cell(int);
 // global lte helper for mobility management
 Ptr<LteHelper> lteHelper = CreateObject<LteHelper>();
 
-bool IsTopLevelSourceDir(std::string path) {
-  bool haveVersion = false;
-  bool haveLicense = false;
+// bool IsTopLevelSourceDir(std::string path) {
+//   bool haveVersion = false;
+//   bool haveLicense = false;
 
-  //
-  // If there's a file named VERSION and a file named LICENSE in this
-  // directory, we assume it's our top level source directory.
-  //
+//   //
+//   // If there's a file named VERSION and a file named LICENSE in this
+//   // directory, we assume it's our top level source directory.
+//   //
 
-  std::list<std::string> files = SystemPath::ReadFiles(path);
-  for (std::list<std::string>::const_iterator i = files.begin();
-       i != files.end(); ++i) {
-    if (*i == "VERSION") {
-      haveVersion = true;
-    } else if (*i == "LICENSE") {
-      haveLicense = true;
-    }
+//   std::list<std::string> files = SystemPath::ReadFiles(path);
+//   for (std::list<std::string>::const_iterator i = files.begin();
+//        i != files.end(); ++i) {
+//     if (*i == "VERSION") {
+//       haveVersion = true;
+//     } else if (*i == "LICENSE") {
+//       haveLicense = true;
+//     }
+//   }
+
+//   return haveVersion && haveLicense;
+// }
+
+// std::string GetTopLevelSourceDir(void) {
+//   std::string self = SystemPath::FindSelfDirectory();
+//   std::list<std::string> elements = SystemPath::Split(self);
+//   while (!elements.empty()) {
+//     std::string path = SystemPath::Join(elements.begin(), elements.end());
+//     if (IsTopLevelSourceDir(path)) {
+//       return path;
+//     }
+//     elements.pop_back();
+//   }
+//   NS_FATAL_ERROR("Could not find source directory from self=" << self);
+// }
+
+std::string exec(std::string cmd) {
+  std::array<char, 128> buffer;
+  std::string result;
+  std::shared_ptr<FILE> pipe(popen(cmd.c_str(), "r"), pclose);
+  if (!pipe)
+    throw std::runtime_error("popen() failed!");
+  while (!feof(pipe.get())) {
+    if (fgets(buffer.data(), 128, pipe.get()) != nullptr)
+      result += buffer.data();
   }
-
-  return haveVersion && haveLicense;
-}
-
-std::string GetTopLevelSourceDir(void) {
-  std::string self = SystemPath::FindSelfDirectory();
-  std::list<std::string> elements = SystemPath::Split(self);
-  while (!elements.empty()) {
-    std::string path = SystemPath::Join(elements.begin(), elements.end());
-    if (IsTopLevelSourceDir(path)) {
-      return path;
-    }
-    elements.pop_back();
-  }
-  NS_FATAL_ERROR("Could not find source directory from self=" << self);
+  return result;
 }
 
 /*============================================================*/
@@ -380,13 +394,14 @@ std::map<std::pair<int, int>, double> populate_requests_trace() {
     boost::split(split_string, str, boost::is_any_of(" "));
 
     // pegar triple time [1], user [], valor da request
-    LOG(split_string[1] << " " << split_string[3] << " " << split_string[5]
-                        << " ");
+    if (verbose) {
+      LOG(split_string[1] << " " << split_string[3] << " " << split_string[5]
+                          << " ");
+    }
     int user = stoi(split_string[3]);
     int time = stoi(split_string[1]);
     double request_value = stod(split_string[5]);
     requests[{time, user}] = request_value;
-    // wait;
   }
   trace_file.close();
   return requests;
@@ -560,14 +575,6 @@ int get_user_id_from_ipv4(Ipv4Address ip) {
       return i;
     }
   }
-
-  // for (auto &u : user_ip)
-  // {
-  //   if (u == ip)
-  //   {
-  //     return u;
-  //   }
-  // }
   return -1;
 }
 
@@ -679,7 +686,7 @@ void move_drones(Ptr<Node> drone, Vector position, double n_vel) {
     // set new node position for a smoother movement
     auto mob = drone->GetObject<MobilityModel>();
     mob->SetPosition(position);
-
+    return;
   }
 
   else {
@@ -715,19 +722,6 @@ void move_drones(Ptr<Node> drone, Vector position, double n_vel) {
     }
     LOG("drone arrived at " << Simulator::Now().GetSeconds());
   }
-}
-
-std::string exec(std::string cmd) {
-  std::array<char, 128> buffer;
-  std::string result;
-  std::shared_ptr<FILE> pipe(popen(cmd.c_str(), "r"), pclose);
-  if (!pipe)
-    throw std::runtime_error("popen() failed!");
-  while (!feof(pipe.get())) {
-    if (fgets(buffer.data(), 128, pipe.get()) != nullptr)
-      result += buffer.data();
-  }
-  return result;
 }
 
 /* ======================= TRAFFIC GENERATORS ===============*/
@@ -900,43 +894,45 @@ void UDPApp(Ptr<Node> remoteHost, NodeContainer ueNodes) {
   clientApps.Start(Seconds(startTime));
 }
 
-void write_metrics() {
-  std::stringstream sinrdata;
-  unsigned int qtyUEs = ues_sinr.size();
-  unsigned int qtyUEsCovered = 0;
-  float coverageRatio = 0;
-  for (unsigned int id = 0; id < qtyUEs; ++id) {
-    if (ues_sinr[id] >= 3)
-      qtyUEsCovered++;
-    sinrdata << "Id: " << id << ", SINR: " << ues_sinr[id] << "dB" << std::endl;
-  }
-  coverageRatio = (float)qtyUEsCovered / qtyUEs;
-  ues_sinr_file << "Coverage ratio: " << coverageRatio * 100 << "%"
-                << std::endl;
-  ues_sinr_file << sinrdata.str();
+// void write_metrics() {
+//   std::stringstream sinrdata;
+//   unsigned int qtyUEs = ues_sinr.size();
+//   unsigned int qtyUEsCovered = 0;
+//   float coverageRatio = 0;
+//   for (unsigned int id = 0; id < qtyUEs; ++id) {
+//     if (ues_sinr[id] >= 3)
+//       qtyUEsCovered++;
+//     sinrdata << "Id: " << id << ", SINR: " << ues_sinr[id] << "dB" <<
+//     std::endl;
+//   }
+//   coverageRatio = (float)qtyUEsCovered / qtyUEs;
+//   ues_sinr_file << "Coverage ratio: " << coverageRatio * 100 << "%"
+//                 << std::endl;
+//   ues_sinr_file << sinrdata.str();
 
-  std::stringstream timedata;
-  double total_time = 0;
-  double mean_time;
-  for (auto time : time_to_centroid) {
-    total_time += time;
-    timedata << time << std::endl;
-  }
-  mean_time = total_time / active_drones;
-  time_to_centroid_file << "Mean time to centroid: " << mean_time << std::endl;
-  time_to_centroid_file << timedata.str();
-}
+//   std::stringstream timedata;
+//   double total_time = 0;
+//   double mean_time;
+//   for (auto time : time_to_centroid) {
+//     total_time += time;
+//     timedata << time << std::endl;
+//   }
+//   mean_time = total_time / active_drones;
+//   time_to_centroid_file << "Mean time to centroid: " << mean_time <<
+//   std::endl; time_to_centroid_file << timedata.str();
+// }
 
-void print_position(NodeContainer ueNodes) {
-  std::cout << '\n';
-  for (uint32_t j = 0; j < ueNodes.GetN(); ++j) {
-    Ptr<MobilityModel> mob = ueNodes.Get(j)->GetObject<MobilityModel>();
-    Vector pos = mob->GetPosition();
-    Vector3D speed = mob->GetVelocity();
-    std::cout << " Node " << j << " | POS: (x=" << pos.x << ", y=" << pos.y
-              << ") | Speed(" << speed.x << ", " << speed.y << ")" << std::endl;
-  }
-}
+// void print_position(NodeContainer ueNodes) {
+//   std::cout << '\n';
+//   for (uint32_t j = 0; j < ueNodes.GetN(); ++j) {
+//     Ptr<MobilityModel> mob = ueNodes.Get(j)->GetObject<MobilityModel>();
+//     Vector pos = mob->GetPosition();
+//     Vector3D speed = mob->GetVelocity();
+//     std::cout << " Node " << j << " | POS: (x=" << pos.x << ", y=" << pos.y
+//               << ") | Speed(" << speed.x << ", " << speed.y << ")" <<
+//               std::endl;
+//   }
+// }
 
 void ThroughputMonitor(FlowMonitorHelper *fmhelper, Ptr<FlowMonitor> flowMon) {
   // count lost packets
@@ -1004,7 +1000,6 @@ void ThroughputMonitor(FlowMonitorHelper *fmhelper, Ptr<FlowMonitor> flowMon) {
 }
 
 void UAVManager() {
-
   // get centers from python script
   exec("python3 scratch/clustering.py");
   std::ifstream centroids("centroids.txt");

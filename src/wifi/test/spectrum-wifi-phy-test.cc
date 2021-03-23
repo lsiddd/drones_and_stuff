@@ -16,18 +16,21 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "ns3/spectrum-phy.h"
 #include "ns3/test.h"
+#include "ns3/constant-position-mobility-model.h"
 #include "ns3/spectrum-wifi-helper.h"
 #include "ns3/wifi-spectrum-value-helper.h"
+#include "ns3/multi-model-spectrum-channel.h"
 #include "ns3/spectrum-wifi-phy.h"
 #include "ns3/nist-error-rate-model.h"
 #include "ns3/wifi-mac-header.h"
-#include "ns3/wifi-mac-trailer.h"
-#include "ns3/wifi-phy-tag.h"
 #include "ns3/wifi-spectrum-signal-parameters.h"
 #include "ns3/wifi-phy-listener.h"
 #include "ns3/log.h"
+#include "ns3/wifi-net-device.h"
+#include "ns3/wifi-psdu.h"
+#include "ns3/wifi-ppdu.h"
+#include "ns3/wifi-utils.h"
 
 using namespace ns3;
 
@@ -37,6 +40,13 @@ static const uint8_t CHANNEL_NUMBER = 36;
 static const uint32_t FREQUENCY = 5180; // MHz
 static const uint16_t CHANNEL_WIDTH = 20; // MHz
 static const uint16_t GUARD_WIDTH = CHANNEL_WIDTH; // MHz (expanded to channel width to model spectrum mask)
+
+class ExtSpectrumWifiPhy : public SpectrumWifiPhy
+{
+public:
+  using SpectrumWifiPhy::SpectrumWifiPhy;
+  using SpectrumWifiPhy::GetBand;
+};
 
 /**
  * \ingroup wifi-test
@@ -55,6 +65,7 @@ public:
    */
   SpectrumWifiPhyBasicTest (std::string name);
   virtual ~SpectrumWifiPhyBasicTest ();
+
 protected:
   virtual void DoSetup (void);
   Ptr<SpectrumWifiPhy> m_phy; ///< Phy
@@ -71,18 +82,19 @@ protected:
   void SendSignal (double txPowerWatts);
   /**
    * Spectrum wifi receive success function
-   * \param p the packet
+   * \param psdu the PSDU
    * \param snr the SNR
    * \param txVector the transmit vector
+   * \param statusPerMpdu reception status per MPDU
    */
-  void SpectrumWifiPhyRxSuccess (Ptr<Packet> p, double snr, WifiTxVector txVector);
+  void SpectrumWifiPhyRxSuccess (Ptr<WifiPsdu> psdu, double snr, WifiTxVector txVector, std::vector<bool> statusPerMpdu);
   /**
    * Spectrum wifi receive failure function
-   * \param p the packet
-   * \param snr the SNR
-   */
-  void SpectrumWifiPhyRxFailure (Ptr<Packet> p, double snr);
+   * \param psdu the PSDU
+-   */
+  void SpectrumWifiPhyRxFailure (Ptr<WifiPsdu> psdu);
   uint32_t m_count; ///< count
+
 private:
   virtual void DoRun (void);
 };
@@ -103,29 +115,26 @@ SpectrumWifiPhyBasicTest::SpectrumWifiPhyBasicTest (std::string name)
 Ptr<SpectrumSignalParameters>
 SpectrumWifiPhyBasicTest::MakeSignal (double txPowerWatts)
 {
-  WifiTxVector txVector = WifiTxVector (WifiPhy::GetOfdmRate6Mbps (), 0, WIFI_PREAMBLE_LONG, false, 1, 1, 0, 20, false, false);
-  MpduType mpdutype = NORMAL_MPDU;
+  WifiTxVector txVector = WifiTxVector (WifiPhy::GetOfdmRate6Mbps (), 0, WIFI_PREAMBLE_LONG, 800, 1, 1, 0, 20, false);
 
   Ptr<Packet> pkt = Create<Packet> (1000);
   WifiMacHeader hdr;
-  WifiMacTrailer trailer;
 
   hdr.SetType (WIFI_MAC_QOSDATA);
   hdr.SetQosTid (0);
-  uint32_t size = pkt->GetSize () + hdr.GetSize () + trailer.GetSerializedSize ();
-  Time txDuration = m_phy->CalculateTxDuration (size, txVector, m_phy->GetFrequency (), mpdutype, 0);
-  hdr.SetDuration (txDuration);
 
-  pkt->AddHeader (hdr);
-  pkt->AddTrailer (trailer);
-  WifiPhyTag tag (txVector, mpdutype, 1);
-  pkt->AddPacketTag (tag);
+  Ptr<WifiPsdu> psdu = Create<WifiPsdu> (pkt, hdr);
+  Time txDuration = m_phy->CalculateTxDuration (psdu->GetSize (), txVector, m_phy->GetPhyBand ());
+
+  Ptr<WifiPpdu> ppdu = Create<WifiPpdu> (psdu, txVector, txDuration, WIFI_PHY_BAND_5GHZ);
+
   Ptr<SpectrumValue> txPowerSpectrum = WifiSpectrumValueHelper::CreateOfdmTxPowerSpectralDensity (FREQUENCY, CHANNEL_WIDTH, txPowerWatts, GUARD_WIDTH);
   Ptr<WifiSpectrumSignalParameters> txParams = Create<WifiSpectrumSignalParameters> ();
   txParams->psd = txPowerSpectrum;
   txParams->txPhy = 0;
   txParams->duration = txDuration;
-  txParams->packet = pkt;
+  txParams->ppdu = ppdu;
+
   return txParams;
 }
 
@@ -137,16 +146,16 @@ SpectrumWifiPhyBasicTest::SendSignal (double txPowerWatts)
 }
 
 void
-SpectrumWifiPhyBasicTest::SpectrumWifiPhyRxSuccess (Ptr<Packet> p, double snr, WifiTxVector txVector)
+SpectrumWifiPhyBasicTest::SpectrumWifiPhyRxSuccess (Ptr<WifiPsdu> psdu, double snr, WifiTxVector txVector, std::vector<bool> statusPerMpdu)
 {
-  NS_LOG_FUNCTION (this << p << snr << txVector);
+  NS_LOG_FUNCTION (this << *psdu << snr << txVector);
   m_count++;
 }
 
 void
-SpectrumWifiPhyBasicTest::SpectrumWifiPhyRxFailure (Ptr<Packet> p, double snr)
+SpectrumWifiPhyBasicTest::SpectrumWifiPhyRxFailure (Ptr<WifiPsdu> psdu)
 {
-  NS_LOG_FUNCTION (this << p << snr);
+  NS_LOG_FUNCTION (this << *psdu);
   m_count++;
 }
 
@@ -160,15 +169,13 @@ void
 SpectrumWifiPhyBasicTest::DoSetup (void)
 {
   m_phy = CreateObject<SpectrumWifiPhy> ();
-  m_phy->ConfigureStandard (WIFI_PHY_STANDARD_80211n_5GHZ);
+  m_phy->ConfigureStandardAndBand (WIFI_PHY_STANDARD_80211n, WIFI_PHY_BAND_5GHZ);
   Ptr<ErrorRateModel> error = CreateObject<NistErrorRateModel> ();
   m_phy->SetErrorRateModel (error);
   m_phy->SetChannelNumber (CHANNEL_NUMBER);
   m_phy->SetFrequency (FREQUENCY);
   m_phy->SetReceiveOkCallback (MakeCallback (&SpectrumWifiPhyBasicTest::SpectrumWifiPhyRxSuccess, this));
   m_phy->SetReceiveErrorCallback (MakeCallback (&SpectrumWifiPhyBasicTest::SpectrumWifiPhyRxFailure, this));
-  //Bug 2460: CcaMode1Threshold default should be set to -62 dBm when using Spectrum
-  m_phy->SetCcaMode1Threshold (-62.0);
 }
 
 // Test that the expected number of packet receptions occur.
@@ -180,13 +187,13 @@ SpectrumWifiPhyBasicTest::DoRun (void)
   Simulator::Schedule (Seconds (1), &SpectrumWifiPhyBasicTest::SendSignal, this, txPowerWatts);
   Simulator::Schedule (Seconds (2), &SpectrumWifiPhyBasicTest::SendSignal, this, txPowerWatts);
   Simulator::Schedule (Seconds (3), &SpectrumWifiPhyBasicTest::SendSignal, this, txPowerWatts);
-  // Send packets spaced 1 microsecond second apart; only one should be received
+  // Send packets spaced 1 microsecond second apart; none should be received (PHY header reception failure)
   Simulator::Schedule (MicroSeconds (4000000), &SpectrumWifiPhyBasicTest::SendSignal, this, txPowerWatts);
   Simulator::Schedule (MicroSeconds (4000001), &SpectrumWifiPhyBasicTest::SendSignal, this, txPowerWatts);
   Simulator::Run ();
   Simulator::Destroy ();
 
-  NS_TEST_ASSERT_MSG_EQ (m_count, 4, "Didn't receive right number of packets");
+  NS_TEST_ASSERT_MSG_EQ (m_count, 3, "Didn't receive right number of packets");
 }
 
 /**
@@ -300,12 +307,324 @@ SpectrumWifiPhyListenerTest::DoRun (void)
   Simulator::Run ();
 
   NS_TEST_ASSERT_MSG_EQ (m_count, 1, "Didn't receive right number of packets");
+  NS_TEST_ASSERT_MSG_EQ (m_listener->m_notifyMaybeCcaBusyStart, 2, "Didn't receive NotifyMaybeCcaBusyStart (preamble deteted + L-SIG received)");
   NS_TEST_ASSERT_MSG_EQ (m_listener->m_notifyRxStart, 1, "Didn't receive NotifyRxStart");
   NS_TEST_ASSERT_MSG_EQ (m_listener->m_notifyRxEndOk, 1, "Didn't receive NotifyRxEnd");
-  NS_TEST_ASSERT_MSG_EQ (m_listener->m_notifyMaybeCcaBusyStart, 0, "Received NotifyMaybeCcaBusyStart unexpectedly");
 
   Simulator::Destroy ();
   delete m_listener;
+}
+
+/**
+ * \ingroup wifi-test
+ * \ingroup tests
+ *
+ * \brief Spectrum Wifi Phy Filter Test
+ */
+class SpectrumWifiPhyFilterTest : public TestCase
+{
+public:
+  SpectrumWifiPhyFilterTest ();
+  /**
+   * Constructor
+   *
+   * \param name reference name
+   */
+  SpectrumWifiPhyFilterTest (std::string name);
+  virtual ~SpectrumWifiPhyFilterTest ();
+
+private:
+  virtual void DoSetup (void);
+  virtual void DoRun (void);
+
+  /**
+   * Run one function
+   */
+  void RunOne ();
+
+  /**
+   * Send PPDU function
+   */
+  void SendPpdu (void);
+
+  /**
+   * Callback triggered when a packet is received by the PHYs
+   * \param context the context
+   * \param p the received packet
+   * \param rxPowersW the received power per channel band in watts
+   */
+  void RxCallback (Ptr<const Packet> p, RxPowerWattPerChannelBand rxPowersW);
+
+  Ptr<ExtSpectrumWifiPhy> m_txPhy; ///< TX PHY
+  Ptr<ExtSpectrumWifiPhy> m_rxPhy; ///< RX PHY
+
+  uint16_t m_txChannelWidth; ///< TX channel width (MHz)
+  uint16_t m_rxChannelWidth; ///< RX channel width (MHz)
+};
+
+SpectrumWifiPhyFilterTest::SpectrumWifiPhyFilterTest ()
+  : TestCase ("SpectrumWifiPhy test RX filters"),
+    m_txChannelWidth (20),
+    m_rxChannelWidth (20)
+{
+}
+
+SpectrumWifiPhyFilterTest::SpectrumWifiPhyFilterTest (std::string name)
+  : TestCase (name)
+{
+}
+
+void
+SpectrumWifiPhyFilterTest::SendPpdu (void)
+{
+  WifiTxVector txVector = WifiTxVector (WifiPhy::GetHeMcs0 (), 0, WIFI_PREAMBLE_HE_SU, 800, 1, 1, 0, m_txChannelWidth, false, false);
+  Ptr<Packet> pkt = Create<Packet> (1000);
+  WifiMacHeader hdr;
+  hdr.SetType (WIFI_MAC_QOSDATA);
+  hdr.SetQosTid (0);
+  hdr.SetAddr1 (Mac48Address ("00:00:00:00:00:01"));
+  hdr.SetSequenceNumber (1);
+  Ptr<WifiPsdu> psdu = Create<WifiPsdu> (pkt, hdr);
+  m_txPhy->Send (WifiConstPsduMap ({std::make_pair (SU_STA_ID, psdu)}), txVector);
+}
+
+SpectrumWifiPhyFilterTest::~SpectrumWifiPhyFilterTest ()
+{
+  m_txPhy = 0;
+  m_rxPhy = 0;
+}
+
+void
+SpectrumWifiPhyFilterTest::RxCallback (Ptr<const Packet> p, RxPowerWattPerChannelBand rxPowersW)
+{
+  for (auto const& pair : rxPowersW)
+    {
+      NS_LOG_INFO ("band: (" << pair.first.first << ";" << pair.first.second << ") -> powerW=" << pair.second << " (" << WToDbm (pair.second) << " dBm)");
+    }
+
+  size_t numBands = rxPowersW.size ();
+  size_t expectedNumBands = std::max (1, (m_rxChannelWidth / 20));
+  expectedNumBands += (m_rxChannelWidth / 40);
+  expectedNumBands += (m_rxChannelWidth / 80);
+  expectedNumBands += (m_rxChannelWidth / 160);
+  if (m_rxChannelWidth == 20)
+    {
+      expectedNumBands += 9; /* RU_26_TONE */
+      expectedNumBands += 4; /* RU_52_TONE */
+      expectedNumBands += 2; /* RU_106_TONE */
+      expectedNumBands += 1; /* RU_242_TONE */
+    }
+  else if (m_rxChannelWidth == 40)
+    {
+      expectedNumBands += 18; /* RU_26_TONE */
+      expectedNumBands += 8; /* RU_52_TONE */
+      expectedNumBands += 4; /* RU_106_TONE */
+      expectedNumBands += 2; /* RU_242_TONE */
+      expectedNumBands += 1; /* RU_484_TONE */
+    }
+  else if (m_rxChannelWidth >= 80)
+    {
+      expectedNumBands += 37 * (m_rxChannelWidth / 80); /* RU_26_TONE */
+      expectedNumBands += 16 * (m_rxChannelWidth / 80); /* RU_52_TONE */
+      expectedNumBands += 8 * (m_rxChannelWidth / 80); /* RU_106_TONE */
+      expectedNumBands += 4 * (m_rxChannelWidth / 80); /* RU_242_TONE */
+      expectedNumBands += 2 * (m_rxChannelWidth / 80); /* RU_484_TONE */
+      expectedNumBands += 1 * (m_rxChannelWidth / 80); /* RU_996_TONE */
+      if (m_rxChannelWidth == 160)
+        {
+          ++expectedNumBands; /* RU_2x996_TONE */
+        }
+    }
+  NS_TEST_ASSERT_MSG_EQ (numBands, expectedNumBands, "Total number of bands handled by the receiver is incorrect");
+
+  uint16_t channelWidth = std::min (m_txChannelWidth, m_rxChannelWidth);
+  WifiSpectrumBand band = m_rxPhy->GetBand (channelWidth, 0);
+  auto it = rxPowersW.find (band);
+  NS_LOG_INFO ("powerW total band: " << it->second << " (" << WToDbm (it->second) << " dBm)");
+  int totalRxPower = static_cast<int> (WToDbm (it->second) + 0.5);
+  int expectedTotalRxPower;
+  if (m_txChannelWidth <= m_rxChannelWidth)
+    {
+      //PHY sends at 16 dBm, and since there is no loss, this should be the total power at the receiver.
+      expectedTotalRxPower = 16;
+    }
+  else
+    {
+      //Only a part of the transmitted power is received
+      expectedTotalRxPower = 16 - static_cast<int> (RatioToDb (m_txChannelWidth / m_rxChannelWidth));
+    }
+  NS_TEST_ASSERT_MSG_EQ (totalRxPower, expectedTotalRxPower, "Total received power is not correct");
+
+  if ((m_txChannelWidth <= m_rxChannelWidth) && (channelWidth >= 20))
+    {
+      band = m_rxPhy->GetBand (20, 0); //primary 20 MHz
+      it = rxPowersW.find (band);
+      NS_LOG_INFO ("powerW in primary 20 MHz channel: " << it->second << " (" << WToDbm (it->second) << " dBm)");
+      int rxPowerPrimaryChannel20 = static_cast<int> (WToDbm (it->second) + 0.5);
+      int expectedRxPowerPrimaryChannel20 = 16 - static_cast<int> (RatioToDb (channelWidth / 20));
+      NS_TEST_ASSERT_MSG_EQ (rxPowerPrimaryChannel20, expectedRxPowerPrimaryChannel20, "Received power in the primary 20 MHz band is not correct");
+    }
+}
+
+void
+SpectrumWifiPhyFilterTest::DoSetup (void)
+{
+  //WifiHelper::EnableLogComponents ();
+  //LogComponentEnable ("SpectrumWifiPhyBasicTest", LOG_LEVEL_ALL);
+
+  Ptr<MultiModelSpectrumChannel> spectrumChannel = CreateObject<MultiModelSpectrumChannel> ();
+  Ptr<FriisPropagationLossModel> lossModel = CreateObject<FriisPropagationLossModel> ();
+  lossModel->SetFrequency (5.180e9);
+  spectrumChannel->AddPropagationLossModel (lossModel);
+  Ptr<ConstantSpeedPropagationDelayModel> delayModel = CreateObject<ConstantSpeedPropagationDelayModel> ();
+  spectrumChannel->SetPropagationDelayModel (delayModel);
+  
+  Ptr<Node> txNode = CreateObject<Node> ();
+  Ptr<WifiNetDevice> txDev = CreateObject<WifiNetDevice> ();
+  m_txPhy = CreateObject<ExtSpectrumWifiPhy> ();
+  m_txPhy->CreateWifiSpectrumPhyInterface (txDev);
+  m_txPhy->ConfigureStandardAndBand (WIFI_PHY_STANDARD_80211ax, WIFI_PHY_BAND_5GHZ);
+  Ptr<ErrorRateModel> error = CreateObject<NistErrorRateModel> ();
+  m_txPhy->SetErrorRateModel (error);
+  m_txPhy->SetDevice (txDev);
+  m_txPhy->SetChannel (spectrumChannel);
+  Ptr<ConstantPositionMobilityModel> apMobility = CreateObject<ConstantPositionMobilityModel> ();
+  m_txPhy->SetMobility (apMobility);
+  txDev->SetPhy (m_txPhy);
+  txNode->AggregateObject (apMobility);
+  txNode->AddDevice (txDev);
+
+  Ptr<Node> rxNode = CreateObject<Node> ();
+  Ptr<WifiNetDevice> rxDev = CreateObject<WifiNetDevice> ();
+  m_rxPhy = CreateObject<ExtSpectrumWifiPhy> ();
+  m_rxPhy->CreateWifiSpectrumPhyInterface (rxDev);
+  m_rxPhy->ConfigureStandardAndBand (WIFI_PHY_STANDARD_80211ax, WIFI_PHY_BAND_5GHZ);
+  m_rxPhy->SetErrorRateModel (error);
+  m_rxPhy->SetChannel (spectrumChannel);
+  Ptr<ConstantPositionMobilityModel> sta1Mobility = CreateObject<ConstantPositionMobilityModel> ();
+  m_rxPhy->SetMobility (sta1Mobility);
+  rxDev->SetPhy (m_rxPhy);
+  rxNode->AggregateObject (sta1Mobility);
+  rxNode->AddDevice (rxDev);
+  m_rxPhy->TraceConnectWithoutContext ("PhyRxBegin", MakeCallback (&SpectrumWifiPhyFilterTest::RxCallback, this));
+}
+
+void
+SpectrumWifiPhyFilterTest::RunOne (void)
+{
+  m_txPhy->SetChannelWidth (m_txChannelWidth);
+  uint16_t txFrequency;
+  switch (m_txChannelWidth)
+    {
+    case 20:
+    default:
+      txFrequency = 5180;
+      break;
+    case 40:
+      txFrequency = 5190;
+      break;
+    case 80:
+      txFrequency = 5210;
+      break;
+    case 160:
+      txFrequency = 5250;
+      break;
+    }
+  m_txPhy->SetFrequency (txFrequency);
+
+  m_rxPhy->SetChannelWidth (m_rxChannelWidth);
+  uint16_t rxFrequency;
+  switch (m_rxChannelWidth)
+    {
+    case 20:
+    default:
+      rxFrequency = 5180;
+      break;
+    case 40:
+      rxFrequency = 5190;
+      break;
+    case 80:
+      rxFrequency = 5210;
+      break;
+    case 160:
+      rxFrequency = 5250;
+      break;
+    }
+  m_rxPhy->SetFrequency (rxFrequency);
+
+  Simulator::Schedule (Seconds (1), &SpectrumWifiPhyFilterTest::SendPpdu, this);
+  
+  Simulator::Run ();
+}
+
+void
+SpectrumWifiPhyFilterTest::DoRun (void)
+{
+  m_txChannelWidth = 20;
+  m_rxChannelWidth = 20;
+  RunOne ();
+
+  m_txChannelWidth = 40;
+  m_rxChannelWidth = 40;
+  RunOne ();
+
+  m_txChannelWidth = 80;
+  m_rxChannelWidth = 80;
+  RunOne ();
+
+  m_txChannelWidth = 160;
+  m_rxChannelWidth = 160;
+  RunOne ();
+
+  m_txChannelWidth = 20;
+  m_rxChannelWidth = 40;
+  RunOne ();
+
+  m_txChannelWidth = 20;
+  m_rxChannelWidth = 80;
+  RunOne ();
+
+  m_txChannelWidth = 40;
+  m_rxChannelWidth = 80;
+  RunOne ();
+
+  m_txChannelWidth = 20;
+  m_rxChannelWidth = 160;
+  RunOne ();
+
+  m_txChannelWidth = 40;
+  m_rxChannelWidth = 160;
+  RunOne ();
+
+  m_txChannelWidth = 80;
+  m_rxChannelWidth = 160;
+  RunOne ();
+
+  m_txChannelWidth = 40;
+  m_rxChannelWidth = 20;
+  RunOne ();
+
+  m_txChannelWidth = 80;
+  m_rxChannelWidth = 20;
+  RunOne ();
+
+  m_txChannelWidth = 80;
+  m_rxChannelWidth = 40;
+  RunOne ();
+
+  m_txChannelWidth = 160;
+  m_rxChannelWidth = 20;
+  RunOne ();
+
+  m_txChannelWidth = 160;
+  m_rxChannelWidth = 40;
+  RunOne ();
+
+  m_txChannelWidth = 160;
+  m_rxChannelWidth = 80;
+  RunOne ();
+
+  Simulator::Destroy ();
 }
 
 /**
@@ -321,10 +640,11 @@ public:
 };
 
 SpectrumWifiPhyTestSuite::SpectrumWifiPhyTestSuite ()
-  : TestSuite ("spectrum-wifi-phy", UNIT)
+  : TestSuite ("wifi-spectrum-wifi-phy", UNIT)
 {
   AddTestCase (new SpectrumWifiPhyBasicTest, TestCase::QUICK);
   AddTestCase (new SpectrumWifiPhyListenerTest, TestCase::QUICK);
+  AddTestCase (new SpectrumWifiPhyFilterTest, TestCase::QUICK);
 }
 
 static SpectrumWifiPhyTestSuite spectrumWifiPhyTestSuite; ///< the test suite

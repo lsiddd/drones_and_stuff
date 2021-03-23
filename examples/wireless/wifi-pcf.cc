@@ -72,7 +72,7 @@ uint64_t m_countCfEndAck;
 uint64_t m_countDataNull;
 uint64_t m_countData;
 
-void TxCallback (std::string context, Ptr<const Packet> p)
+void TxCallback (std::string context, Ptr<const Packet> p, double txPowerW)
 {
   WifiMacHeader hdr;
   p->PeekHeader (hdr);
@@ -133,7 +133,7 @@ int main (int argc, char *argv[])
   uint64_t cfpMaxDurationUs = 65536; //microseconds
   double simulationTime = 10; //seconds
 
-  CommandLine cmd;
+  CommandLine cmd (__FILE__);
   cmd.AddValue ("nWifi", "Number of wifi STA devices", nWifi);
   cmd.AddValue ("enablePcf", "Enable/disable PCF mode", enablePcf);
   cmd.AddValue ("withData", "Enable/disable UDP data packets generation", withData);
@@ -162,7 +162,7 @@ int main (int argc, char *argv[])
   wifiApNode.Create (1);
 
   YansWifiChannelHelper channel = YansWifiChannelHelper::Default ();
-  YansWifiPhyHelper phy = YansWifiPhyHelper::Default ();
+  YansWifiPhyHelper phy;
   phy.SetPcapDataLinkType (YansWifiPhyHelper::DLT_IEEE802_11_RADIO);
   phy.SetChannel (channel.Create ());
 

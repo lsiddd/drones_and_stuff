@@ -102,7 +102,7 @@ Emitter::DoInitialize (void)
 void
 Emitter::Emit (void)
 {
-  NS_LOG_DEBUG ("Emitting at " << Simulator::Now ().GetSeconds () << " seconds");
+  NS_LOG_DEBUG ("Emitting at " << Simulator::Now ().As (Time::S));
   m_interval = Simulator::Now () - m_last;
   m_last = Simulator::Now ();
   TimeProbe::SetValueByPath ("/Names/probe3", m_interval);
@@ -117,7 +117,7 @@ NotifyViaTraceSource (std::string context, Time oldVal, Time newVal)
   GlobalValue::GetValueByName ("verbose", verbose);
   if (verbose.Get ())
     {
-      std::cout << "context: " << context << " old " << oldVal.GetSeconds () << " new " << newVal.GetSeconds () << std::endl;
+      std::cout << "context: " << context << " old " << oldVal.As (Time::S) << " new " << newVal.As (Time::S) << std::endl;
     }
 }
 
@@ -143,7 +143,7 @@ int main (int argc, char *argv[])
   double stopTime = 100.0;
   bool verbose = false;
 
-  CommandLine cmd;
+  CommandLine cmd (__FILE__);
   cmd.AddValue ("stopTime", "Time (seconds) to terminate simulation", stopTime);
   cmd.AddValue ("verbose", "Whether to enable verbose output", verbose);
   cmd.Parse (argc, argv);

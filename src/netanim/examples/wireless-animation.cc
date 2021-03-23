@@ -38,7 +38,7 @@ int
 main (int argc, char *argv[])
 {
   uint32_t nWifi = 20;
-  CommandLine cmd;
+  CommandLine cmd (__FILE__);
   cmd.AddValue ("nWifi", "Number of wifi STA devices", nWifi);
 
   cmd.Parse (argc,argv);
@@ -51,7 +51,7 @@ main (int argc, char *argv[])
   allNodes.Add (wifiApNode);
 
   YansWifiChannelHelper channel = YansWifiChannelHelper::Default ();
-  YansWifiPhyHelper phy = YansWifiPhyHelper::Default ();
+  YansWifiPhyHelper phy;
   phy.SetChannel (channel.Create ());
 
   WifiHelper wifi;

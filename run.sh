@@ -26,9 +26,9 @@ sed -i -r "s/(numStaticCells =) [0-9]{1,2}/\1 ${num_bs}/g" scratch/drones_and_st
 sed -i -r "s/(handover_policy =) \"\w+\"/\1 \"${algorithm}\"/g" scratch/drones_and_stuff.cc
 sed -i -r "s/(SimTime =) [0-9]{1,2}/\1 ${simul_time}/g" scratch/drones_and_stuff.cc
 
-for num_ue in 30  60 90 120
+for num_ue in 30 60 90 120
 do
-    for seed in $(seq 5)
+    for seed in $(seq 10)
     do
         sed -i -r "s/(numUes =) [0-9]{1,2}/\1 ${num_ue}/g" scratch/drones_and_stuff.cc
         echo "Simulation ${num_ue} users and random seed ${seed}."

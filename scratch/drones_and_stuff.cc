@@ -72,6 +72,7 @@ uint32_t active_drones = 0;
 uint32_t seedValue = 10000;
 
 uint32_t SimTime = 30;
+// Time warm_up_time = Seconds(1);
 const uint32_t numUAVs = 10;
 // make sure there's hot spots even if the number of uavs is 0
 const uint32_t number_of_hot_spots = numUAVs == 0 ? 10 : numUAVs;
@@ -99,7 +100,7 @@ bool disableUl = false;
 bool enablePrediction = true;
 bool verbose = false;
 bool enableHandover = false;
-bool useCa = false;
+bool useCa = true;
 bool handovers_enabled = true;
 
 /*============= state variables =======================*/
@@ -125,6 +126,8 @@ Ipv4Address user_ip[numUes];                         // stores the ipv4 address 
 std::unordered_map<int, double> cell_throughput;     //
 double rlf[numUes] = {{0}};                          // map user id to time of last link failure
 
+std::vector<std::pair<int, int>> x2_interfaces;
+
 // peek results at the end of the simulation
 std::vector<double> peek_user_throughput;
 std::vector<double> peek_cell_throughput;
@@ -145,8 +148,8 @@ struct Handover
   // operator to compare two handover instances within a given time window
   bool operator==(const Handover &other) const
   {
-    // return std::abs(other.time - time) < 1 && user == other.user;
-    return user == other.user;
+    return std::abs(other.time - time) < 2 && user == other.user;
+    // return user == other.user  && time - other.time > 0;
     //&& source == other.source && source == other.source &&
     //    target == other.target;
   }
@@ -209,6 +212,7 @@ std::vector<int> cost;
 NodeContainer UAVNodes;
 NodeContainer ueNodes;
 NodeContainer BSNodes;
+NodeContainer StaticBSNodes;
 // todo: test servers in the BS nodes
 NodeContainer serverNodes;
 
@@ -349,13 +353,18 @@ generatePositionAllocator(int number_of_nodes = 300, int area = 1000,
     }
   }
 
-  else
+  else if (allocation == "random")
   {
     for (int i = 0; i < number_of_nodes; i++)
     {
       HpnPosition->Add(
           Vector3D(distribution(generator), distribution(generator), 45));
     }
+  }
+
+  else
+  {
+    NS_FATAL_ERROR("invalid cell allocation policy.");
   }
   return HpnPosition;
 }
@@ -379,7 +388,6 @@ std::vector<std::pair<int, int>> create_hot_spots()
 
 std::map<std::pair<int, int>, double> populate_requests_trace()
 {
-
   int multiplier = 1024;
   std::map<std::pair<int, int>, double> requests; //
 
@@ -524,7 +532,7 @@ Vector get_node_position(Ptr<Node> node)
 
 int get_cell(int user_id)
 {
-  for (uint32_t i = 0; i < numBSs + numUAVs; i++)
+  for (uint32_t i = 0; i < numBSs; i++)
   {
     if (connections[i][user_id])
       return i;
@@ -587,6 +595,14 @@ int getEdge(int nodeId)
       edgeId = i;
     }
   return edgeId;
+}
+
+void reconnection_matrix(int user_id, int cell_id)
+{
+}
+
+void clear_neighbors()
+{
 }
 
 int get_closest_center_index(Ptr<Node> node,
@@ -653,7 +669,6 @@ void ReportUeMeasurementsCallback(std::string path, uint16_t rnti,
   neighbors[cellId - 1][path_imsi[node_id] - 1] = rsrp;
 
   // call handover manager upon receiving new measurements
-  // todo: add some fail checks for signal levels
   handoverManager(path);
 }
 
@@ -967,46 +982,6 @@ void UDPApp(Ptr<Node> remoteHost, NodeContainer ueNodes)
   clientApps.Start(Seconds(startTime));
 }
 
-// void write_metrics() {
-//   std::stringstream sinrdata;
-//   unsigned int qtyUEs = ues_sinr.size();
-//   unsigned int qtyUEsCovered = 0;
-//   float coverageRatio = 0;
-//   for (unsigned int id = 0; id < qtyUEs; ++id) {
-//     if (ues_sinr[id] >= 3)
-//       qtyUEsCovered++;
-//     sinrdata << "Id: " << id << ", SINR: " << ues_sinr[id] << "dB" <<
-//     std::endl;
-//   }
-//   coverageRatio = (float)qtyUEsCovered / qtyUEs;
-//   ues_sinr_file << "Coverage ratio: " << coverageRatio * 100 << "%"
-//                 << std::endl;
-//   ues_sinr_file << sinrdata.str();
-
-//   std::stringstream timedata;
-//   double total_time = 0;
-//   double mean_time;
-//   for (auto time : time_to_centroid) {
-//     total_time += time;
-//     timedata << time << std::endl;
-//   }
-//   mean_time = total_time / active_drones;
-//   time_to_centroid_file << "Mean time to centroid: " << mean_time <<
-//   std::endl; time_to_centroid_file << timedata.str();
-// }
-
-// void print_position(NodeContainer ueNodes) {
-//   std::cout << '\n';
-//   for (uint32_t j = 0; j < ueNodes.GetN(); ++j) {
-//     Ptr<MobilityModel> mob = ueNodes.Get(j)->GetObject<MobilityModel>();
-//     Vector pos = mob->GetPosition();
-//     Vector3D speed = mob->GetVelocity();
-//     std::cout << " Node " << j << " | POS: (x=" << pos.x << ", y=" << pos.y
-//               << ") | Speed(" << speed.x << ", " << speed.y << ")" <<
-//               std::endl;
-//   }
-// }
-
 void ThroughputMonitor(FlowMonitorHelper *fmhelper, Ptr<FlowMonitor> flowMon)
 {
   // count lost packets
@@ -1114,7 +1089,7 @@ void UAVManager()
 
   centroids.close();
 
-  Simulator::Schedule(management_interval, &UAVManager);
+  // Simulator::Schedule(management_interval, &UAVManager);
   return;
 }
 
@@ -1134,54 +1109,61 @@ bool find_handover(Handover h)
 void schedule_handover(int id_user, int id_source, int id_target)
 {
 
-  id_source = get_cell(id_user);
+  // create handover identifier
+  Handover handover(Simulator::Now().GetSeconds(), id_user, id_source,
+                    id_target);
 
+  // if this handover has already been attempted, return.
+  if (find_handover(handover))
+  {
+    // LOG("Handover already exists");
+    return;
+  }
+
+  // reset x2 interface before handover
+  // I dont know anymore what to do to make this work
+  id_source = get_cell(id_user);
 
   Ptr<LteUeNetDevice> ueLteDevice =
       ueDevs.Get(id_user)->GetObject<LteUeNetDevice>();
   Ptr<LteUeRrc> ueRrc = ueLteDevice->GetRrc();
 
-  LOG("User device in state " << ueRrc->GetState());
+  // LOG("User device in state " << ueRrc->GetState());
   if (ueRrc->GetState() != LteUeRrc::CONNECTED_NORMALLY)
   {
-    LOG("User not in CONNECTED_NORMALLY state.");
+    LOG("Wrong LteUeRrc state!");
     return;
   }
-
+  // NS_TEST_ASSERT_MSG_EQ (ueRrc->GetState (), LteUeRrc::CONNECTED_NORMALLY, "Wrong LteUeRrc state!");
 
   Ptr<NetDevice> enbDev = enbDevs.Get(id_source);
-  if (enbDev != 0)
+  if (enbDev == 0)
   {
-    LOG("LTE eNB device not found");
+    LOG(Simulator::Now().GetSeconds() << " LTE eNB " << id_source << " device not found");
     return;
   }
 
   Ptr<LteEnbNetDevice> enbLteDevice = enbDev->GetObject<LteEnbNetDevice>();
   Ptr<LteEnbRrc> enbRrc = enbLteDevice->GetRrc();
   uint16_t rnti = ueRrc->GetRnti();
+
+  LOG("rnti " << rnti);
+  LOG("user_id " << id_user);
+  LOG("id_source " << id_source);
+  LOG("id_target " << id_user);
+
   Ptr<UeManager> ueManager = enbRrc->GetUeManager(rnti);
-  if (ueManager != 0)
+
+  if (ueManager == nullptr)
   {
-    LOG("RNTI " << rnti << " not found in eNB");
+    LOG(Simulator::Now().GetSeconds() << " RNTI " << rnti << " not found in eNB");
     return;
   }
-
-  // create handover identifier
-  Handover handover(Simulator::Now().GetSeconds(), id_user, id_source,
-                    id_target);
 
   // if handover is valid, add it to list of handovers
   handover_vector.push_back(handover);
-
-  // // if this handover has already been attempted, return.
-  if (find_handover(handover))
-  {
-    LOG("Handover already exists");
-    return;
-  }
-
   LOG(handover);
-  wait;
+  // wait;
   lteHelper->HandoverRequest(Simulator::Now(), ueDevs.Get(id_user),
                              enbDevs.Get(id_source), enbDevs.Get(id_target));
 }
@@ -1189,27 +1171,18 @@ void schedule_handover(int id_user, int id_source, int id_target)
 void handoverManager(std::string path)
 {
 
-  LOG(path);
-  int nodeid = get_nodeid_from_path(path);
+  if (Simulator::Now() > Seconds(2))
+    return;
 
-  // LOG("received meas for path " << path);
-  // LOG("path evaluated to be for node " << nodeid << " imsi " << nodeid + 1);
+  int nodeid = get_nodeid_from_path(path);
 
   if (nodeid == -1)
     return;
-
-  // evaluate warm up time, to avoid meas too early into the simulation
-  // if (Simulator::Now() < Seconds(5)) {
-  //   return;
-  // }
-
-  // todo: evaluate only for user meas receive
 
   int user_thr = 5 * 1024 * 1024;
   int cell_thr = 10 * 1024 * 1024;
 
   // user-wise strongest cell implementation
-
   int imsi = nodeid + 1;
   uint32_t servingCell = get_cell_from_imsi(imsi);
   int rsrp = std::numeric_limits<int>::lowest();
@@ -1233,7 +1206,7 @@ void handoverManager(std::string path)
 
         // define drone with highest signal as bset cell
         if (neighbors[cell][nodeid] > rsrp && cell != servingCell &&
-            is_drone(cell))
+            is_drone(cell) && !is_drone(servingCell))
         {
           rsrp = neighbors[cell][nodeid];
           bestNeighborCell = cell;
@@ -1502,7 +1475,7 @@ void just_a_monitor()
       if (int cell = get_cell(i) != -1)
       {
         std::string cell_type = is_drone(cell) ? "UAV" : "GBS";
-        LOG("User is in " << cell_type << ".");
+        LOG("User " << i << " is in " << cell_type << ".");
 
         if (cell_type == "UAV")
         {
@@ -1555,7 +1528,7 @@ int main(int argc, char *argv[])
   LogComponentEnable("EvalvidServer", LOG_LEVEL_ALL);
   LogComponentEnable("UdpEchoClientApplication", LOG_LEVEL_INFO);
   LogComponentEnable("UdpEchoServerApplication", LOG_LEVEL_INFO);
-  LogComponentEnable("EpcX2", LOG_LEVEL_LOGIC);
+  // LogComponentEnable("EpcX2", LOG_LEVEL_LOGIC);
 
   CommandLine cmd;
   cmd.AddValue("seedValue", "Random seed of the simulation", seedValue);
@@ -1566,21 +1539,19 @@ int main(int argc, char *argv[])
   // fix random seed
   ns3::RngSeedManager::SetSeed(seedValue);
 
-  // create epc helper and set as default
-  Ptr<PointToPointEpcHelper> epcHelper = CreateObject<PointToPointEpcHelper>();
-  lteHelper->SetEpcHelper(epcHelper);
-  // get pgw node
-  Ptr<Node> pgw = epcHelper->GetPgwNode();
-
   // lte specific config
   lteHelper->SetAttribute("PathlossModel",
                           StringValue("ns3::NakagamiPropagationLossModel"));
   lteHelper->SetHandoverAlgorithmType("ns3::NoOpHandoverAlgorithm");
-
   lteHelper->SetEnbDeviceAttribute("DlBandwidth",
-                                   UintegerValue(6)); // Set Download BandWidth
+                                   UintegerValue(25)); // Set Download BandWidth
   lteHelper->SetEnbDeviceAttribute("UlBandwidth",
-                                   UintegerValue(6)); // Set Upload Bandwidth
+                                   UintegerValue(25)); // Set Upload Bandwidth
+
+  Config::SetDefault("ns3::LteUePhy::TxPower", DoubleValue(10));
+  Config::SetDefault("ns3::LteUePhy::NoiseFigure", DoubleValue(9));
+  Config::SetDefault("ns3::LteEnbPhy::TxPower", DoubleValue(30));
+  Config::SetDefault("ns3::LteEnbPhy::NoiseFigure", DoubleValue(5));
 
   // Network config
   if (useCa)
@@ -1592,31 +1563,27 @@ int main(int argc, char *argv[])
                        StringValue("ns3::RrComponentCarrierManager"));
   }
 
-  // Config::SetDefault("ns3::LteEnbPhy::TxPower",
-  // DoubleValue(eNodeBTxPower));
-  Config::SetDefault("ns3::LteEnbRrc::SrsPeriodicity", UintegerValue(320));
-  // error modes for ctrl and data planes
   Config::SetDefault("ns3::LteSpectrumPhy::CtrlErrorModelEnabled",
                      BooleanValue(false));
   Config::SetDefault("ns3::LteSpectrumPhy::DataErrorModelEnabled",
-                     BooleanValue(true));
-  lteHelper->SetPathlossModelType(
-      TypeId::LookupByName("ns3::LogDistancePropagationLossModel"));
+                     BooleanValue(false));
 
   // Radio link failure detection parameters
-  Config::SetDefault("ns3::LteUeRrc::N310", UintegerValue(1));
-  Config::SetDefault("ns3::LteUeRrc::N311", UintegerValue(1));
-  Config::SetDefault("ns3::LteUeRrc::T310", TimeValue(Seconds(1)));
+  // Config::SetDefault("ns3::LteUeRrc::N310", UintegerValue(1));
+  // Config::SetDefault("ns3::LteUeRrc::N311", UintegerValue(1));
+  // Config::SetDefault("ns3::LteUeRrc::T310", TimeValue(Seconds(1)));
 
   // disable rlf detection
-  Config::SetDefault("ns3::LteUePhy::EnableRlfDetection", BooleanValue(false));
   Config::SetDefault("ns3::LteHelper::UseIdealRrc", BooleanValue(true));
 
   // create nodes in global containers
   UAVNodes.Create(numUAVs);
   ueNodes.Create(numUes);
-  BSNodes.Create(numStaticCells);
-  serverNodes.Create(numStaticCells);
+  StaticBSNodes.Create(numStaticCells);
+  // serverNodes.Create(numStaticCells);
+
+  // merge uav and bs nodes
+  BSNodes = NodeContainer(UAVNodes, StaticBSNodes);
 
   // create and install internet
   NodeContainer remoteHostContainer;
@@ -1625,11 +1592,17 @@ int main(int argc, char *argv[])
   InternetStackHelper internet;
   internet.Install(remoteHost);
 
+  // create epc helper and set as default
+  Ptr<PointToPointEpcHelper> epcHelper = CreateObject<PointToPointEpcHelper>();
+  lteHelper->SetEpcHelper(epcHelper);
+  // get pgw node
+  Ptr<Node> pgw = epcHelper->GetPgwNode();
+
   // Create the Internet
   PointToPointHelper p2ph;
   p2ph.SetDeviceAttribute("DataRate", DataRateValue(DataRate("100Gb/s")));
   p2ph.SetDeviceAttribute("Mtu", UintegerValue(1500));
-  p2ph.SetChannelAttribute("Delay", TimeValue(Seconds(0.010))); // 0.010
+  p2ph.SetChannelAttribute("Delay", TimeValue(Seconds(0.001))); // 0.010
   NetDeviceContainer internetDevices = p2ph.Install(pgw, remoteHost);
 
   Ipv4AddressHelper ipv4h;
@@ -1647,7 +1620,6 @@ int main(int argc, char *argv[])
   // set up mobility
   MobilityHelper mobility;
   mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
-  // mobility.Install(remoteHost);
   mobility.Install(pgw);
   mobility.Install(remoteHostContainer);
 
@@ -1659,9 +1631,9 @@ int main(int argc, char *argv[])
   mobilityEnb.SetMobilityModel("ns3::ConstantPositionMobilityModel");
   auto BSPosition = generatePositionAllocator(numStaticCells, 2000, "koln");
   mobilityEnb.SetPositionAllocator(BSPosition);
-  mobilityEnb.Install(BSNodes);
+  mobilityEnb.Install(StaticBSNodes);
 
-  mobilityEnb.Install(serverNodes);
+  // mobilityEnb.Install(serverNodes);
 
   /*reassign for uav random positioning*/
   MobilityHelper mobilityUAV;
@@ -1670,7 +1642,7 @@ int main(int argc, char *argv[])
   mobilityUAV.SetPositionAllocator(UAVPosition);
   mobilityUAV.Install(UAVNodes);
 
-  enbDevs = lteHelper->InstallEnbDevice(NodeContainer(BSNodes, UAVNodes));
+  enbDevs = lteHelper->InstallEnbDevice(NodeContainer(BSNodes));
   ueDevs = lteHelper->InstallUeDevice(ueNodes);
 
   // set up different transmission powers for drones
@@ -1692,9 +1664,11 @@ int main(int argc, char *argv[])
   internet.Install(ueNodes);
   Ipv4InterfaceContainer ueIpIface;
   ueIpIface = epcHelper->AssignUeIpv4Address(NetDeviceContainer(ueDevs));
+
   // Assign IP address to UEs, and install applications
   for (uint32_t u = 0; u < ueNodes.GetN(); ++u)
   {
+    // add route to remote host
     Ptr<Node> ueNode = ueNodes.Get(u);
     // Set the default gateway for the UE
     Ptr<Ipv4StaticRouting> ueStaticRouting =
@@ -1705,7 +1679,7 @@ int main(int argc, char *argv[])
 
   // attach to cells with the highest sinr
   lteHelper->Attach(ueDevs);
-  // lteHelper->AddX2Interface(BSNodes);
+  lteHelper->AddX2Interface(BSNodes);
 
   // populate user ip map
   for (uint32_t i = 0; i < ueNodes.GetN(); i++)
@@ -1753,9 +1727,8 @@ int main(int argc, char *argv[])
 
   /* all scheduled functions*/
   Simulator::Schedule(management_interval, &ThroughputMonitor, &flowmon,
-                      monitor); // recurrent
-  Simulator::Schedule(management_interval,
-                      &UAVManager); // only executed in the beginning?
+                      monitor);                          // recurrent
+  Simulator::Schedule(management_interval, &UAVManager); // only executed in the beginning?
   Simulator::Schedule(management_interval, &generate_requests, remoteHost,
                       centers, requests, 20 * 1024 * 1024, 500); // recurrent
   Simulator::Schedule(management_interval, &just_a_monitor);     // just a monitor

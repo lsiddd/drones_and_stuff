@@ -73,11 +73,11 @@ uint32_t seedValue = 10000;
 
 uint32_t SimTime = 30;
 // Time warm_up_time = Seconds(1);
-uint32_t numUAVs = 10;
+uint32_t numUAVs = 20;
 // make sure there's hot spots even if the number of uavs is 0
 uint32_t number_of_hot_spots = numUAVs == 0 ? 10 : numUAVs;
-uint32_t numUes = 10;
-uint32_t numStaticCells = 10;
+uint32_t numUes = 30;
+uint32_t numStaticCells = 50;
 uint32_t numEdgeServers = numStaticCells;
 uint32_t numBSs = numUAVs + numStaticCells;
 int eNodeBTxPower = 46;
@@ -996,7 +996,7 @@ void UAVManager() {
   for (uint32_t i = 0; i < numUAVs; i++) {
     Ptr<Node> drone = UAVNodes.Get(i);
     int closest_hot_spot_index = get_closest_center_index(drone, centers);
-    if (closest_hot_spot_index = -1) {
+    if (closest_hot_spot_index == -1) {
       continue;
     }
 
@@ -1045,6 +1045,8 @@ void schedule_handover(int id_user, int id_source, int id_target) {
       return;
   }
 
+  bool random_time = true;
+
   // create handover identifier
   Handover handover(Simulator::Now().GetSeconds(), id_user, id_source,
                     id_target);
@@ -1090,20 +1092,27 @@ void schedule_handover(int id_user, int id_source, int id_target) {
   // this mf keeps returning error I dont know why
   // Ptr<UeManager> ueManager = enbRrc->GetUeManager(rnti);
 
-  // if handover is valid, add it to list of handovers
-  // std::uniform_real_distribution<> dis(0, 2.0);
-  // int handover_time = dis(generator);
+  if (random_time) {
+      std::uniform_real_distribution<> dis(0, 1.0);
+  int handover_time = dis(generator);
 
   handover_vector.push_back(
+      Handover(handover_time, id_user, id_source, id_target));
+  lteHelper->HandoverRequest(Seconds(handover_time), ueDevs.Get(id_user),
+                             enbDevs.Get(id_source), enbDevs.Get(id_target));
+
+  }
+  else {
+      handover_vector.push_back(
       Handover(Simulator::Now().GetSeconds(), id_user, id_source, id_target));
   lteHelper->HandoverRequest(Simulator::Now(), ueDevs.Get(id_user),
                              enbDevs.Get(id_source), enbDevs.Get(id_target));
+
+  }
+  // if handover is valid, add it to list of handovers
 }
 
 void handoverManager(std::string path) {
-
-  if (Simulator::Now() > Seconds(2))
-    return;
 
   int nodeid = get_nodeid_from_path(path);
 
@@ -1131,7 +1140,7 @@ void handoverManager(std::string path) {
 
   if (handover_policy == "iuavbs") {
     // if user is not served
-    if (user_throughput[nodeid] < 0.8 * user_requests[nodeid]) {
+    if (unserved_users[nodeid]) {
       // handover to closest drone
       for (uint32_t cell = 0; cell < numBSs; cell++) {
 
@@ -1369,6 +1378,7 @@ void just_a_monitor() {
         unserved << i << " " << user_pos.x << " " << user_pos.y << " "
                  << user_requests[i] << "\n";
         number_of_unserved++;
+        unserved_users[i] = true;
       }
 
       int cell = get_cell(i);
@@ -1444,6 +1454,7 @@ int main(int argc, char *argv[]) {
   Config::SetDefault("ns3::LteUePhy::NoiseFigure", DoubleValue(9));
   Config::SetDefault("ns3::LteEnbPhy::TxPower", DoubleValue(30));
   Config::SetDefault("ns3::LteEnbPhy::NoiseFigure", DoubleValue(5));
+  Config::SetDefault("ns3::LteEnbRrc::SrsPeriodicity", UintegerValue(320)); 
 
   // Network config
   if (useCa) {

@@ -2,7 +2,7 @@
 
 num_uav=10
 num_bs=20
-simul_time=30
+simul_time=50
 
 if [ $# -ne 0 ]
 then
@@ -21,10 +21,12 @@ fi
 
 echo $algorithm
 
-sed -i -r "s/(numUAVs =) [0-9]{1,2}/\1 ${num_uav}/g" scratch/drones_and_stuff.cc
-sed -i -r "s/(numStaticCells =) [0-9]{1,2}/\1 ${num_bs}/g" scratch/drones_and_stuff.cc
+sed -i -r "s/(numUAVs =) [0-9]+/\1 ${num_uav}/g" scratch/drones_and_stuff.cc
+sed -i -r "s/(numStaticCells =) [0-9]+/\1 ${num_bs}/g" scratch/drones_and_stuff.cc
 sed -i -r "s/(handover_policy =) \"\w+\"/\1 \"${algorithm}\"/g" scratch/drones_and_stuff.cc
-sed -i -r "s/(SimTime =) [0-9]{1,2}/\1 ${simul_time}/g" scratch/drones_and_stuff.cc
+sed -i -r "s/(SimTime =) [0-9]+/\1 ${simul_time}/g" scratch/drones_and_stuff.cc
+
+exit 0
 
 for num_ue in 30 60 90 120
 do
